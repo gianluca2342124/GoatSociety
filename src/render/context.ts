@@ -1,5 +1,5 @@
-import type { BrandKit, MatchData, Project, Slide, SlideElement } from '../model/types'
-import { applyOverrides, resolveColor, resolveFont, resolveText } from '../model/tokens'
+import type { BrandKit, Intensity, MatchData, Project, Slide, SlideElement } from '../model/types'
+import { applyOverrides, resolveColor, resolveFont, resolveText, shownAtIntensity, slideAccent, slideIntensity } from '../model/tokens'
 import { getImage } from './assetCache'
 import { EDITOR_3D_SCALE, get3DError, get3DRender } from './three/render3dCache'
 
@@ -11,6 +11,10 @@ export interface RenderCtx {
   page: number
   pages: number
   mode: 'editor' | 'export'
+  /** Effective visual intensity of the slide (GOAT EDITORIAL presets). */
+  intensity: Intensity
+  /** True when the element renders at the slide intensity. */
+  shown: (el: SlideElement) => boolean
   image: (id: string | null | undefined) => HTMLImageElement | HTMLCanvasElement | null
   render3d: (el: SlideElement) => HTMLCanvasElement | null
   error3d: (el: SlideElement) => string | null
@@ -24,7 +28,8 @@ export function makeRenderCtx(project: Project, slide: Slide, brand: BrandKit, m
   const index = project.slides.findIndex((s) => s.id === slide.id)
   const page = index >= 0 ? index + 1 : 1
   const pages = Math.max(1, project.slides.length)
-  const cctx = { match, brand }
+  const cctx = { match, brand, accent: slideAccent(project, slide) }
+  const intensity = slideIntensity(project, slide)
   return {
     match,
     brand,
@@ -33,6 +38,8 @@ export function makeRenderCtx(project: Project, slide: Slide, brand: BrandKit, m
     page,
     pages,
     mode,
+    intensity,
+    shown: (el) => shownAtIntensity(el, intensity),
     image: (id) => (id ? getImage(id) : null),
     render3d: (el) => get3DRender(el, project, slide, brand, scale3d),
     error3d: (el) => get3DError(el, project, slide, brand, scale3d),

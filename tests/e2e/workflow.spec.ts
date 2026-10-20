@@ -151,10 +151,13 @@ test('complete carousel workflow: create, edit, save, reload, export', async ({ 
   await blur.fill('41')
   await expect.poll(() => state<number>(page, 'return ed.project.slides.find(s => s.id === ed.activeSlideId).elements.find(e => e.type === "prediction").blurIntensity')).toBe(41)
 
-  // 14. Add a Telegram promotional slide (the templates panel is still open).
+  // 14. Add the community promotional slide (the templates panel is still open).
   if (!(await page.getByTestId('template-community').isVisible())) await page.getByTestId('tab-templates').click()
   await page.getByTestId('template-community').getByRole('button').first().click()
   await expect(page.getByTestId('slide-thumb')).toHaveCount(10)
+  // Exported content never mentions external messaging platforms.
+  const platformMentions = await state<number>(page, 'return ed.project.slides.flatMap(s => s.elements).filter(e => e.type === "text" && /telegram|t\\.me\\//i.test(e.text)).length')
+  expect(platformMentions).toBe(0)
 
   // 15–17. Save, reload and verify the project is intact.
   await page.getByRole('button', { name: 'Guardar', exact: true }).click()

@@ -207,11 +207,16 @@ export function TacticsProps({ el }: { el: TacticsElement }) {
       </Section>
       <Section title="Jugadores">
         <Row label="Estilo">
-          <Segmented value={t.playerStyle} onChange={(v) => setT((tt) => void (tt.playerStyle = v))} options={[{ value: 'disc', label: 'Disco' }, { value: 'shirt', label: 'Camiseta' }, { value: 'ring', label: 'Anillo' }]} />
+          <Segmented value={t.playerStyle} onChange={(v) => setT((tt) => void (tt.playerStyle = v))} options={[{ value: 'flat', label: 'Plano' }, { value: 'disc', label: 'Disco' }, { value: 'shirt', label: 'Camiseta' }, { value: 'ring', label: 'Anillo' }]} />
         </Row>
-        <Slider label="Tamaño" min={8} max={60} step={1} value={t.playerSize} onChange={(v) => setT((tt) => void (tt.playerSize = v))} />
+        <Slider label="Tamaño" min={8} max={70} step={1} value={t.playerSize} onChange={(v) => setT((tt) => void (tt.playerSize = v))} />
         <Toggle label="Dorsales" checked={t.showNumbers} onChange={(v) => setT((tt) => void (tt.showNumbers = v))} />
         <Toggle label="Etiquetas con nombre" checked={t.showLabels} onChange={(v) => setT((tt) => void (tt.showLabels = v))} />
+        <Row label="Etiquetas">
+          <Segmented value={t.labelStyle ?? 'pill'} onChange={(v) => setT((tt) => void (tt.labelStyle = v))} options={[{ value: 'text', label: 'Texto limpio' }, { value: 'pill', label: 'Píldora' }]} />
+        </Row>
+        <ColorField label="Color de destacado" value={t.highlightColor ?? '$accent'} onChange={(c) => setT((tt) => void (tt.highlightColor = c))} />
+        <Slider label="Atenuar jugadores no destacados" value={1 - (t.dimOthers ?? 1)} format={(v) => (v < 0.01 ? 'No' : `${Math.round(v * 100)}%`)} onChange={(v) => setT((tt) => void (tt.dimOthers = v < 0.01 ? undefined : 1 - v))} />
         <Slider label="Brillo de flechas y destacados" value={t.glow} onChange={(v) => setT((tt) => void (tt.glow = v))} />
       </Section>
       <TacticsCore el={el} />

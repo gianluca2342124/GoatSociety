@@ -306,11 +306,15 @@ export function ChartsPanel() {
   const { W } = canvasSize()
   const w = W - 160
   const items: { label: string; run: () => void }[] = [
-    { label: 'Barras enfrentadas', run: () => insertElement('statBars', { style: 'dual', width: w, height: 640, x: 80 }) },
-    { label: 'Barras de proporción', run: () => insertElement('statBars', { style: 'split', width: w, height: 560, x: 80 }) },
-    { label: 'Barras apiladas', run: () => insertElement('statBars', { style: 'stacked', width: w, height: 700, x: 80, maxRows: 3 }) },
-    { label: 'Tarjeta de métrica', run: () => insertElement('statBars', { style: 'split', width: 440, height: 230, maxRows: 1, valueSize: 80 }) },
-    { label: 'Dato destacado', run: () => insertElement('statNumber', { width: w, height: 380, x: 80 }) },
+    { label: 'Comparativa editorial', run: () => insertElement('statBars', { style: 'editorial', showCrests: true, width: w, height: 820, x: 80 }) },
+    { label: 'Cifra gigante', run: () => insertElement('statNumber', { layout: 'hero', width: w, height: 560, x: 80, valueSize: 300 }) },
+    { label: 'Ranking', run: () => insertElement('ranking', { width: w, x: 80 }) },
+    { label: 'Probabilidad 1X2', run: () => insertElement('probability', { width: w, x: 80 }) },
+    { label: 'Barras enfrentadas', run: () => insertElement('statBars', { style: 'dual', width: w, height: 640, x: 80, valueSize: 64, labelSize: 26, barHeight: 14, rowGap: 34, maxRows: 5 }) },
+    { label: 'Barras de proporción', run: () => insertElement('statBars', { style: 'split', width: w, height: 560, x: 80, valueSize: 64, labelSize: 26, barHeight: 14, rowGap: 34, maxRows: 5 }) },
+    { label: 'Barras apiladas', run: () => insertElement('statBars', { style: 'stacked', width: w, height: 700, x: 80, maxRows: 3, valueSize: 64, labelSize: 26, barHeight: 14, rowGap: 34 }) },
+    { label: 'Tarjeta de métrica', run: () => insertElement('statBars', { style: 'split', width: 440, height: 230, maxRows: 1, valueSize: 80, labelSize: 26, barHeight: 14 }) },
+    { label: 'Dato apilado', run: () => insertElement('statNumber', { layout: 'stacked', width: w, height: 380, x: 80, valueSize: 200 }) },
     { label: 'Dato en tarjeta', run: () => insertElement('statNumber', { layout: 'card', width: w, height: 320, x: 80, valueSize: 150 }) },
     { label: 'Anillo de progreso', run: () => insertElement('progressRing', {}) },
     { label: 'Racha (forma)', run: () => insertElement('formRow', {}) },
@@ -321,6 +325,7 @@ export function ChartsPanel() {
     { label: 'Pronóstico', run: () => insertElement('prediction', { mode: 'plain', width: w, x: 80 }) },
     { label: 'Pronóstico bloqueado', run: () => insertElement('prediction', { mode: 'locked', width: w, x: 80, showNote: false }) },
     { label: 'Pronóstico revelado', run: () => insertElement('prediction', { mode: 'revealed', width: w, x: 80 }) },
+    { label: 'Pronóstico en tarjeta', run: () => insertElement('prediction', { mode: 'plain', chrome: 'card', showMatch: true, width: w, x: 80 }) },
     { label: 'Resultados verificados', run: () => insertElement('resultsList', { width: w, x: 80 }) },
     { label: 'Escudo local', run: () => insertElement('crest', { side: 'home', width: 360, height: 360 }) },
     { label: 'Escudo visitante', run: () => insertElement('crest', { side: 'away', width: 360, height: 360 }) },

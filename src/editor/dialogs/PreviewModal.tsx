@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, Music2, Share2, Smartphone, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, Monitor, Music2, ScanLine, Share2, Smartphone, X } from 'lucide-react'
+import { platformZones } from '../../model/formats'
 import { useEditor } from '../../store/editor'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
@@ -14,12 +15,15 @@ export function PreviewModal() {
   const [i, setI] = useState(Math.max(0, project.slides.findIndex((s) => s.id === activeId)))
   const [url, setUrl] = useState('')
   const [phone, setPhone] = useState(false)
+  // Real mobile-feed size: the slide at ≈390 CSS px wide, like on a phone.
+  const [real, setReal] = useState(true)
+  const [guides, setGuides] = useState(false)
   const close = () => useUI.getState().set({ modal: null })
   const n = project.slides.length
   useEffect(() => {
     let alive = true
     setUrl('')
-    const scale = Math.min(1, (window.innerHeight * 1.6) / project.format.height)
+    const scale = Math.min(1, Math.max((window.innerHeight * 1.6) / project.format.height, (400 * (window.devicePixelRatio || 1)) / project.format.width))
     void renderSlideCanvas(project, project.slides[i], brand, { scale, transparent: false, format: 'png' }).then((c) => alive && setUrl(c.toDataURL('image/jpeg', 0.92)))
     return () => {
       alive = false
@@ -43,8 +47,14 @@ export function PreviewModal() {
           Vista previa · {String(i + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" className="btn" data-active={phone} onClick={() => setPhone(!phone)}>
-            <Smartphone size={14} /> {phone ? 'Ocultar interfaz' : 'Simular interfaz móvil'}
+          <button type="button" className="btn" data-active={real} aria-pressed={real} title="Muestra la diapositiva a ≈390 px de ancho, el tamaño real en un móvil" onClick={() => setReal(!real)}>
+            {real ? <Smartphone size={14} /> : <Monitor size={14} />} {real ? 'Tamaño real (móvil)' : 'Ajustar a pantalla'}
+          </button>
+          <button type="button" className="btn" data-active={guides} aria-pressed={guides} title="Zonas que tapa la interfaz de TikTok / Instagram (no se exporta)" onClick={() => setGuides(!guides)}>
+            <ScanLine size={14} /> Zonas seguras
+          </button>
+          <button type="button" className="btn" data-active={phone} aria-pressed={phone} onClick={() => setPhone(!phone)}>
+            <Smartphone size={14} /> {phone ? 'Ocultar interfaz' : 'Simular interfaz'}
           </button>
           <button type="button" className="icon-btn" aria-label="Cerrar vista previa" onClick={close}>
             <X size={18} />
@@ -55,8 +65,25 @@ export function PreviewModal() {
         <button type="button" className="icon-btn h-12 w-12 rounded-full border border-line" aria-label="Anterior" disabled={i === 0} onClick={() => setI(i - 1)}>
           <ChevronLeft size={22} />
         </button>
-        <div className="relative h-full max-h-[86vh] overflow-hidden rounded-[18px] bg-ink shadow-2xl ring-1 ring-white/10" style={{ aspectRatio: `${ratio}` }}>
+        <div
+          className={real ? 'relative shrink-0 overflow-hidden rounded-[30px] bg-ink shadow-2xl ring-[9px] ring-[#1b1b1d]' : 'relative h-full max-h-[86vh] overflow-hidden rounded-[18px] bg-ink shadow-2xl ring-1 ring-white/10'}
+          style={real ? { width: 390, height: 390 / ratio, maxHeight: '84vh', aspectRatio: `${ratio}` } : { aspectRatio: `${ratio}` }}
+          data-testid="preview-frame"
+        >
           {url ? <img src={url} alt={`Diapositiva ${i + 1}`} className="h-full w-full object-contain" /> : <div className="flex h-full w-full items-center justify-center"><Spinner size={28} /></div>}
+          {guides && (
+            <div className="pointer-events-none absolute inset-0">
+              {platformZones(project.format).map((z, k) => (
+                <div
+                  key={k}
+                  className="absolute flex items-start bg-[rgba(255,64,85,0.18)] p-1 text-[9px] font-semibold tracking-wide text-[#ffc4cb] uppercase outline outline-1 outline-[rgba(255,64,85,0.55)]"
+                  style={{ left: `${(z.x / project.format.width) * 100}%`, top: `${(z.y / project.format.height) * 100}%`, width: `${(z.w / project.format.width) * 100}%`, height: `${(z.h / project.format.height) * 100}%` }}
+                >
+                  {z.label}
+                </div>
+              ))}
+            </div>
+          )}
           {phone && (
             <div className="pointer-events-none absolute inset-0 text-white">
               <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
@@ -88,6 +115,7 @@ export function PreviewModal() {
           <ChevronRight size={22} />
         </button>
       </div>
+      {real && <p className="-mt-3 pb-2 text-center text-[11px] text-dim">Tamaño real de un móvil (≈390 px de ancho). Si se lee aquí en 2 segundos, funciona en el feed.</p>}
       <div className="flex justify-center gap-1.5 pb-5">
         {project.slides.map((s, k) => (
           <button key={s.id} type="button" aria-label={`Ir a diapositiva ${k + 1}`} onClick={() => setI(k)} className={`h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-gold' : 'w-1.5 bg-white/30'}`} />

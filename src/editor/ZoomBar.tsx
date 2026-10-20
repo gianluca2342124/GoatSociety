@@ -31,6 +31,9 @@ export function ZoomBar() {
       <button type="button" className="icon-btn" aria-label="Ajustar a pantalla" title="Ajustar (0)" onClick={() => set({ autoFit: true })}>
         <Maximize size={15} />
       </button>
+      <button type="button" className="rounded-md px-2 py-1 text-[11px] font-semibold text-muted hover:bg-white/5 hover:text-ivory" title="Ver a tamaño real de móvil (≈390 px de ancho)" aria-label="Tamaño móvil" onClick={() => setZoom(390 / project.format.width)}>
+        Móvil
+      </button>
       <div className="mx-1 h-5 w-px bg-line" />
       <button type="button" className="icon-btn" data-active={showGrid} aria-pressed={showGrid} aria-label="Cuadrícula" title="Mostrar cuadrícula" onClick={() => set({ showGrid: !showGrid })}>
         <Grid3x3 size={15} />

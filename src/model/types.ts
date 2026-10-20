@@ -72,7 +72,16 @@ export interface BaseElement {
   visible: boolean
   locked: boolean
   fx?: ElementFx
+  /**
+   * Visual intensity this element needs to be shown (GOAT EDITORIAL presets).
+   * 'editorial' hides it on Minimal slides, 'cinematic' only shows it on
+   * Cinematic slides. Undefined = always shown. Never deleted, only hidden.
+   */
+  minIntensity?: 'editorial' | 'cinematic'
 }
+
+/** Slide visual intensity (non-destructive creative preset). */
+export type Intensity = 'minimal' | 'editorial' | 'cinematic'
 
 // ── Text ────────────────────────────────────────────────────────────────────
 export interface TextElement extends BaseElement {
@@ -155,7 +164,12 @@ export interface StatBarsElement extends BaseElement {
   /** For source 'match': which match stats to include (empty = all). */
   statIds: ID[]
   maxRows: number
-  style: 'dual' | 'split' | 'stacked'
+  /** 'editorial' = huge numbers + one thick proportional split bar per row. */
+  style: 'dual' | 'split' | 'stacked' | 'editorial'
+  /** 'leader' paints the leading side with the accent and the other neutral. Undefined = team colors. */
+  colorMode?: 'teams' | 'leader'
+  /** Accent used by colorMode 'leader' (default $accent). */
+  accentColor?: ColorValue
   scaleMode: 'pair' | 'fixed' | 'global'
   fixedMax: number
   homeColor: ColorValue
@@ -187,8 +201,9 @@ export interface StatNumberElement extends BaseElement {
   accentColor: ColorValue
   labelColor: ColorValue
   textColor: ColorValue
-  layout: 'stacked' | 'inline' | 'card'
-  align: 'left' | 'center'
+  /** 'hero' = giant number, large label, short support line (editorial). */
+  layout: 'stacked' | 'inline' | 'card' | 'hero'
+  align: 'left' | 'center' | 'right'
   cardFill: ColorValue
   cardOpacity: number
 }
@@ -214,7 +229,8 @@ export interface FormRowElement extends BaseElement {
   type: 'formRow'
   source: 'home' | 'away' | 'custom'
   results: FormResult[]
-  shape: 'circle' | 'square' | 'pill'
+  /** 'letter' = flat letters only, 'dot' = flat dots (editorial, no chips). */
+  shape: 'circle' | 'square' | 'pill' | 'letter' | 'dot'
   winColor: ColorValue
   drawColor: ColorValue
   lossColor: ColorValue
@@ -271,6 +287,8 @@ export interface PlayerListElement extends BaseElement {
   rowGap: number
   title: string
   align: 'left' | 'right'
+  /** 'editorial' = open rows with hairline separators, no cards. Undefined = cards. */
+  variant?: 'card' | 'editorial'
 }
 
 export interface MatchListElement extends BaseElement {
@@ -284,6 +302,8 @@ export interface MatchListElement extends BaseElement {
   timeFont: string
   showCompetition: boolean
   maxItems: number
+  /** 'editorial' = open rows with hairline separators, no cards. Undefined = cards. */
+  variant?: 'card' | 'editorial'
 }
 
 export interface PredictionElement extends BaseElement {
@@ -305,6 +325,8 @@ export interface PredictionElement extends BaseElement {
   cornerRadius: number
   revealStamp: string
   headlineFont: string
+  /** 'none' = editorial layout without card, header, pills or gauges. Undefined = card. */
+  chrome?: 'card' | 'none'
 }
 
 export interface ResultsListElement extends BaseElement {
@@ -320,6 +342,63 @@ export interface ResultsListElement extends BaseElement {
   rowGap: number
   font: string
   cardColor: ColorValue
+  /** 'editorial' = hero hit-rate summary + open rows. Undefined = cards. */
+  variant?: 'card' | 'editorial'
+}
+
+// ── Ranking & probability (editorial charts) ───────────────────────────────
+export interface RankingRow {
+  id: ID
+  label: string
+  sub: string
+  value: number | null
+  /** Text shown instead of the formatted value (optional). */
+  display: string
+}
+
+export interface RankingElement extends BaseElement {
+  type: 'ranking'
+  rows: RankingRow[]
+  maxRows: number
+  unit: string
+  decimals: number
+  /** Row painted with the accent (-1 = none). */
+  highlightIndex: number
+  showRank: boolean
+  showBars: boolean
+  accentColor: ColorValue
+  textColor: ColorValue
+  mutedColor: ColorValue
+  lineColor: ColorValue
+  barColor: ColorValue
+  nameFont: string
+  valueFont: string
+  nameSize: number
+  valueSize: number
+}
+
+export interface ProbabilityElement extends BaseElement {
+  type: 'probability'
+  home: number | null
+  draw: number | null
+  away: number | null
+  showDraw: boolean
+  homeLabel: string
+  drawLabel: string
+  awayLabel: string
+  /** 'leader' = favourite in the accent, the rest neutral. 'teams' = team colors. */
+  colorMode: 'leader' | 'teams'
+  accentColor: ColorValue
+  trackColor: ColorValue
+  textColor: ColorValue
+  mutedColor: ColorValue
+  valueFont: string
+  labelFont: string
+  valueSize: number
+  labelSize: number
+  barHeight: number
+  /** Normalise the three values to 100 % for the bar (labels keep the typed numbers). */
+  normalize: boolean
 }
 
 // ── Tactics ────────────────────────────────────────────────────────────────
@@ -368,13 +447,19 @@ export interface TacticsData {
   showAway: boolean
   players: TacticalPlayer[]
   annotations: TacticalAnnotation[]
-  playerStyle: 'disc' | 'shirt' | 'ring'
+  playerStyle: 'disc' | 'shirt' | 'ring' | 'flat'
   playerSize: number
   showLabels: boolean
   showNumbers: boolean
   /** Perspective tilt for camera 'perspective' (0..1). */
   tilt: number
   glow: number
+  /** Opacity for players that are not highlighted (focus one action). Undefined = 1. */
+  dimOthers?: number
+  /** 'text' = plain bold labels instead of pills (editorial). */
+  labelStyle?: 'pill' | 'text'
+  /** Highlight ring color (default $accent). */
+  highlightColor?: ColorValue
 }
 
 export interface TacticsElement extends BaseElement {
@@ -422,7 +507,8 @@ export interface MascotElement extends BaseElement {
 
 export interface BrandMarkElement extends BaseElement {
   type: 'brandMark'
-  variant: 'watermark' | 'header' | 'badge' | 'signature' | 'wordmark'
+  /** 'editorial' = small mark + name with tight tracking; 'icon' = goat mark only. */
+  variant: 'watermark' | 'header' | 'badge' | 'signature' | 'wordmark' | 'editorial' | 'icon'
   color: ColorValue
   accentColor: ColorValue
   useLogo: boolean
@@ -491,6 +577,8 @@ export type SlideElement =
   | MatchListElement
   | PredictionElement
   | ResultsListElement
+  | RankingElement
+  | ProbabilityElement
   | TacticsElement
   | Stadium3DElement
   | Model3DElement
@@ -603,6 +691,15 @@ export interface Slide {
   background: SlideBackground
   elements: SlideElement[]
   overrides: MatchOverrides
+  /** Slide accent (token or hex). Undefined = project style → brand accent. */
+  accent?: ColorValue
+  /** Slide visual intensity. Undefined = project style → 'editorial'. */
+  intensity?: Intensity
+}
+
+export interface ProjectStyle {
+  accent?: ColorValue
+  intensity?: Intensity
 }
 
 export interface Project {
@@ -619,6 +716,8 @@ export interface Project {
   slides: Slide[]
   /** Show "01 / 07" page numbers on slides that contain a page token. */
   pageNumbers: boolean
+  /** Project-wide creative preset (accent + intensity). */
+  style?: ProjectStyle
 }
 
 // ── Brand kit (global) ─────────────────────────────────────────────────────
@@ -632,6 +731,10 @@ export interface BrandPalette {
   muted: string
   positive: string
   negative: string
+  /** Default single accent for slides (GOAT EDITORIAL). */
+  accent: string
+  /** Hairline separators. */
+  line: string
 }
 
 export interface BrandFonts {
@@ -646,8 +749,14 @@ export interface BrandFonts {
 export interface BrandKit {
   name: string
   handle: string
+  /**
+   * Optional external community destination (internal, never rendered by
+   * default). Field names kept for backward compatibility with saved kits.
+   */
   telegramUrl: string
   telegramLabel: string
+  /** Design-system version of the kit (used for safe default upgrades). */
+  brandVersion?: number
   logoAssetId: ID | null
   logoTreatment: 'original' | 'ivory' | 'gold' | 'black'
   palette: BrandPalette

@@ -19,7 +19,7 @@ export function formatOf(preset: FormatPreset): CanvasFormat {
 export function safeArea(format: CanvasFormat): { top: number; bottom: number; left: number; right: number } {
   switch (format.preset) {
     case 'story':
-      return { top: 230, bottom: 420, left: 60, right: 150 }
+      return { top: 200, bottom: 340, left: 48, right: 150 }
     case 'portrait':
       return { top: 70, bottom: 140, left: 60, right: 60 }
     case 'square':
@@ -27,4 +27,34 @@ export function safeArea(format: CanvasFormat): { top: number; bottom: number; l
     case 'landscape':
       return { top: 60, bottom: 120, left: 100, right: 100 }
   }
+}
+
+export interface PlatformZone {
+  x: number
+  y: number
+  w: number
+  h: number
+  label: string
+}
+
+/**
+ * Areas covered by the platform interface (TikTok photo mode / Reels / Stories
+ * for 9:16, Instagram feed chrome for the other formats). Editor guide only —
+ * never exported.
+ */
+export function platformZones(format: CanvasFormat): PlatformZone[] {
+  const { width: W, height: H } = format
+  const s = safeArea(format)
+  if (format.preset === 'story') {
+    const buttonsTop = Math.round(H * 0.45)
+    return [
+      { x: 0, y: 0, w: W, h: s.top, label: 'Estado y pestañas' },
+      { x: W - s.right, y: buttonsTop, w: s.right, h: H - s.bottom - buttonsTop, label: 'Botones' },
+      { x: 0, y: H - s.bottom, w: W, h: s.bottom, label: 'Descripción y música' },
+    ]
+  }
+  return [
+    { x: 0, y: 0, w: W, h: s.top, label: 'Interfaz' },
+    { x: 0, y: H - s.bottom, w: W, h: s.bottom, label: 'Interfaz' },
+  ]
 }

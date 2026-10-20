@@ -1,7 +1,7 @@
 // Offscreen Three.js renders, cached as 2D canvases so they composite into the
 // same canvas pipeline used by the editor and the exporter.
 import type { BrandKit, Model3DElement, Project, Slide, SlideElement, Stadium3DElement } from '../../model/types'
-import { applyOverrides, resolveColor } from '../../model/tokens'
+import { applyOverrides, resolveColor, slideAccent } from '../../model/tokens'
 import { hashKey } from '../paint/bitmapCache'
 import { useAssetVersion } from '../assetCache'
 
@@ -22,7 +22,8 @@ export const EDITOR_3D_SCALE = 1.25
 
 function resolve(el: Stadium3DElement | Model3DElement, project: Project, slide: Slide, brand: BrandKit, scale: number): Resolved3D {
   const match = applyOverrides(project.match, slide.overrides)
-  const c = (v: string) => resolveColor(v, { match, brand })
+  const accent = slideAccent(project, slide)
+  const c = (v: string) => resolveColor(v, { match, brand, accent })
   const colors: Record<string, string> = {}
   if (el.type === 'stadium3d') {
     colors.home = c(el.tactics.homeColor)
@@ -31,7 +32,8 @@ function resolve(el: Stadium3DElement | Model3DElement, project: Project, slide:
     colors.pitch2 = c(el.tactics.pitchColor2)
     colors.line = c(el.tactics.lineColor)
     colors.accent = c(el.lighting.accent)
-    colors.primary = c('$primary')
+    // Highlight rings/spots follow the slide accent (GOAT EDITORIAL).
+    colors.primary = c(el.tactics.highlightColor ?? '$accent')
     colors.positive = c('$positive')
     colors.negative = c('$negative')
     colors.text = c('$text')

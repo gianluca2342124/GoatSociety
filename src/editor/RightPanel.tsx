@@ -25,15 +25,17 @@ import {
   Unlock,
 } from 'lucide-react'
 import type { SlideElement } from '../model/types'
+import { shownAtIntensity, slideIntensity } from '../model/tokens'
 import { activeSlideOf, useActiveSlide, useEditor } from '../store/editor'
 import { useUI } from '../store/ui'
 import { ELEMENT_LABELS } from '../model/elements'
 import { AppearanceSection, AssetPicker, FillEditor, TransformSection } from './props/common'
 import { BrandMarkProps, CrestProps, EffectProps, GlassProps, IconProps, ImageProps, MascotProps, Model3DProps, ShapeProps, TextProps } from './props/basicProps'
-import { FormRowProps, MatchListProps, PlayerListProps, PredictionProps, ProgressRingProps, ResultsListProps, StatBarsProps, StatNumberProps, TableProps } from './props/dataProps'
+import { FormRowProps, MatchListProps, PlayerListProps, PredictionProps, ProbabilityProps, ProgressRingProps, RankingProps, ResultsListProps, StatBarsProps, StatNumberProps, TableProps } from './props/dataProps'
 import { Stadium3DProps, TacticsProps } from './props/tacticsProps'
 import { Section, Slider, TextField, Toggle } from '../ui/controls'
 import { buildTemplateSlide, templateById } from '../templates'
+import { SlideStyleSection } from './StylePanel'
 
 function ElementSpecific({ el }: { el: SlideElement }) {
   switch (el.type) {
@@ -75,6 +77,10 @@ function ElementSpecific({ el }: { el: SlideElement }) {
       return <PredictionProps el={el} />
     case 'resultsList':
       return <ResultsListProps el={el} />
+    case 'ranking':
+      return <RankingProps el={el} />
+    case 'probability':
+      return <ProbabilityProps el={el} />
     case 'tactics':
       return <TacticsProps el={el} />
     case 'stadium3d':
@@ -260,6 +266,7 @@ function SlidePanel() {
           )}
         </div>
       </Section>
+      <SlideStyleSection />
       <Section title="Fondo">
         <Toggle label="Fondo transparente (PNG/WebP)" checked={slide.background.transparent} onChange={(v) => setBg({ transparent: v })} />
         {!slide.background.transparent && <FillEditor fill={slide.background.fill} onChange={(f) => setBg({ fill: f })} allowNone={false} label="Color de fondo" />}
@@ -307,7 +314,7 @@ function SlidePanel() {
   )
 }
 
-function LayerRow({ el, selected }: { el: SlideElement; selected: boolean }) {
+function LayerRow({ el, selected, intensityHidden }: { el: SlideElement; selected: boolean; intensityHidden: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: el.id })
   const updateElement = useEditor((s) => s.updateElement)
   const [editing, setEditing] = useState(false)
@@ -328,8 +335,13 @@ function LayerRow({ el, selected }: { el: SlideElement; selected: boolean }) {
         <input autoFocus className="field flex-1 px-1.5 py-0.5 text-[12px]" aria-label="Renombrar capa" value={el.name} onChange={(e) => updateElement(el.id, { name: e.target.value }, { key: `name-${el.id}` })} onBlur={() => setEditing(false)} onKeyDown={(e) => e.key === 'Enter' && setEditing(false)} />
       ) : (
         <span className={`flex-1 truncate ${el.visible ? '' : 'text-dim line-through'}`} onDoubleClick={() => setEditing(true)} title="Doble clic para renombrar">
-          {el.name}
+          <span className={intensityHidden ? 'opacity-45' : ''}>{el.name}</span>
           <span className="ml-1.5 text-[10px] text-dim">{ELEMENT_LABELS[el.type]}</span>
+          {intensityHidden && (
+            <span className="ml-1.5 text-[10px] text-dim" title="Oculto por la intensidad visual de la diapositiva">
+              · {el.minIntensity === 'cinematic' ? 'solo cinemático' : 'oculto en mínimo'}
+            </span>
+          )}
         </span>
       )}
       <button type="button" className="icon-btn h-6 w-6" aria-label={el.visible ? 'Ocultar capa' : 'Mostrar capa'} onClick={(e) => (e.stopPropagation(), updateElement(el.id, { visible: !el.visible }))}>
@@ -344,6 +356,7 @@ function LayerRow({ el, selected }: { el: SlideElement; selected: boolean }) {
 
 export function LayersPanel() {
   const slide = useActiveSlide()
+  const project = useEditor((s) => s.project)
   const selection = useEditor((s) => s.selection)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   if (!slide) return null
@@ -361,7 +374,7 @@ export function LayersPanel() {
         <SortableContext items={reversed.map((e) => e.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0.5">
             {reversed.map((el) => (
-              <LayerRow key={el.id} el={el} selected={selection.includes(el.id)} />
+              <LayerRow key={el.id} el={el} selected={selection.includes(el.id)} intensityHidden={!shownAtIntensity(el, slideIntensity(project, slide))} />
             ))}
           </div>
         </SortableContext>

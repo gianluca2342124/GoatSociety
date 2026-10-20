@@ -1,4 +1,4 @@
-import type { AssetKind, AssetRecord, BrandKit, Project } from '../model/types'
+import type { AssetKind, AssetRecord, BrandKit, Project, SlideElement } from '../model/types'
 import { SCHEMA_VERSION, defaultBackground, sampleAgenda } from '../model/defaults'
 import { uid } from '../model/ids'
 import { blobToArrayBuffer } from './assets'
@@ -103,8 +103,27 @@ export function bundleAssetToRecord(a: BundleAsset): AssetRecord {
   return { id: a.id, name: a.name, kind: a.kind, mime: a.mime, blob, width: a.width, height: a.height, size: blob.size, createdAt: Date.now() }
 }
 
+/**
+ * Schema 2 (GOAT EDITORIAL): exported content must not mention external
+ * messaging platforms. Old built-in texts that printed the community link
+ * become a neutral profile CTA. Everything else is left untouched.
+ */
+function migrateElementV2(el: SlideElement): SlideElement {
+  if (el.type !== 'text') return el
+  let text = el.text
+  if (/\{telegram(\.label)?\}/.test(text)) {
+    text = text
+      .replace(/\{telegram\.label\}\s*·\s*\{telegram\}/g, 'Link en la bio ↗')
+      .replace(/\{telegram\.label\}/g, 'Link en la bio')
+      .replace(/\{telegram\}/g, 'Link en la bio')
+  }
+  const name = el.name === 'Botón Telegram' ? 'Llamada a la acción' : el.name === 'Enlace Telegram' ? 'Llamada al perfil' : el.name
+  return text === el.text && name === el.name ? el : { ...el, text, name }
+}
+
 /** Fill in fields added in later versions so old files keep working. */
 export function migrateProject(p: Project): Project {
+  const from = p.schemaVersion ?? 1
   const out: Project = {
     ...p,
     kind: p.kind ?? 'carousel',
@@ -119,7 +138,7 @@ export function migrateProject(p: Project): Project {
       templateId: s.templateId ?? null,
       background: { ...defaultBackground(), ...(s.background ?? {}) },
       overrides: s.overrides ?? {},
-      elements: (s.elements ?? []).filter((e) => e && typeof e === 'object' && 'type' in e),
+      elements: (s.elements ?? []).filter((e) => e && typeof e === 'object' && 'type' in e).map((e) => (from < 2 ? migrateElementV2(e) : e)),
     })),
   }
   out.match = {

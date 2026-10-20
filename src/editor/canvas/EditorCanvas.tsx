@@ -9,7 +9,7 @@ import { useAssetVersion } from '../../render/assetCache'
 import { makeRenderCtx, type RenderCtx } from '../../render/context'
 import { paintBackground, paintElementLocal, paintWatermark } from '../../render/painters'
 import type { SlideElement } from '../../model/types'
-import { safeArea } from '../../model/formats'
+import { platformZones, safeArea } from '../../model/formats'
 import { TacticsOverlay } from './TacticsOverlay'
 import { TextEditOverlay } from './TextEditOverlay'
 
@@ -62,8 +62,8 @@ function ElementNode({
       x={el.x}
       y={el.y}
       rotation={el.rotation}
-      visible={el.visible}
-      listening={!el.locked && el.visible}
+      visible={el.visible && rc.shown(el)}
+      listening={!el.locked && el.visible && rc.shown(el)}
       draggable={!el.locked}
       onMouseDown={(e) => onSelect(e, el)}
       onTouchStart={(e) => onSelect(e, el)}
@@ -189,7 +189,7 @@ export function EditorCanvas() {
     tr.getLayer()?.batchDraw()
   }, [selection, slide, editingTextId, tacticsEditId])
 
-  const others = useMemo(() => slide.elements.filter((e) => e.visible && !selection.includes(e.id) && !(e.type === 'effect' && e.width >= W * 0.95)), [slide.elements, selection, W])
+  const others = useMemo(() => slide.elements.filter((e) => e.visible && rc.shown(e) && !selection.includes(e.id) && !(e.type === 'effect' && e.width >= W * 0.95)), [slide.elements, selection, W, rc])
 
   const onSelect = useCallback(
     (e: KonvaEventObject<MouseEvent | TouchEvent>, el: SlideElement) => {
@@ -363,7 +363,7 @@ export function EditorCanvas() {
       if (x1 - x0 < 4 && y1 - y0 < 4) return
       const s = activeSlideOf(useEditor.getState())
       if (!s) return
-      const hits = s.elements.filter((el) => el.visible && !el.locked && el.x < x1 && el.x + el.width > x0 && el.y < y1 && el.y + el.height > y0).map((el) => el.id)
+      const hits = s.elements.filter((el) => el.visible && rc.shown(el) && !el.locked && el.x < x1 && el.x + el.width > x0 && el.y < y1 && el.y + el.height > y0).map((el) => el.id)
       const cur = useEditor.getState().selection
       useEditor.getState().select(m.add ? [...new Set([...cur, ...hits])] : hits)
     }
@@ -453,10 +453,14 @@ export function EditorCanvas() {
   const safeScene = useCallback(
     (ctx: Konva.Context) => {
       const c = ctx._context
-      c.fillStyle = 'rgba(239,70,85,0.12)'
-      c.fillRect(0, 0, W, safe.top)
-      c.fillRect(0, H - safe.bottom, W, safe.bottom)
-      c.fillRect(W - safe.right, safe.top, safe.right, H - safe.top - safe.bottom)
+      c.fillStyle = 'rgba(255,64,85,0.13)'
+      c.font = `600 ${12 / zoom}px "Inter Variable"`
+      for (const z of platformZones(project.format)) {
+        c.fillStyle = 'rgba(255,64,85,0.13)'
+        c.fillRect(z.x, z.y, z.w, z.h)
+        c.fillStyle = 'rgba(255,190,190,0.8)'
+        c.fillText(z.label.toUpperCase(), z.x + 8 / zoom, z.y + 18 / zoom)
+      }
       c.setLineDash([12 / zoom, 8 / zoom])
       c.strokeStyle = 'rgba(239,70,85,0.8)'
       c.lineWidth = 1.5 / zoom
@@ -466,7 +470,7 @@ export function EditorCanvas() {
       c.font = `600 ${12 / zoom}px "Inter Variable"`
       c.fillText('ZONA DE INTERFAZ DE LA PLATAFORMA (solo guía, no se exporta)', safe.left, safe.top - 8 / zoom)
     },
-    [W, H, safe, zoom],
+    [W, H, safe, zoom, project.format],
   )
 
   const editingEl = slide.elements.find((e) => e.id === editingTextId)

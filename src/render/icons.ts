@@ -49,7 +49,7 @@ export const ICONS: Record<string, { node: IconNode; label: string }> = {
   unlock: { node: LockOpen as IconNode, label: 'Abierto' },
   check: { node: Check as IconNode, label: 'Acierto' },
   x: { node: X as IconNode, label: 'Fallo' },
-  send: { node: Send as IconNode, label: 'Telegram' },
+  send: { node: Send as IconNode, label: 'Enviar' },
   trophy: { node: Trophy as IconNode, label: 'Trofeo' },
   flame: { node: Flame as IconNode, label: 'Racha' },
   target: { node: Target as IconNode, label: 'Objetivo' },

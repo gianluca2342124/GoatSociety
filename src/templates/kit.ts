@@ -1,7 +1,7 @@
 // Building blocks shared by all templates. Templates are parameterized
 // compositions of editable elements laid out relative to the canvas format.
 import * as E from '../model/elements'
-import type { CanvasFormat, EffectElement, Fill, SlideBackground, SlideElement, TextElement } from '../model/types'
+import type { BrandMarkElement, CanvasFormat, CrestElement, EffectElement, Fill, ShapeElement, SlideBackground, SlideElement, TextElement } from '../model/types'
 import { defaultBackground } from '../model/defaults'
 
 export interface TCtx {
@@ -10,13 +10,17 @@ export interface TCtx {
   /** Content column width and left edge. */
   cw: number
   left: number
+  /** Right edge of the content column. */
+  right: number
   cx: number
-  /** Typographic scale relative to a 1080px column. */
+  /** Typographic scale relative to a 1080px story (936px column). */
   s: number
-  /** Vertical zones. */
+  /** Signature row (top of the slide). */
   top: number
+  /** First and last y for primary content (mobile safe area: TikTok/IG UI). */
   contentTop: number
   contentBottom: number
+  /** Legacy footer row. */
   footer: number
   ch: number
   landscape: boolean
@@ -25,11 +29,26 @@ export interface TCtx {
   v: number
 }
 
+/**
+ * GOAT EDITORIAL type scale (px on a 1080×1920 story, multiplied by t.s).
+ * hero 100–170 · main stat 130–250+ · secondary 55–85 · support 38–55 · labels 32–45.
+ */
+export const TYPE = {
+  mega: 320,
+  stat: 230,
+  hero: 150,
+  h2: 96,
+  secondary: 64,
+  support: 46,
+  label: 38,
+  micro: 30,
+} as const
+
 export function makeCtx(format: CanvasFormat): TCtx {
   const { width: W, height: H, preset } = format
   const landscape = preset === 'landscape'
   const story = preset === 'story'
-  const margin = landscape ? 110 : 80
+  const margin = landscape ? 110 : 72
   const cw = landscape ? Math.min(W - margin * 2, 1240) : W - margin * 2
   const left = (W - cw) / 2
   let top: number
@@ -38,31 +57,191 @@ export function makeCtx(format: CanvasFormat): TCtx {
   let footer: number
   switch (preset) {
     case 'story':
+      // Keep the message clear of the platform UI (status bar/tabs on top,
+      // caption and buttons at the bottom).
       top = 150
-      contentTop = 290
-      contentBottom = H - 330
+      contentTop = 270
+      contentBottom = H - 320
       footer = H - 250
       break
     case 'portrait':
-      top = 68
-      contentTop = 165
-      contentBottom = H - 135
+      top = 64
+      contentTop = 150
+      contentBottom = H - 100
       footer = H - 84
       break
     default:
-      top = 56
-      contentTop = 150
-      contentBottom = H - 120
+      top = 52
+      contentTop = 132
+      contentBottom = H - 84
       footer = H - 72
   }
   const ch = contentBottom - contentTop
-  return { W, H, cw, left, cx: W / 2, s: Math.min(1, cw / 920), top, contentTop, contentBottom, footer, ch, landscape, story, v: Math.min(1, ch / 1220) }
+  return { W, H, cw, left, right: left + cw, cx: W / 2, s: Math.min(1, cw / 936), top, contentTop, contentBottom, footer, ch, landscape, story, v: Math.min(1, ch / 1290) }
 }
 
 /** y/h for a fraction range of the content zone. */
 export function zone(t: TCtx, from: number, to: number): { y: number; h: number } {
   return { y: t.contentTop + t.ch * from, h: t.ch * (to - from) }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// GOAT EDITORIAL building blocks
+// Black background · big white type · ONE accent ($accent) · one message.
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Solid editorial background. */
+export function ink(): SlideBackground {
+  return bg({ kind: 'solid', color: '$bg' })
+}
+
+/** Size helper: scales a story px value to the format (keeps a sane floor). */
+export function px(t: TCtx, v: number, floor = 0): number {
+  return Math.max(floor, v * Math.min(t.s, t.v + 0.18))
+}
+
+/** Discreet brand signature (top-left by default). */
+export function signature(t: TCtx, p: Partial<BrandMarkElement> = {}): BrandMarkElement {
+  const h = px(t, 44, 28)
+  return E.brandMark({ name: 'Firma', variant: 'editorial', align: 'left', x: t.left, y: t.top, width: 460 * t.s, height: h, color: '$text', accentColor: '$text', ...p })
+}
+
+/** Small goat mark (everyday slides) — never a hero. */
+export function goatMark(t: TCtx, x: number, y: number, size = 64, p: Partial<BrandMarkElement> = {}): BrandMarkElement {
+  const s = px(t, size, 32)
+  return E.brandMark({ name: 'Marca', variant: 'icon', x, y, width: s, height: s, color: '$text', accentColor: '$text', ...p })
+}
+
+/** Headline: Anton, left aligned, tight leading, accent markup [[word]]. */
+export function hl(t: TCtx, content: string, box: { x?: number; y: number; w?: number; h: number }, size: number = TYPE.hero, p: Partial<TextElement> = {}): TextElement {
+  const fs = size * t.s
+  return text(t, content, box, {
+    name: 'Titular',
+    fontFamily: '$headline',
+    fontSize: fs,
+    fontWeight: 400,
+    // Room for Spanish accents (Á, Ú) and Ç between uppercase lines.
+    lineHeight: 1.04,
+    letterSpacing: 0,
+    uppercase: true,
+    align: 'left',
+    verticalAlign: 'top',
+    fill: { kind: 'solid', color: '$text' },
+    accentColor: '$accent',
+    autoFit: true,
+    minFontSize: Math.min(fs, Math.max(44, fs * 0.45)),
+    ...p,
+  })
+}
+
+/** Support line: Inter Tight, secondary gray, sentence case. */
+export function support(t: TCtx, content: string, box: { x?: number; y: number; w?: number; h: number }, size: number = TYPE.support, p: Partial<TextElement> = {}): TextElement {
+  const fs = size * t.s
+  return text(t, content, box, {
+    name: 'Apoyo',
+    fontFamily: '$body',
+    fontSize: fs,
+    fontWeight: 500,
+    lineHeight: 1.22,
+    letterSpacing: 0,
+    uppercase: false,
+    align: 'left',
+    verticalAlign: 'top',
+    fill: { kind: 'solid', color: '$muted' },
+    accentColor: '$text',
+    autoFit: true,
+    minFontSize: Math.max(26, fs * 0.7),
+    ...p,
+  })
+}
+
+/** Label: Barlow Condensed, uppercase, minimal tracking. */
+export function label(t: TCtx, content: string, box: { x?: number; y: number; w?: number; h: number }, size: number = TYPE.label, p: Partial<TextElement> = {}): TextElement {
+  const fs = size * t.s
+  return text(t, content, box, {
+    name: 'Etiqueta',
+    fontFamily: '$label',
+    fontSize: fs,
+    fontWeight: 600,
+    lineHeight: 1.05,
+    letterSpacing: fs * 0.02,
+    uppercase: true,
+    align: 'left',
+    verticalAlign: 'top',
+    fill: { kind: 'solid', color: '$muted' },
+    accentColor: '$accent',
+    autoFit: true,
+    minFontSize: Math.max(24, fs * 0.7),
+    ...p,
+  })
+}
+
+/** Text-only call to action (no pill, no fake button). */
+export function cta(t: TCtx, content: string, box: { x?: number; y: number; w?: number; h?: number }, size = 52, p: Partial<TextElement> = {}): TextElement {
+  const fs = size * t.s
+  return text(t, content, { ...box, h: box.h ?? fs * 1.3 }, {
+    name: 'Llamada a la acción',
+    fontFamily: '$label',
+    fontSize: fs,
+    fontWeight: 700,
+    lineHeight: 1.05,
+    letterSpacing: fs * 0.01,
+    uppercase: true,
+    align: 'left',
+    verticalAlign: 'top',
+    fill: { kind: 'solid', color: '$text' },
+    accentColor: '$accent',
+    autoFit: true,
+    minFontSize: Math.max(26, fs * 0.6),
+    ...p,
+  })
+}
+
+/** Legal line (small, dim). */
+export function disclaimer(t: TCtx, y: number, p: Partial<TextElement> = {}): TextElement {
+  const fs = px(t, 28, 18)
+  return text(t, '{disclaimer}', { y, h: fs * 1.4 }, {
+    name: 'Aviso',
+    fontFamily: '$body',
+    fontSize: fs,
+    fontWeight: 500,
+    lineHeight: 1.2,
+    letterSpacing: 0,
+    uppercase: false,
+    align: 'left',
+    fill: { kind: 'solid', color: '$dim' },
+    autoFit: true,
+    minFontSize: 16,
+    ...p,
+  })
+}
+
+/** Flat hairline separator (#242424). */
+export function rule(t: TCtx, y: number, w = t.cw, x = t.left): ShapeElement {
+  return E.shape({ name: 'Separador', shape: 'rect', x, y, width: w, height: 2, cornerRadius: 0, fill: { kind: 'solid', color: '$line' } })
+}
+
+/** Plain team crest (no glow, no rim). */
+export function crestOf(side: 'home' | 'away', x: number, y: number, size: number, p: Partial<CrestElement> = {}): CrestElement {
+  return E.crest({ name: side === 'home' ? 'Escudo local' : 'Escudo visitante', side, x, y, width: size, height: size, aura: 0, ...p })
+}
+
+/**
+ * Cinematic-only atmosphere: invisible on Minimal/Editorial slides, shown
+ * when the user picks the Cinematic intensity. Never deleted.
+ */
+export function cinematic(t: TCtx, kind: 'spot' | 'stadium' | 'grain' = 'spot'): SlideElement[] {
+  const only = { minIntensity: 'cinematic' as const }
+  const out: SlideElement[] = []
+  if (kind === 'stadium') out.push(fx(t, 'stadiumLights', { color: '#FFFFFF', intensity: 0.35, spread: 0.3, height: t.H * 0.6, ...only }))
+  if (kind === 'spot' || kind === 'stadium') out.push(fx(t, 'spotlight', { color: '#FFFFFF', intensity: 0.1, spread: 0.6, height: t.H * 0.7, ...only }))
+  out.push(vignette(t, 0.7, 0.35))
+  out.push(grain(t, 0.05))
+  for (const e of out) e.minIntensity = 'cinematic'
+  return out
+}
+
+// ── Legacy helpers (kept for compatibility) ───────────────────────────────
 
 // ── Backgrounds & atmosphere ───────────────────────────────────────────────
 

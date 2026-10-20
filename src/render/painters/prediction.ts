@@ -4,7 +4,7 @@ import type { RenderCtx } from '../context'
 import { blurredCopy, deviceScale, ellipsePath, makeCanvas, roundRect, setShadow, type Ctx } from '../paint/canvas'
 import { grainTexture, seeded } from '../paint/noise'
 import { drawLabel, drawLayout, labelWidth } from '../text/draw'
-import { fitText } from '../text/layout'
+import { capHeightOf, fitText } from '../text/layout'
 import { paintCrestBox } from './crest'
 import { paintIconGlyph } from './basic'
 
@@ -40,6 +40,10 @@ function drawLock(ctx: Ctx, style: PredictionElement['lockStyle'], cx: number, c
 }
 
 export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) {
+  if (el.chrome === 'none') {
+    paintPredictionEditorial(ctx, el, rc)
+    return
+  }
   const { width: w, height: h } = el
   const pred = rc.match.predictions[el.predictionIndex] ?? rc.match.predictions[0]
   const accent = rc.color(el.accentColor)
@@ -249,4 +253,159 @@ function paintCrestOffset(ctx: Ctx, rc: RenderCtx, side: 'home' | 'away', x: num
   ctx.translate(x, y)
   paintCrestBox(ctx, side === 'home' ? rc.match.home : rc.match.away, size, size, rc)
   ctx.restore()
+}
+
+/** Solid, flat padlock (no medallion, no glow). */
+export function drawSolidLock(ctx: Ctx, cx: number, cy: number, size: number, color: string, hole: string) {
+  const bw = size * 0.78
+  const bh = size * 0.6
+  const bx = cx - bw / 2
+  const by = cy - size / 2 + size * 0.4
+  const sw = size * 0.13
+  const r = bw * 0.32
+  ctx.save()
+  ctx.beginPath()
+  ctx.moveTo(cx - r, by + 1)
+  ctx.lineTo(cx - r, cy - size / 2 + r + sw / 2)
+  ctx.arc(cx, cy - size / 2 + r + sw / 2, r, Math.PI, 0)
+  ctx.lineTo(cx + r, by + 1)
+  ctx.strokeStyle = color
+  ctx.lineWidth = sw
+  ctx.lineCap = 'butt'
+  ctx.stroke()
+  roundRect(ctx, bx, by, bw, bh, size * 0.08)
+  ctx.fillStyle = color
+  ctx.fill()
+  ellipsePath(ctx, cx, by + bh * 0.42, size * 0.075, size * 0.075)
+  ctx.fillStyle = hole
+  ctx.fill()
+  ctx.fillRect(cx - size * 0.03, by + bh * 0.42, size * 0.06, bh * 0.3)
+  ctx.restore()
+}
+
+/**
+ * GOAT EDITORIAL prediction: no card, no header, no pills, no gauges.
+ * A muted market label, the pick as the hero, the odds as one big accent
+ * number. Locked mode blurs decoy text in place and puts one solid lock on it.
+ */
+function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx) {
+  const { width: w, height: h } = el
+  const pred = rc.match.predictions[el.predictionIndex] ?? rc.match.predictions[0]
+  if (!pred) return
+  const accent = rc.color(el.accentColor)
+  const textC = rc.color(el.textColor)
+  const muted = rc.color('$muted')
+  const locked = el.mode === 'locked'
+  const labelFont = rc.font('$label')
+  const numFont = rc.font('$numbers')
+  const headFont = rc.font(el.headlineFont)
+  type Part = 'stamp' | 'market' | 'pick' | 'odds' | 'conf' | 'note'
+  // Natural sizes at full scale (1080 wide story), shrunk below if needed.
+  const stampS = el.mode === 'revealed' && el.revealStamp ? 46 : 0
+  const marketS = 44
+  const pickS = Math.min(170, w * 0.17)
+  const oddsS = el.showOdds && pred.odds ? Math.min(210, w * 0.2) : 0
+  const confS = el.showConfidence ? 50 : 0
+  const noteStyle = { family: rc.font('$body'), size: 44, weight: 500, italic: false, letterSpacing: 0, lineHeight: 1.25, uppercase: false }
+  const pickText = pred.pick || 'Pronóstico'
+  const pickStyle = { family: headFont, size: pickS, weight: 400, italic: false, letterSpacing: 0, lineHeight: 0.95, uppercase: true }
+  const pickLay = fitText(pickText, pickStyle, w, pickS * 2.05, 40)
+  const noteLay = el.showNote && pred.note ? fitText(pred.note, noteStyle, w, 44 * 1.25 * 3, 28) : null
+  const capOf = (f: string, s: number, wt = 400) => capHeightOf(f, s, wt, false)
+  const heights: Record<Part, number> = {
+    stamp: stampS ? capOf(labelFont, stampS, 700) : 0,
+    market: capOf(labelFont, marketS, 600),
+    pick: pickLay.height,
+    odds: oddsS ? capOf(numFont, oddsS) + 16 + capOf(labelFont, 38, 600) : 0,
+    conf: confS ? capOf(rc.font('$body'), confS, 600) : 0,
+    note: noteLay ? noteLay.height : 0,
+  }
+  const gaps: Record<Part, number> = { stamp: 30, market: 34, pick: 60, odds: 46, conf: 40, note: 0 }
+  const order: Part[] = ['stamp', 'market', 'pick', 'odds', 'conf', 'note']
+  const used = order.filter((p) => heights[p] > 0)
+  let total = used.reduce((a, p, i) => a + heights[p] + (i < used.length - 1 ? gaps[p] : 0), 0)
+  const k = total > h ? h / total : 1
+  total *= k
+  const box: Record<Part, { y: number; h: number }> = {} as Record<Part, { y: number; h: number }>
+  let y = (h - total) / 2
+  for (const p of order) {
+    box[p] = { y, h: heights[p] * k }
+    if (heights[p] > 0) y += (heights[p] + gaps[p]) * k
+  }
+  const cx = w / 2
+  const draw = (c: Ctx, part: Part, decoy: boolean) => {
+    const b = box[part]
+    if (!b.h) return
+    switch (part) {
+      case 'stamp':
+        drawLabel(c, el.revealStamp, cx, b.y, { family: labelFont, size: stampS * k, weight: 700, color: accent, align: 'center', baseline: 'top', uppercase: true, maxWidth: w })
+        break
+      case 'market':
+        drawLabel(c, pred.market || 'Mercado', cx, b.y, { family: labelFont, size: marketS * k, weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true, maxWidth: w })
+        break
+      case 'pick': {
+        const lay = decoy ? fitText(scramble(pickText), pickStyle, w, pickS * 2.05, 40) : pickLay
+        c.save()
+        c.translate((w * (1 - k)) / 2, b.y)
+        c.scale(k, k)
+        drawLayout(c, lay, { ...pickStyle, size: lay.fontSize, letterSpacing: lay.letterSpacing }, { width: w, height: heights.pick, align: 'center', verticalAlign: 'middle', fill: textC, accent })
+        c.restore()
+        break
+      }
+      case 'odds': {
+        const os = oddsS * k
+        drawLabel(c, decoy ? scramble(pred.odds) : pred.odds, cx, b.y, { family: numFont, size: os, color: accent, align: 'center', baseline: 'top', maxWidth: w })
+        drawLabel(c, 'cuota', cx, b.y + capOf(numFont, os) + 16 * k, { family: labelFont, size: 38 * k, weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true })
+        break
+      }
+      case 'conf': {
+        const pct = Math.max(0, Math.min(100, pred.confidence))
+        const level = pct >= 70 ? 'alta' : pct >= 50 ? 'media' : 'moderada'
+        drawLabel(c, locked ? `Confianza ${level}` : `${Math.round(pct)}% de confianza`, cx, b.y, { family: rc.font('$body'), size: confS * k, weight: 600, color: muted, align: 'center', baseline: 'top', maxWidth: w })
+        break
+      }
+      case 'note': {
+        const lay = decoy ? fitText(scramble(pred.note), noteStyle, w, 44 * 1.25 * 3, 28) : noteLay!
+        c.save()
+        c.translate((w * (1 - k)) / 2, b.y)
+        c.scale(k, k)
+        drawLayout(c, lay, { ...noteStyle, size: lay.fontSize }, { width: w, height: heights.note, align: 'center', verticalAlign: 'top', fill: muted, accent })
+        c.restore()
+      }
+    }
+  }
+  const ALL: Part[] = ['market', 'pick', 'odds', 'conf', 'note']
+  const hidden: Part[] = !locked ? [] : el.hiddenPosition === 'all' ? ALL : el.hiddenPosition === 'pickAndOdds' ? ['pick', 'odds'] : ['pick']
+  for (const part of order) if (!hidden.includes(part)) draw(ctx, part, false)
+  if (!locked) return
+  const present = hidden.filter((p) => box[p] && box[p].h > 0)
+  if (!present.length) return
+  const regionY = Math.min(...present.map((p) => box[p].y)) - 30
+  const regionBottom = Math.max(...present.map((p) => box[p].y + box[p].h)) + 30
+  const regionH = regionBottom - regionY
+  const s = deviceScale(ctx)
+  const pad = Math.max(20, el.blurIntensity * 2)
+  const off = makeCanvas((w + pad * 2) * s, (regionH + pad * 2) * s)
+  const octx = off.getContext('2d')!
+  octx.scale(s, s)
+  octx.translate(pad, -regionY + pad)
+  for (const part of hidden) draw(octx, part, true)
+  const blurred = blurredCopy(off, Math.max(2, el.blurIntensity) * s)
+  const bp = (blurred.width - off.width) / 2 / s
+  ctx.save()
+  ctx.globalAlpha *= Math.max(0.25, 1 - el.overlayOpacity * 0.6)
+  ctx.drawImage(blurred, -pad - bp, regionY - pad - bp, w + pad * 2 + bp * 2, regionH + pad * 2 + bp * 2)
+  ctx.restore()
+  if (el.lockStyle !== 'none') {
+    const ts = el.teaser ? Math.min(46, w * 0.045) : 0
+    const lockSize = Math.min(170, regionH * 0.5, w * 0.18)
+    const blockH = lockSize + (ts ? ts * 2 : 0)
+    const lcy = regionY + (regionH - blockH) / 2 + lockSize / 2
+    if (el.lockStyle === 'padlock') drawSolidLock(ctx, cx, lcy, lockSize, accent, rc.color('$bg'))
+    else {
+      const icon = el.lockStyle === 'shield' ? 'shield' : 'key'
+      paintIconGlyph(ctx, icon, cx - lockSize / 2, lcy - lockSize / 2, lockSize, accent, 2.6)
+    }
+    if (ts) drawLabel(ctx, rc.text(el.teaser), cx, lcy + lockSize / 2 + ts * 0.9, { family: labelFont, size: ts, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: w })
+  }
 }

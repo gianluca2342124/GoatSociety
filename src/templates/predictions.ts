@@ -1,7 +1,7 @@
 import * as E from '../model/elements'
 import type { TemplateDef } from './types'
 import type { TCtx } from './kit'
-import { BG, atmosphere, body, crestPair, footer, glow, header, headline, kicker, pill, text, zone } from './kit'
+import { BG, atmosphere, body, cinematic, crestPair, cta, disclaimer, footer, glow, header, headline, hl, ink, kicker, pill, px, signature, text, zone } from './kit'
 
 export const premiumPrediction: TemplateDef = {
   id: 'premium-prediction',
@@ -67,8 +67,28 @@ export const lockedPrediction: TemplateDef = {
   number: 14,
   name: 'Locked Prediction',
   category: 'predictions',
-  description: 'Pronóstico oculto con cristal esmerilado, desenfoque real y candado.',
-  build: (t) => ({ background: BG.emerald(), elements: lockedLayout(t, 'locked') }),
+  description: 'Pronóstico bloqueado: desenfoque real, candado y llamada al perfil.',
+  build: (t) => {
+    const my = t.contentTop
+    const mh = px(t, 96)
+    const py = my + mh + px(t, 60)
+    const ph = px(t, 620)
+    const hy = py + ph + px(t, 50)
+    const hh = px(t, 270)
+    const cy = hy + hh + px(t, 40)
+    return {
+      background: ink(),
+      elements: [
+        ...cinematic(t),
+        signature(t),
+        hl(t, '{home.short} vs {away.short}', { y: my, h: mh }, 96, { name: 'Partido', align: 'center' }),
+        E.prediction({ name: 'Pronóstico bloqueado', mode: 'locked', x: t.left, y: py, width: t.cw, height: ph, chrome: 'none', showMatch: false, showNote: false, showConfidence: false, hiddenPosition: 'pickAndOdds', blurIntensity: 18, overlayOpacity: 0.3, teaser: '' }),
+        hl(t, 'Pronóstico [[bloqueado]]', { y: hy, h: hh }, 140, { align: 'center' }),
+        cta(t, 'Desbloquéalo en mi perfil  ↗', { y: cy, h: px(t, 70) }, 54, { align: 'center', fill: { kind: 'solid', color: '$accent' } }),
+        disclaimer(t, t.contentBottom - px(t, 10), { align: 'center' }),
+      ],
+    }
+  },
 }
 
 export const predictionReveal: TemplateDef = {

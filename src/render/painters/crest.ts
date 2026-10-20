@@ -1,5 +1,5 @@
 import type { CrestElement, CrestStyle } from '../../model/types'
-import { mix, withAlpha } from '../../model/tokens'
+import { withAlpha } from '../../model/tokens'
 import type { RenderCtx } from '../context'
 import { ellipsePath, polygonPath, setShadow, clearShadow, type Ctx } from '../paint/canvas'
 import { drawImageFit } from './basic'
@@ -65,33 +65,21 @@ function badgePath(ctx: Ctx, shape: CrestStyle['shape'], s: number) {
   }
 }
 
-/** Original placeholder badge generated from team colors and initials. */
+/** Original placeholder badge generated from team colors and initials (flat, no gold). */
 export function paintPlaceholderCrest(ctx: Ctx, size: number, team: CrestTeam) {
   const s = size
   const primary = team.primary
   const secondary = team.secondary
-  const gold = '#CBAA62'
-  const dark = '#0B0C0F'
+  const rim = '#F5F5F5'
   ctx.save()
-  // Outer rim
+  // Thin light rim
   badgePath(ctx, team.crestStyle.shape, s)
-  const rimGrad = ctx.createLinearGradient(0, 0, s, s)
-  rimGrad.addColorStop(0, mix(gold, '#ffffff', 0.25))
-  rimGrad.addColorStop(0.5, gold)
-  rimGrad.addColorStop(1, mix(gold, '#000000', 0.45))
-  ctx.fillStyle = rimGrad
+  ctx.fillStyle = rim
   ctx.fill()
-  // Inner field (scaled)
   ctx.save()
-  const inset = 0.075
+  const inset = 0.045
   ctx.translate(s * inset, s * inset)
   ctx.scale(1 - inset * 2, 1 - inset * 2)
-  badgePath(ctx, team.crestStyle.shape, s)
-  ctx.fillStyle = dark
-  ctx.fill()
-  ctx.save()
-  ctx.translate(s * 0.03, s * 0.03)
-  ctx.scale(0.94, 0.94)
   badgePath(ctx, team.crestStyle.shape, s)
   ctx.clip()
   ctx.fillStyle = primary
@@ -136,49 +124,22 @@ export function paintPlaceholderCrest(ctx: Ctx, size: number, team: CrestTeam) {
     default:
       break
   }
-  // Monogram plate
+  // Monogram band
   const plateH = s * 0.3
   const plateY = s * 0.36
-  ctx.fillStyle = withAlpha(dark, 0.82)
+  ctx.fillStyle = 'rgba(5,5,5,0.86)'
   ctx.fillRect(0, plateY, s, plateH)
-  ctx.fillStyle = withAlpha(gold, 0.9)
-  ctx.fillRect(0, plateY, s, s * 0.012)
-  ctx.fillRect(0, plateY + plateH - s * 0.012, s, s * 0.012)
-  // Sheen
-  const sheen = ctx.createLinearGradient(0, 0, s * 0.8, s)
-  sheen.addColorStop(0, 'rgba(255,255,255,0.28)')
-  sheen.addColorStop(0.4, 'rgba(255,255,255,0.04)')
-  sheen.addColorStop(1, 'rgba(0,0,0,0.25)')
-  ctx.fillStyle = sheen
-  ctx.fillRect(0, 0, s, s)
   ctx.restore()
-  ctx.restore()
-  // Initials
   const abbr = (team.abbr || team.name.slice(0, 3)).toUpperCase().slice(0, 4)
-  drawLabel(ctx, abbr, s / 2, plateY + plateH / 2 + s * 0.005, {
-    family: 'Big Shoulders Display Variable',
-    size: s * 0.2,
-    weight: 800,
-    color: '#F3F0E8',
+  drawLabel(ctx, abbr, s / 2, plateY + plateH / 2, {
+    family: 'Archivo Black',
+    size: s * 0.17,
+    weight: 400,
+    color: '#F5F5F5',
     align: 'center',
     baseline: 'middle',
-    letterSpacing: s * 0.01,
-    maxWidth: s * 0.62,
+    maxWidth: s * 0.66,
   })
-  // Small star on top
-  const starY = s * 0.2
-  ctx.beginPath()
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI / 2 + (Math.PI / 5) * i
-    const r = (i % 2 === 0 ? 0.045 : 0.019) * s
-    const x = s / 2 + Math.cos(a) * r
-    const y = starY + Math.sin(a) * r
-    if (i === 0) ctx.moveTo(x, y)
-    else ctx.lineTo(x, y)
-  }
-  ctx.closePath()
-  ctx.fillStyle = gold
-  ctx.fill()
   ctx.restore()
 }
 
@@ -187,8 +148,8 @@ export function teamForCrest(el: CrestElement, rc: RenderCtx): CrestTeam {
     return {
       name: el.customName || 'Equipo',
       abbr: (el.customName || 'EQ').slice(0, 3),
-      primary: '#2A2F38',
-      secondary: '#CBAA62',
+      primary: '#2A2A2A',
+      secondary: '#6E6E6E',
       crestAssetId: el.customAssetId,
       crestStyle: { shape: 'shield', pattern: 'solid' },
     }
@@ -233,12 +194,6 @@ export function paintCrestBox(ctx: Ctx, team: CrestTeam, w: number, h: number, r
     drawImageFit(ctx, img, inner, inner, 'contain')
   } else {
     // One shadow for the whole badge silhouette, then the badge itself.
-    ctx.save()
-    setShadow(ctx, 'rgba(0,0,0,0.6)', inner * 0.08, 0, inner * 0.04)
-    badgePath(ctx, team.crestStyle.shape, inner)
-    ctx.fillStyle = '#0B0C0F'
-    ctx.fill()
-    ctx.restore()
     paintPlaceholderCrest(ctx, inner, team)
   }
   ctx.restore()

@@ -1,4 +1,4 @@
-import type { MatchData, SlideBackground, SlideElement } from '../model/types'
+import type { ColorValue, Intensity, MatchData, SlideBackground, SlideElement } from '../model/types'
 import type { TCtx } from './kit'
 
 export type TemplateCategory = 'match' | 'stats' | 'tactics' | 'predictions' | 'brand'
@@ -6,6 +6,10 @@ export type TemplateCategory = 'match' | 'stats' | 'tactics' | 'predictions' | '
 export interface TemplateOutput {
   background: SlideBackground
   elements: SlideElement[]
+  /** Optional suggested slide accent (token like '$red'). Undefined = project/brand accent. */
+  accent?: ColorValue
+  /** Optional suggested intensity. Undefined = project default (Editorial). */
+  intensity?: Intensity
 }
 
 export interface TemplateDef {

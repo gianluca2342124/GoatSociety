@@ -113,6 +113,25 @@ export function paintBrandMark(ctx: Ctx, el: BrandMarkElement, rc: RenderCtx) {
   const label = rc.text(el.text || '{brand}')
   const fam = rc.font('$label')
   switch (el.variant) {
+    case 'editorial': {
+      // Discreet signature: small mark + name, tight tracking.
+      const icon = h
+      const ts = h * 0.5
+      const tw = labelWidth(label, { family: fam, size: ts, weight: 700, letterSpacing: ts * 0.05, uppercase: true })
+      const gap = h * 0.28
+      const iw = icon * (GOAT_VIEW.width / GOAT_VIEW.height)
+      const total = iw + gap + tw
+      const align = el.align ?? 'left'
+      const sx = align === 'left' ? 0 : align === 'right' ? Math.max(0, w - total) : Math.max(0, (w - total) / 2)
+      paintMark(ctx, rc, sx - (icon - iw) / 2, 0, icon, accent, rc.color('$bg'), el.useLogo)
+      drawLabel(ctx, label, sx + iw + gap, h / 2, { family: fam, size: ts, weight: 700, color, uppercase: true, letterSpacing: ts * 0.05, maxWidth: Math.max(10, w - iw - gap) })
+      return
+    }
+    case 'icon': {
+      const size = Math.min(w, h)
+      paintMark(ctx, rc, (w - size) / 2, (h - size) / 2, size, accent, rc.color('$bg'), el.useLogo)
+      return
+    }
     case 'watermark': {
       const size = Math.min(w, h)
       paintMark(ctx, rc, (w - size) / 2, (h - size) / 2, size, color, rc.color('$bg'), el.useLogo)

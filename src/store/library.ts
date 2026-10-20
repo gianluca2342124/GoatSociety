@@ -1,7 +1,7 @@
 // Global local library: brand kit, assets, teams and the project list.
 import { create } from 'zustand'
 import type { AssetKind, AssetMeta, BrandKit, TeamLibraryEntry } from '../model/types'
-import { DEFAULT_BRAND } from '../model/brand'
+import { DEFAULT_BRAND, migrateBrand } from '../model/brand'
 import { STARTER_TEAMS } from '../model/defaults'
 import { uid } from '../model/ids'
 import { kvGet, kvSet, type ProjectMeta } from '../db/db'
@@ -31,14 +31,7 @@ interface LibraryState {
 let brandSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 function mergeBrand(saved: Partial<BrandKit> | undefined): BrandKit {
-  if (!saved) return DEFAULT_BRAND
-  return {
-    ...DEFAULT_BRAND,
-    ...saved,
-    palette: { ...DEFAULT_BRAND.palette, ...(saved.palette ?? {}) },
-    fonts: { ...DEFAULT_BRAND.fonts, ...(saved.fonts ?? {}) },
-    watermark: { ...DEFAULT_BRAND.watermark, ...(saved.watermark ?? {}) },
-  }
+  return migrateBrand(saved)
 }
 
 export const useLibrary = create<LibraryState>((set, get) => ({

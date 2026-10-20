@@ -2,7 +2,7 @@ import { uid } from '../model/ids'
 import type { AnnotationKind, PitchView, TacticalAnnotation, TacticalPlayer, TacticsData } from '../model/types'
 import { buildTeam } from './formations'
 
-export function annotation(kind: AnnotationKind, points: { x: number; y: number }[], color = '$primary', label = '', width = 0.45): TacticalAnnotation {
+export function annotation(kind: AnnotationKind, points: { x: number; y: number }[], color = '$accent', label = '', width = 0.45): TacticalAnnotation {
   return { id: uid('ta'), kind, points, color, width, label, opacity: 1 }
 }
 
@@ -13,10 +13,10 @@ export function defaultTactics(overrides: Partial<TacticsData> = {}): TacticsDat
     view: 'full',
     camera: 'top',
     vertical: true,
-    pitchColor: '#0E2A22',
-    pitchColor2: '#0B231C',
-    lineColor: '#F3F0E8',
-    lineOpacity: 0.55,
+    pitchColor: '#2D6A3C',
+    pitchColor2: '#245731',
+    lineColor: '#FFFFFF',
+    lineOpacity: 0.78,
     stripes: true,
     homeColor: '$home',
     awayColor: '$away',
@@ -26,12 +26,14 @@ export function defaultTactics(overrides: Partial<TacticsData> = {}): TacticsDat
     showAway: true,
     players: [...buildTeam(homeFormation, 'home'), ...buildTeam(awayFormation, 'away')],
     annotations: [],
-    playerStyle: 'disc',
+    playerStyle: 'flat',
     playerSize: 22,
     showLabels: true,
     showNumbers: true,
     tilt: 0.6,
-    glow: 0.6,
+    glow: 0,
+    labelStyle: 'text',
+    highlightColor: '$accent',
     ...overrides,
   }
 }
@@ -66,10 +68,10 @@ export const TACTICAL_PRESETS: TacticalPreset[] = [
         players,
         annotations: [
           annotation('pass', [{ x: 40, y: 30 }, { x: 58, y: 14 }], '$text'),
-          annotation('run', [{ x: 52, y: 12 }, { x: 78, y: 18 }, { x: 88, y: 28 }], '$primary', 'Carrera'),
-          annotation('run', [{ x: 55, y: 34 }, { x: 86, y: 36 }], '$primary'),
-          annotation('run', [{ x: 50, y: 56 }, { x: 72, y: 54 }, { x: 84, y: 44 }], '$primary'),
-          annotation('zone', [{ x: 62, y: 6 }, { x: 92, y: 6 }, { x: 92, y: 62 }, { x: 62, y: 62 }], '$positive', 'ESPACIO'),
+          annotation('run', [{ x: 52, y: 12 }, { x: 78, y: 18 }, { x: 88, y: 28 }], '$accent', 'Carrera'),
+          annotation('run', [{ x: 55, y: 34 }, { x: 86, y: 36 }], '$accent'),
+          annotation('run', [{ x: 50, y: 56 }, { x: 72, y: 54 }, { x: 84, y: 44 }], '$accent'),
+          annotation('zone', [{ x: 62, y: 6 }, { x: 92, y: 6 }, { x: 92, y: 62 }, { x: 62, y: 62 }], '$accent', 'ESPACIO'),
         ],
       }
     },
@@ -85,11 +87,11 @@ export const TACTICAL_PRESETS: TacticalPreset[] = [
       return {
         players,
         annotations: [
-          annotation('press', [{ x: 69, y: 34 }, { x: 80, y: 32 }], '$negative'),
-          annotation('press', [{ x: 66, y: 10 }, { x: 80, y: 14 }], '$negative'),
-          annotation('press', [{ x: 66, y: 58 }, { x: 80, y: 54 }], '$negative'),
-          annotation('circle', [{ x: 84, y: 34 }, { x: 89, y: 34 }], '$primary', 'Pivote aislado'),
-          annotation('zone', [{ x: 74, y: 8 }, { x: 105, y: 8 }, { x: 105, y: 60 }, { x: 74, y: 60 }], '$negative', 'ZONA DE PRESIÓN'),
+          annotation('press', [{ x: 69, y: 34 }, { x: 80, y: 32 }], '$accent'),
+          annotation('press', [{ x: 66, y: 10 }, { x: 80, y: 14 }], '$accent'),
+          annotation('press', [{ x: 66, y: 58 }, { x: 80, y: 54 }], '$accent'),
+          annotation('circle', [{ x: 84, y: 34 }, { x: 89, y: 34 }], '$accent', 'Pivote aislado'),
+          annotation('zone', [{ x: 74, y: 8 }, { x: 105, y: 8 }, { x: 105, y: 60 }, { x: 74, y: 60 }], '$accent', 'ZONA DE PRESIÓN'),
         ],
       }
     },
@@ -109,8 +111,8 @@ export const TACTICAL_PRESETS: TacticalPreset[] = [
         players,
         annotations: [
           annotation('pass', [{ x: 70, y: 34 }, { x: 80, y: 36 }, { x: 94, y: 36 }], '$text', 'Pase filtrado'),
-          annotation('run', [{ x: 80, y: 30 }, { x: 94, y: 35 }], '$primary', 'Desmarque'),
-          annotation('spotlight', [{ x: 94, y: 36 }, { x: 99, y: 36 }], '$primary'),
+          annotation('run', [{ x: 80, y: 30 }, { x: 94, y: 35 }], '$accent', 'Desmarque'),
+          annotation('spotlight', [{ x: 94, y: 36 }, { x: 99, y: 36 }], '$accent'),
         ],
       }
     },
@@ -129,10 +131,10 @@ export const TACTICAL_PRESETS: TacticalPreset[] = [
         view: 'half',
         players,
         annotations: [
-          annotation('run', [{ x: 72, y: 64 }, { x: 86, y: 68 }, { x: 96, y: 60 }], '$primary', 'Desdoble'),
+          annotation('run', [{ x: 72, y: 64 }, { x: 86, y: 68 }, { x: 96, y: 60 }], '$accent', 'Desdoble'),
           annotation('arrow', [{ x: 82, y: 60 }, { x: 88, y: 50 }], '$text'),
           annotation('pass', [{ x: 88, y: 50 }, { x: 97, y: 58 }], '$text'),
-          annotation('circle', [{ x: 84, y: 58 }, { x: 91, y: 58 }], '$positive', '2v1'),
+          annotation('circle', [{ x: 84, y: 58 }, { x: 91, y: 58 }], '$accent', '2v1'),
         ],
       }
     },
@@ -151,9 +153,9 @@ export const TACTICAL_PRESETS: TacticalPreset[] = [
       return {
         players,
         annotations: [
-          annotation('zone', [{ x: 60, y: 0 }, { x: 92, y: 0 }, { x: 92, y: 22 }, { x: 60, y: 22 }], '$primary', 'SOBRECARGA'),
+          annotation('zone', [{ x: 60, y: 0 }, { x: 92, y: 0 }, { x: 92, y: 22 }, { x: 60, y: 22 }], '$accent', 'SOBRECARGA'),
           annotation('pass', [{ x: 70, y: 12 }, { x: 64, y: 40 }, { x: 82, y: 58 }], '$text', 'Cambio de orientación'),
-          annotation('spotlight', [{ x: 82, y: 58 }, { x: 87, y: 58 }], '$positive'),
+          annotation('spotlight', [{ x: 82, y: 58 }, { x: 87, y: 58 }], '$accent'),
         ],
       }
     },
@@ -169,10 +171,10 @@ export const TACTICAL_PRESETS: TacticalPreset[] = [
       return {
         players,
         annotations: [
-          annotation('run', [{ x: 64, y: 22 }, { x: 46, y: 26 }], '$negative', 'Repliegue'),
-          annotation('run', [{ x: 64, y: 46 }, { x: 46, y: 42 }], '$negative'),
-          annotation('press', [{ x: 62, y: 34 }, { x: 57, y: 31 }], '$primary', 'Contrapresión'),
-          annotation('zone', [{ x: 20, y: 14 }, { x: 46, y: 14 }, { x: 46, y: 54 }, { x: 20, y: 54 }], '$negative', 'ESPACIO A PROTEGER'),
+          annotation('run', [{ x: 64, y: 22 }, { x: 46, y: 26 }], '$accent', 'Repliegue'),
+          annotation('run', [{ x: 64, y: 46 }, { x: 46, y: 42 }], '$accent'),
+          annotation('press', [{ x: 62, y: 34 }, { x: 57, y: 31 }], '$accent', 'Contrapresión'),
+          annotation('zone', [{ x: 20, y: 14 }, { x: 46, y: 14 }, { x: 46, y: 54 }, { x: 20, y: 54 }], '$accent', 'ESPACIO A PROTEGER'),
         ],
       }
     },
@@ -194,8 +196,8 @@ export const TACTICAL_PRESETS: TacticalPreset[] = [
           annotation('pass', [{ x: 5, y: 34 }, { x: 13, y: 18 }], '$text'),
           annotation('pass', [{ x: 13, y: 18 }, { x: 30, y: 6 }], '$text'),
           annotation('pass', [{ x: 30, y: 6 }, { x: 38, y: 24 }], '$text'),
-          annotation('run', [{ x: 32, y: 26 }, { x: 40, y: 22 }], '$primary'),
-          annotation('zone', [{ x: 6, y: 12 }, { x: 22, y: 12 }, { x: 22, y: 56 }, { x: 6, y: 56 }], '$primary', 'LÍNEA DE 3'),
+          annotation('run', [{ x: 32, y: 26 }, { x: 40, y: 22 }], '$accent'),
+          annotation('zone', [{ x: 6, y: 12 }, { x: 22, y: 12 }, { x: 22, y: 56 }, { x: 6, y: 56 }], '$accent', 'LÍNEA DE 3'),
         ],
       }
     },
@@ -215,9 +217,9 @@ export const TACTICAL_PRESETS: TacticalPreset[] = [
         players,
         annotations: [
           annotation('pass', [{ x: 66, y: 50 }, { x: 80, y: 62 }], '$text', 'Recepción'),
-          annotation('curve', [{ x: 80, y: 62 }, { x: 86, y: 46 }, { x: 93, y: 40 }], '$primary', 'Conducción interior'),
-          annotation('zone', [{ x: 88, y: 46 }, { x: 102, y: 46 }, { x: 102, y: 66 }, { x: 88, y: 66 }], '$negative', 'ESPALDA DEL LATERAL'),
-          annotation('spotlight', [{ x: 80, y: 62 }, { x: 85, y: 62 }], '$primary'),
+          annotation('curve', [{ x: 80, y: 62 }, { x: 86, y: 46 }, { x: 93, y: 40 }], '$accent', 'Conducción interior'),
+          annotation('zone', [{ x: 88, y: 46 }, { x: 102, y: 46 }, { x: 102, y: 66 }, { x: 88, y: 66 }], '$accent', 'ESPALDA DEL LATERAL'),
+          annotation('spotlight', [{ x: 80, y: 62 }, { x: 85, y: 62 }], '$accent'),
         ],
       }
     },

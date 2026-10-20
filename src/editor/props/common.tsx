@@ -72,17 +72,34 @@ const BLENDS: { value: BlendMode; label: string }[] = [
   { value: 'lighten', label: 'Aclarar' },
 ]
 
+const MIN_INTENSITY_OPTIONS: { value: 'always' | 'editorial' | 'cinematic'; label: string }[] = [
+  { value: 'always', label: 'Siempre' },
+  { value: 'editorial', label: 'Editorial y Cinemático' },
+  { value: 'cinematic', label: 'Solo Cinemático' },
+]
+
 export function AppearanceSection({ el }: { el: SlideElement }) {
   const set = useElementSetter(el)
   const fx = el.fx ?? {}
   const shadow = fx.shadow ?? { enabled: false, color: '#000000', blur: 30, offsetX: 0, offsetY: 12, opacity: 0.6 }
-  const glow = fx.glow ?? { enabled: false, color: '$primary', blur: 30, opacity: 0.8 }
+  const glow = fx.glow ?? { enabled: false, color: '$accent', blur: 30, opacity: 0.8 }
   const setFx = (patch: Partial<NonNullable<SlideElement['fx']>>) => set((d) => void (d.fx = { ...(d.fx ?? {}), ...patch }), `fx-${el.id}-${Object.keys(patch).join()}`)
   return (
     <>
       <Section title="Apariencia">
         <Slider label="Opacidad" value={el.opacity} onChange={(v) => set({ opacity: v })} format={(v) => `${Math.round(v * 100)}%`} />
         <Select label="Fusión" value={(fx.blend ?? 'source-over') as BlendMode} options={BLENDS} onChange={(v) => setFx({ blend: v })} />
+        <Select
+          label="Visible en intensidad"
+          value={el.minIntensity ?? 'always'}
+          options={MIN_INTENSITY_OPTIONS}
+          onChange={(v) =>
+            set((d) => {
+              if (v === 'always') delete d.minIntensity
+              else d.minIntensity = v
+            })
+          }
+        />
       </Section>
       <Section title="Efectos del elemento" defaultOpen={!!(fx.shadow?.enabled || fx.glow?.enabled || fx.blur)}>
         <Toggle label="Sombra editorial" checked={shadow.enabled} onChange={(v) => setFx({ shadow: { ...shadow, enabled: v } })} />

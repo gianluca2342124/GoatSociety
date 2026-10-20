@@ -4,7 +4,7 @@ import { luminance, mix, parseColor, visibleOnDark, withAlpha } from '../../mode
 import type { RenderCtx } from '../context'
 import { clearShadow, ellipsePath, roundRect, setShadow, type Ctx } from '../paint/canvas'
 import { drawLabel } from '../text/draw'
-import { fitText } from '../text/layout'
+import { capHeightOf, fitText } from '../text/layout'
 import { drawLayout } from '../text/draw'
 import { paintCrestBox } from './crest'
 
@@ -41,6 +41,10 @@ export function paintStatBars(ctx: Ctx, el: StatBarsElement, rc: RenderCtx) {
   const { width: w } = el
   let h = el.height
   if (!rows.length) return
+  if (el.style === 'editorial') {
+    paintEditorialBars(ctx, el, rc, rows)
+    return
+  }
   const [homeC, awayC] = teamColors(rc, el.homeColor, el.awayColor)
   const labelFont = rc.font(el.labelFont)
   const valueFont = rc.font(el.valueFont)
@@ -189,6 +193,93 @@ export function paintStatBars(ctx: Ctx, el: StatBarsElement, rc: RenderCtx) {
   clearShadow(ctx)
 }
 
+// ── GOAT EDITORIAL comparison ───────────────────────────────────────────────
+// Two huge numbers per row and one thick, flat, proportional split bar.
+// colorMode 'leader' (default): the leading side carries the slide accent,
+// the other side stays neutral. 'teams' uses the (legible) team colors.
+const NEUTRAL_BAR = '#3A3A3A'
+const EMPTY_BAR = '#242424'
+
+function editorialColors(el: StatBarsElement, rc: RenderCtx, leader: 'home' | 'away' | 'tie' | 'none') {
+  const valueC = rc.color(el.valueColor)
+  const mutedC = rc.color(el.labelColor)
+  if ((el.colorMode ?? 'leader') === 'teams') {
+    const [h, a] = teamColors(rc, el.homeColor, el.awayColor)
+    return { homeBar: h, awayBar: a, homeText: valueC, awayText: valueC }
+  }
+  const accent = rc.color(el.accentColor ?? '$accent')
+  if (leader === 'home') return { homeBar: accent, awayBar: NEUTRAL_BAR, homeText: valueC, awayText: mutedC }
+  if (leader === 'away') return { homeBar: NEUTRAL_BAR, awayBar: accent, homeText: mutedC, awayText: valueC }
+  return { homeBar: '#8A8A8A', awayBar: '#8A8A8A', homeText: valueC, awayText: valueC }
+}
+
+export function paintEditorialBars(ctx: Ctx, el: StatBarsElement, rc: RenderCtx, rows: StatRow[]) {
+  const { width: w } = el
+  let h = el.height
+  const labelFont = rc.font(el.labelFont)
+  const valueFont = rc.font(el.valueFont)
+  const labelColor = rc.color(el.labelColor)
+  const textColor = rc.color(el.valueColor)
+  const gmax = globalMaxOf(rows)
+  const sep = el.decimalSeparator
+  let top = 0
+  if (el.showCrests) {
+    const cs = Math.min(120, h * 0.16)
+    paintCrestBox(ctx, { ...rc.match.home }, cs, cs, rc)
+    ctx.save()
+    ctx.translate(w - cs, 0)
+    paintCrestBox(ctx, { ...rc.match.away }, cs, cs, rc)
+    ctx.restore()
+    const ns = Math.min(46, cs * 0.4)
+    drawLabel(ctx, rc.match.home.shortName || rc.match.home.name, cs + 22, cs / 2, { family: labelFont, size: ns, weight: 700, color: textColor, uppercase: true, maxWidth: w / 2 - cs - 34 })
+    drawLabel(ctx, rc.match.away.shortName || rc.match.away.name, w - cs - 22, cs / 2, { family: labelFont, size: ns, weight: 700, color: textColor, uppercase: true, align: 'right', maxWidth: w / 2 - cs - 34 })
+    top = cs + Math.max(36, el.rowGap)
+    h -= top
+  }
+  const n = rows.length
+  const single = n === 1
+  const rowH = (h - el.rowGap * (n - 1)) / n
+  const barH = Math.max(6, Math.min(el.barHeight, rowH * 0.18))
+  const labelSize = Math.min(el.labelSize, rowH * (single ? 0.16 : 0.22))
+  const labelBlock = single ? labelSize * 1.9 : 0
+  const gapVB = Math.max(12, rowH * 0.08)
+  const capK = capHeightOf(valueFont, 100, 400, false) / 100 || 0.72
+  const valueSize = Math.max(10, Math.min(el.valueSize, (rowH - labelBlock - barH - gapVB) / capK))
+  const cap = valueSize * capK
+  rows.forEach((row, i) => {
+    const y = top + i * (rowH + el.rowGap)
+    const bars = computeBars(row, el.scaleMode, el.fixedMax, gmax)
+    const col = editorialColors(el, rc, bars.leader)
+    const hv = formatNumber(row.home, row.decimals, sep, row.unit)
+    const av = formatNumber(row.away, row.decimals, sep, row.unit)
+    // Center the row block vertically inside its slot.
+    const block = labelBlock + cap + gapVB + barH
+    const y0 = y + Math.max(0, (rowH - block) / 2)
+    if (single) drawLabel(ctx, row.label, w / 2, y0, { family: labelFont, size: labelSize, weight: 600, color: labelColor, align: 'center', baseline: 'top', uppercase: true, letterSpacing: labelSize * 0.04, maxWidth: w })
+    const vy = y0 + labelBlock
+    const valueMax = single ? w * 0.48 : w * 0.3
+    drawLabel(ctx, hv, 0, vy, { family: valueFont, size: valueSize, color: col.homeText, baseline: 'top', maxWidth: valueMax })
+    drawLabel(ctx, av, w, vy, { family: valueFont, size: valueSize, color: col.awayText, align: 'right', baseline: 'top', maxWidth: valueMax })
+    if (!single) drawLabel(ctx, row.label, w / 2, vy + cap / 2, { family: labelFont, size: labelSize, weight: 600, color: labelColor, align: 'center', uppercase: true, letterSpacing: labelSize * 0.04, maxWidth: w * 0.38 })
+    const by = vy + cap + gapVB
+    const gap = Math.max(4, barH * 0.35)
+    const total = w - gap
+    const neutral = !bars.homeValid && !bars.awayValid
+    const hw = neutral ? total / 2 : total * bars.homeShare
+    const r = Math.min(4, barH / 2)
+    if (hw > 0.5) {
+      roundRect(ctx, 0, by, hw, barH, r)
+      ctx.fillStyle = neutral ? EMPTY_BAR : col.homeBar
+      ctx.fill()
+    }
+    if (total - hw > 0.5) {
+      roundRect(ctx, hw + gap, by, total - hw, barH, r)
+      ctx.fillStyle = neutral ? EMPTY_BAR : col.awayBar
+      ctx.fill()
+    }
+  })
+}
+
 /** Single metric presented as a card: label on top, big values, split bar. */
 function paintMetricCard(ctx: Ctx, el: StatBarsElement, _rc: RenderCtx, row: StatRow, top: number, w: number, h: number, homeC: string, awayC: string, labelFont: string, valueFont: string, labelColor: string, valueColor: string, gmax: number) {
   const bars = computeBars(row, el.scaleMode, el.fixedMax, gmax)
@@ -245,6 +336,10 @@ export function paintStatNumber(ctx: Ctx, el: StatNumberElement, rc: RenderCtx) 
     ctx.fillStyle = accent
     ctx.fill()
   }
+  if (el.layout === 'hero') {
+    paintHeroNumber(ctx, el, rc, value)
+    return
+  }
   const iw = w - pad * 2
   const ih = h - pad * 2
   ctx.save()
@@ -292,6 +387,41 @@ export function paintStatNumber(ctx: Ctx, el: StatNumberElement, rc: RenderCtx) 
     ctx.restore()
   }
   ctx.restore()
+}
+
+/** GOAT EDITORIAL single dominant stat: giant number, large label, short support line. */
+function paintHeroNumber(ctx: Ctx, el: StatNumberElement, rc: RenderCtx, value: string) {
+  const { width: w, height: h } = el
+  const align = el.align ?? 'left'
+  const ax = align === 'center' ? w / 2 : align === 'right' ? w : 0
+  const valueFont = rc.font(el.valueFont)
+  const label = rc.text(el.label)
+  const desc = rc.text(el.description)
+  const capK = capHeightOf(valueFont, 100, 400, false) / 100 || 0.72
+  // Reserve room for the label and support line, then size the number.
+  const labelSize0 = Math.max(40, Math.min(85, el.valueSize * 0.3))
+  const descSize0 = Math.max(36, Math.min(52, el.valueSize * 0.2))
+  const reserve = (label ? labelSize0 * 1.45 : 0) + (desc ? descSize0 * 2.9 : 0)
+  const valueSize = Math.max(20, Math.min(el.valueSize, (h - reserve) / capK, h / capK))
+  const k = valueSize / Math.max(1, el.valueSize)
+  const labelSize = Math.max(28, labelSize0 * Math.min(1, k * 1.2))
+  const descSize = Math.max(26, descSize0 * Math.min(1, k * 1.2))
+  const cap = valueSize * capK
+  drawLabel(ctx, value, ax, 0, { family: valueFont, size: valueSize, color: rc.color(el.valueColor), align, baseline: 'top', maxWidth: w })
+  let y = cap + Math.max(18, valueSize * 0.12)
+  if (label) {
+    drawLabel(ctx, label, ax, y, { family: rc.font('$label'), size: labelSize, weight: 700, color: rc.color(el.labelColor), align, baseline: 'top', uppercase: true, letterSpacing: labelSize * 0.01, maxWidth: w })
+    y += capHeightOf(rc.font('$label'), labelSize, 700, false) + Math.max(16, labelSize * 0.42)
+  }
+  if (desc) {
+    const style = { family: rc.font('$body'), size: descSize, weight: 500, italic: false, letterSpacing: 0, lineHeight: 1.22, uppercase: false }
+    const room = Math.max(10, h - y)
+    const lay = fitText(desc, style, w, room, 18)
+    ctx.save()
+    ctx.translate(0, y)
+    drawLayout(ctx, lay, { ...style, size: lay.fontSize }, { width: w, height: room, align, verticalAlign: 'top', fill: rc.color(el.textColor), accent: rc.color(el.accentColor) })
+    ctx.restore()
+  }
 }
 
 export function paintProgressRing(ctx: Ctx, el: ProgressRingElement, rc: RenderCtx) {
@@ -343,6 +473,21 @@ export function paintFormRow(ctx: Ctx, el: FormRowElement, rc: RenderCtx) {
   const total = n * size + (n - 1) * el.gap
   let x = (w - total) / 2
   const y = (h - size) / 2
+  if (el.shape === 'letter' || el.shape === 'dot') {
+    list.forEach((r) => {
+      const c = rc.color(r === 'W' ? el.winColor : r === 'D' ? el.drawColor : el.lossColor)
+      if (el.shape === 'letter') {
+        drawLabel(ctx, FORM_LETTER[r], x + size / 2, h / 2, { family: rc.font('$numbers'), size: size * 1.02, color: c, align: 'center', maxWidth: size })
+      } else {
+        ellipsePath(ctx, x + size / 2, y + size / 2, size / 2, size / 2)
+        ctx.fillStyle = c
+        ctx.fill()
+        if (el.showLetters) drawLabel(ctx, FORM_LETTER[r], x + size / 2, y + size / 2, { family: rc.font('$label'), size: size * 0.5, weight: 800, color: luminance(c) > 0.35 ? '#050505' : rc.color(el.textColor), align: 'center' })
+      }
+      x += size + el.gap
+    })
+    return
+  }
   list.forEach((r) => {
     const c = rc.color(r === 'W' ? el.winColor : r === 'D' ? el.drawColor : el.lossColor)
     ctx.save()

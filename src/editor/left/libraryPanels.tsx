@@ -172,13 +172,15 @@ export function AssetsPanel() {
 }
 
 const PALETTE_LABELS: { key: keyof BrandKit['palette']; label: string }[] = [
+  { key: 'accent', label: 'Acento por defecto' },
   { key: 'bg', label: 'Fondo' },
+  { key: 'text', label: 'Texto' },
+  { key: 'muted', label: 'Texto secundario' },
+  { key: 'line', label: 'Separadores' },
   { key: 'surface', label: 'Superficie' },
-  { key: 'primary', label: 'Oro (principal)' },
-  { key: 'secondary', label: 'Verde bosque' },
-  { key: 'tertiary', label: 'Burdeos' },
-  { key: 'text', label: 'Marfil (texto)' },
-  { key: 'muted', label: 'Gris' },
+  { key: 'primary', label: 'Oro (solo marca)' },
+  { key: 'secondary', label: 'Verde bosque (cinemático)' },
+  { key: 'tertiary', label: 'Burdeos (cinemático)' },
   { key: 'positive', label: 'Acierto' },
   { key: 'negative', label: 'Fallo' },
 ]
@@ -202,9 +204,12 @@ export function BrandPanel() {
       <Section title="Identidad">
         <TextField label="Nombre de la marca" value={brand.name} onChange={(v) => setBrand({ name: v })} />
         <TextField label="Usuario" value={brand.handle} onChange={(v) => setBrand({ handle: v })} />
-        <TextField label="Enlace de Telegram" value={brand.telegramUrl} onChange={(v) => setBrand({ telegramUrl: v })} placeholder="t.me/tucomunidad" />
-        <TextField label="Etiqueta del botón" value={brand.telegramLabel} onChange={(v) => setBrand({ telegramLabel: v })} />
         <TextField label="Aviso legal" multiline rows={2} value={brand.disclaimer} onChange={(v) => setBrand({ disclaimer: v })} />
+      </Section>
+      <Section title="Destino de la comunidad (opcional)" defaultOpen={false}>
+        <TextField label="Enlace externo de la comunidad" value={brand.telegramUrl} onChange={(v) => setBrand({ telegramUrl: v })} placeholder="Opcional" />
+        <TextField label="Etiqueta del destino" value={brand.telegramLabel} onChange={(v) => setBrand({ telegramLabel: v })} placeholder="Opcional" />
+        <p className="text-[11px] leading-snug text-dim">Uso interno. Las plantillas nunca lo muestran: usan llamadas neutras como «Enlace en la bio». Si lo quieres en una diapositiva, escribe {'{community}'} en un texto.</p>
       </Section>
       <Section title="Logo">
         <AssetPicker label="Tu logo de GOAT SOCIETY" value={brand.logoAssetId} uploadKind="logo" kinds={['logo', 'mascot', 'other']} onChange={(id) => setBrand({ logoAssetId: id })} />
@@ -250,7 +255,7 @@ export function BrandPanel() {
         >
           Restaurar valores de GOAT SOCIETY
         </button>
-        <p className="text-[11px] text-dim">Paleta original: {DEFAULT_BRAND.palette.bg} · {DEFAULT_BRAND.palette.primary} · {DEFAULT_BRAND.palette.secondary} · {DEFAULT_BRAND.palette.tertiary}</p>
+        <p className="text-[11px] text-dim">Paleta GOAT EDITORIAL: fondo {DEFAULT_BRAND.palette.bg} · texto {DEFAULT_BRAND.palette.text} · acento {DEFAULT_BRAND.palette.accent}</p>
       </Section>
     </div>
   )

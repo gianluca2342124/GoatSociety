@@ -1,4 +1,4 @@
-import type { BrandKit, ColorValue, MatchData, MatchOverrides, Prediction } from './types'
+import type { BrandKit, ColorValue, Intensity, MatchData, MatchOverrides, Prediction, Project, Slide, SlideElement } from './types'
 
 export interface TokenContext {
   match: MatchData
@@ -9,11 +9,40 @@ export interface TokenContext {
 
 // ── Colors ──────────────────────────────────────────────────────────────────
 
-export function resolveColor(value: ColorValue | undefined, ctx: { match: MatchData; brand: BrandKit }): string {
+export interface ColorContext {
+  match: MatchData
+  brand: BrandKit
+  /** Slide accent (token or hex). Falls back to the brand accent. */
+  accent?: ColorValue
+}
+
+const FIXED: Record<string, string> = {
+  $green: '#2BE477',
+  $yellow: '#FFD43B',
+  $red: '#FF4055',
+  $blue: '#3B8BFF',
+  $white: '#FFFFFF',
+  $dim: '#6E6E6E',
+  $neutral: '#3A3A3A',
+  $onAccent: '#050505',
+}
+
+export function resolveColor(value: ColorValue | undefined, ctx: ColorContext): string {
   if (!value) return 'rgba(0,0,0,0)'
   if (value[0] !== '$') return value
   const p = ctx.brand.palette
+  const fixed = FIXED[value]
+  if (fixed) return fixed
   switch (value) {
+    case '$accent': {
+      const a = ctx.accent
+      if (a && a !== '$accent') return resolveColor(a, { ...ctx, accent: undefined })
+      return p.accent || '#2BE477'
+    }
+    case '$line':
+      return p.line || '#242424'
+    case '$gold':
+      return p.primary
     case '$bg':
       return p.bg
     case '$surface':
@@ -197,7 +226,7 @@ export const TEXT_TOKENS: { token: string; label: string }[] = [
   { token: '{odds}', label: 'Cuota' },
   { token: '{handle}', label: 'Usuario' },
   { token: '{brand}', label: 'Marca' },
-  { token: '{telegram}', label: 'Enlace Telegram' },
+  { token: '{community}', label: 'Destino de la comunidad (opcional)' },
   { token: '{page}', label: 'Nº de página' },
   { token: '{pages}', label: 'Total páginas' },
   { token: '{disclaimer}', label: 'Aviso legal' },
@@ -268,8 +297,11 @@ export function tokenValue(key: string, ctx: TokenContext): string | undefined {
       return brand.handle
     case 'brand':
       return brand.name
+    // Optional external destination. '{telegram}' kept as a legacy alias.
+    case 'community':
     case 'telegram':
       return brand.telegramUrl
+    case 'community.label':
     case 'telegram.label':
       return brand.telegramLabel
     case 'disclaimer':
@@ -299,4 +331,22 @@ export function resolveText(text: string, ctx: TokenContext): string {
 /** True when the text references shared match data. */
 export function isLinked(text: string): boolean {
   return /\{(home|away|competition|stage|date|weekday|time|venue|headline|subheadline|pick|market|odds)[a-zA-Z0-9.]*\}/.test(text)
+}
+
+// ── Editorial presets (accent + intensity) ──────────────────────────────────
+
+const INTENSITY_RANK: Record<Intensity, number> = { minimal: 0, editorial: 1, cinematic: 2 }
+
+export function slideIntensity(project: Pick<Project, 'style'> | null | undefined, slide: Pick<Slide, 'intensity'>): Intensity {
+  return slide.intensity ?? project?.style?.intensity ?? 'editorial'
+}
+
+export function slideAccent(project: Pick<Project, 'style'> | null | undefined, slide: Pick<Slide, 'accent'>): ColorValue | undefined {
+  return slide.accent ?? project?.style?.accent
+}
+
+/** True when the element should render at the given slide intensity. */
+export function shownAtIntensity(el: Pick<SlideElement, 'minIntensity'>, intensity: Intensity): boolean {
+  if (!el.minIntensity) return true
+  return INTENSITY_RANK[intensity] >= INTENSITY_RANK[el.minIntensity]
 }

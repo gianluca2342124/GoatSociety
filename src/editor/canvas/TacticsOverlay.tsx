@@ -62,7 +62,7 @@ export function TacticsOverlay({ el, zoom }: { el: TacticsElement; zoom: number 
       id: uid('ta'),
       kind: tool,
       points,
-      color: tool === 'press' ? '$negative' : tool === 'pass' ? '$text' : tool === 'zone' ? '$primary' : '$primary',
+      color: tool === 'pass' ? '$text' : '$accent',
       width: 0.45,
       label: '',
       opacity: 1,

@@ -23,6 +23,8 @@ export function buildTemplateSlide(def: TemplateDef, format: CanvasFormat, match
     background: out.background,
     elements: out.elements,
     overrides: {},
+    ...(out.accent ? { accent: out.accent } : {}),
+    ...(out.intensity ? { intensity: out.intensity } : {}),
   }
 }
 

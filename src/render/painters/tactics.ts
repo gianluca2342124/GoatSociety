@@ -1,5 +1,5 @@
 import type { TacticalAnnotation, TacticalPlayer, TacticsData, TacticsElement } from '../../model/types'
-import { mix, withAlpha } from '../../model/tokens'
+import { luminance, mix, withAlpha } from '../../model/tokens'
 import type { RenderCtx } from '../context'
 import { clearShadow, ellipsePath, polygonPath, roundRect, setShadow, type Ctx } from '../paint/canvas'
 import { cachedPaint, hashKey } from '../paint/bitmapCache'
@@ -67,6 +67,28 @@ function pill(ctx: Ctx, text: string, cx: number, cy: number, size: number, colo
   ctx.lineWidth = 1.2
   ctx.stroke()
   drawLabel(ctx, text, cx, cy, { family: fam, size, weight: 700, color, align: 'center', uppercase: true, letterSpacing: size * 0.08 })
+}
+
+/** Annotation/player tag: pill (classic) or plain bold text with a dark halo (editorial). */
+function tag(ctx: Ctx, t: TacticsData, text: string, cx: number, cy: number, size: number, color: string, rc: RenderCtx) {
+  if (t.labelStyle !== 'text') {
+    pill(ctx, text, cx, cy, size, color, rc)
+    return
+  }
+  const fam = rc.font('$label')
+  const s = size * 1.45
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.strokeStyle = 'rgba(5,5,5,0.85)'
+  ctx.lineWidth = s * 0.28
+  const w = labelWidth(text, { family: fam, size: s, weight: 700, uppercase: true })
+  // Halo: draw the text stroked behind the fill.
+  ctx.font = `700 ${s}px "${fam}"`
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.strokeText(text.toLocaleUpperCase('es-ES'), cx - w / 2, cy)
+  ctx.restore()
+  drawLabel(ctx, text, cx, cy, { family: fam, size: s, weight: 700, color, align: 'center', uppercase: true })
 }
 
 function paintAnnotation(ctx: Ctx, a: TacticalAnnotation, t: TacticsData, proj: Projection, rc: RenderCtx) {
@@ -148,7 +170,7 @@ function paintAnnotation(ctx: Ctx, a: TacticalAnnotation, t: TacticsData, proj: 
         const top = proj.toScreen({ x: c.x, y: c.y - r })
         const bottom = proj.toScreen({ x: c.x, y: c.y + r })
         const lp = t.vertical ? { x: Math.max(top.x, bottom.x) + unit * 3, y: (top.y + bottom.y) / 2 } : { x: top.x, y: Math.min(top.y, bottom.y) - unit * 2 }
-        pill(ctx, a.label, lp.x, lp.y, Math.max(12, unit * 1.5), color, rc)
+        tag(ctx, t, a.label, lp.x, lp.y, Math.max(12, unit * 1.5), color, rc)
       }
       break
     }
@@ -206,7 +228,7 @@ function paintAnnotation(ctx: Ctx, a: TacticalAnnotation, t: TacticsData, proj: 
       }
       if (a.label) {
         const mid = path[Math.floor(path.length / 2)]
-        pill(ctx, a.label, mid.x, mid.y - unit * 2.2, Math.max(12, unit * 1.4), color, rc)
+        tag(ctx, t, a.label, mid.x, mid.y - unit * (t.labelStyle === 'text' ? 2.8 : 2.2), Math.max(12, unit * 1.4), color, rc)
       }
     }
   }
@@ -217,26 +239,39 @@ function paintPlayer(ctx: Ctx, p: TacticalPlayer, t: TacticsData, proj: Projecti
   const s = proj.toScreen(p)
   const r = playerRadius(t, proj, p)
   const base = p.team === 'home' ? colors[0] : colors[1]
+  const hl = rc.color(t.highlightColor ?? '$accent')
   const persp = t.camera !== 'top'
   const lift = persp ? r * 0.55 : 0
+  const flat = t.playerStyle === 'flat'
+  ctx.save()
+  if (t.dimOthers != null && !p.highlight) ctx.globalAlpha *= Math.max(0, Math.min(1, t.dimOthers))
   // Ground shadow / ring
   ctx.save()
   ctx.translate(s.x, s.y)
   ctx.scale(1, persp ? 0.42 : 1)
-  ellipsePath(ctx, 0, persp ? 0 : r * 0.18, r * 1.05, r * 1.05)
-  ctx.fillStyle = 'rgba(0,0,0,0.45)'
-  ctx.fill()
+  if (!flat || persp) {
+    ellipsePath(ctx, 0, persp ? 0 : r * 0.18, r * 1.05, r * 1.05)
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'
+    ctx.fill()
+  }
   if (p.highlight) {
-    setShadow(ctx, withAlpha(rc.color('$primary'), 0.9), r * 1.2 * t.glow)
-    ellipsePath(ctx, 0, 0, r * 1.55, r * 1.55)
-    ctx.strokeStyle = rc.color('$primary')
-    ctx.lineWidth = Math.max(2, r * 0.16)
+    if (t.glow > 0) setShadow(ctx, withAlpha(hl, 0.9), r * 1.2 * t.glow)
+    ellipsePath(ctx, 0, 0, r * 1.5, r * 1.5)
+    ctx.strokeStyle = hl
+    ctx.lineWidth = Math.max(2, r * (flat ? 0.22 : 0.16))
     ctx.stroke()
     clearShadow(ctx)
   }
   ctx.restore()
   const cy = s.y - lift
-  if (t.playerStyle === 'ring') {
+  if (flat) {
+    ellipsePath(ctx, s.x, cy, r, r)
+    ctx.fillStyle = base
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(5,5,5,0.55)'
+    ctx.lineWidth = Math.max(1.5, r * 0.08)
+    ctx.stroke()
+  } else if (t.playerStyle === 'ring') {
     ellipsePath(ctx, s.x, cy, r, r)
     ctx.fillStyle = 'rgba(8,9,11,0.75)'
     ctx.fill()
@@ -280,23 +315,24 @@ function paintPlayer(ctx: Ctx, p: TacticalPlayer, t: TacticsData, proj: Projecti
     ctx.fillStyle = g
     ctx.fill()
     clearShadow(ctx)
-    ctx.strokeStyle = p.highlight ? rc.color('$primary') : 'rgba(243,240,232,0.9)'
+    ctx.strokeStyle = p.highlight ? hl : 'rgba(243,240,232,0.9)'
     ctx.lineWidth = Math.max(1.5, r * 0.13)
     ctx.stroke()
   }
   if (t.showNumbers) {
-    const light = parseInt(base.replace('#', '').slice(0, 2) || '0', 16) > 200 && base.startsWith('#')
+    const light = flat ? luminance(base) > 0.4 : parseInt(base.replace('#', '').slice(0, 2) || '0', 16) > 200 && base.startsWith('#')
     drawLabel(ctx, String(p.number), s.x, cy + (t.playerStyle === 'shirt' ? r * 0.15 : 0), {
       family: rc.font('$label'),
-      size: r * 1.05,
+      size: r * (flat ? 1.1 : 1.05),
       weight: 800,
       color: t.playerStyle === 'ring' ? '#F3F0E8' : light ? '#0B0C0F' : '#F7F5EF',
       align: 'center',
     })
   }
   if (t.showLabels && p.label) {
-    pill(ctx, p.label, s.x, cy + r + r * 0.95, Math.max(11, r * 0.62), p.highlight ? rc.color('$primary') : '#F3F0E8', rc)
+    tag(ctx, t, p.label, s.x, cy + r + r * (t.labelStyle === 'text' ? 0.85 : 0.95), Math.max(11, r * 0.62), p.highlight ? hl : '#F3F0E8', rc)
   }
+  ctx.restore()
 }
 
 export function paintTacticsBoard(ctx: Ctx, t: TacticsData, w: number, h: number, rc: RenderCtx, opts: { skipPlayers?: boolean } = {}) {
@@ -344,7 +380,7 @@ export function paintTacticsBoard(ctx: Ctx, t: TacticsData, w: number, h: number
   const lg = ctx.createRadialGradient(cx, cy - (maxY - minY) * 0.1, R * 0.05, cx, cy, R)
   lg.addColorStop(0, 'rgba(255,255,255,0.07)')
   lg.addColorStop(0.6, 'rgba(0,0,0,0.05)')
-  lg.addColorStop(1, 'rgba(0,0,0,0.55)')
+  lg.addColorStop(1, 'rgba(0,0,0,0.42)')
   ctx.fillStyle = lg
   ctx.fillRect(minX, minY, maxX - minX, maxY - minY)
   // Markings
@@ -383,6 +419,6 @@ export function paintTacticsBoard(ctx: Ctx, t: TacticsData, w: number, h: number
 
 export function paintTactics(ctx: Ctx, el: TacticsElement, rc: RenderCtx) {
   const t = el.tactics
-  const key = hashKey(['tac', t, el.width, el.height, rc.match.home.primary, rc.match.away.primary, rc.brand.palette, rc.brand.fonts])
+  const key = hashKey(['tac', t, el.width, el.height, rc.match.home.primary, rc.match.away.primary, rc.match.away.secondary, rc.brand.palette, rc.brand.fonts, rc.color('$accent')])
   cachedPaint(ctx, key, el.width, el.height, (c) => paintTacticsBoard(c, t, el.width, el.height, rc), { direct: rc.mode === 'export', pad: 40 })
 }

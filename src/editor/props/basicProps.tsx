@@ -334,6 +334,8 @@ export function BrandMarkProps({ el }: { el: BrandMarkElement }) {
         value={el.variant}
         onChange={(v) => set({ variant: v })}
         options={[
+          { value: 'editorial', label: 'Firma editorial (discreta)' },
+          { value: 'icon', label: 'Solo el logo (pequeño)' },
           { value: 'header', label: 'Cabecera (icono + nombre)' },
           { value: 'signature', label: 'Firma de pie' },
           { value: 'badge', label: 'Insignia circular' },
@@ -341,9 +343,9 @@ export function BrandMarkProps({ el }: { el: BrandMarkElement }) {
           { value: 'wordmark', label: 'Logotipo apilado' },
         ]}
       />
-      {el.variant === 'header' && (
+      {(el.variant === 'header' || el.variant === 'editorial') && (
         <Segmented
-          value={el.align ?? 'center'}
+          value={el.align ?? (el.variant === 'editorial' ? 'left' : 'center')}
           onChange={(v) => set({ align: v })}
           options={[
             { value: 'left', label: 'Izquierda' },
@@ -362,6 +364,8 @@ export function BrandMarkProps({ el }: { el: BrandMarkElement }) {
 }
 
 export const MASCOT_PRESETS: { label: string; patch: Partial<MascotElement> }[] = [
+  { label: 'Editorial (acento)', patch: { variant: 'cinematic', baseColor: '#3A3D42', shadowColor: '#050505', rimColor: '$accent', backlightColor: '#101010', eyeColor: '$accent', rimIntensity: 0.55, backlight: 0.15, eyeGlow: 0.35, fog: 0.1, contrast: 0.7 } },
+  { label: 'Icono blanco', patch: { variant: 'icon', baseColor: '$text', eyeColor: '#050505', eyeGlow: 0, facetGap: 0 } },
   { label: 'Aura roja', patch: { variant: 'cinematic', baseColor: '#4A4F57', shadowColor: '#050506', rimColor: '$negative', backlightColor: '$tertiary', eyeColor: '$primary', rimIntensity: 0.85, backlight: 0.9, eyeGlow: 0.9, fog: 0.5 } },
   { label: 'Aura verde', patch: { variant: 'cinematic', baseColor: '#3D434B', shadowColor: '#060708', rimColor: '$positive', backlightColor: '$secondary', eyeColor: '$positive', rimIntensity: 0.8, backlight: 1, eyeGlow: 1, fog: 0.4 } },
   { label: 'Oro', patch: { variant: 'cinematic', baseColor: '$primary', shadowColor: '#2A1D08', rimColor: '#FFF3D0', backlightColor: '$primary', eyeColor: '#08090B', rimIntensity: 0.5, backlight: 0.5, eyeGlow: 0, fog: 0.2, contrast: 0.8 } },

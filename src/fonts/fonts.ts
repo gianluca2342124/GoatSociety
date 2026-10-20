@@ -18,6 +18,8 @@ import '@fontsource-variable/big-shoulders-display'
 import '@fontsource/instrument-serif/400'
 import '@fontsource/instrument-serif/400-italic'
 import '@fontsource-variable/archivo'
+import '@fontsource/archivo-black/400'
+import '@fontsource-variable/inter-tight'
 
 export interface FontDef {
   /** CSS family name used for canvas drawing. */
@@ -30,11 +32,13 @@ export interface FontDef {
 
 export const FONTS: FontDef[] = [
   { family: 'Anton', label: 'Anton', weights: [400], italic: false, category: 'headline' },
+  { family: 'Archivo Black', label: 'Archivo Black', weights: [400], italic: false, category: 'headline' },
   { family: 'Bebas Neue', label: 'Bebas Neue', weights: [400], italic: false, category: 'headline' },
   { family: 'Big Shoulders Display Variable', label: 'Big Shoulders', weights: [300, 400, 500, 600, 700, 800, 900], italic: false, category: 'headline' },
   { family: 'Barlow Condensed', label: 'Barlow Condensed', weights: [400, 500, 600, 700, 800, 900], italic: true, category: 'condensed' },
   { family: 'Oswald Variable', label: 'Oswald', weights: [300, 400, 500, 600, 700], italic: false, category: 'condensed' },
   { family: 'Archivo Variable', label: 'Archivo', weights: [400, 500, 600, 700, 800, 900], italic: false, category: 'body' },
+  { family: 'Inter Tight Variable', label: 'Inter Tight', weights: [300, 400, 500, 600, 700, 800, 900], italic: false, category: 'body' },
   { family: 'Inter Variable', label: 'Inter', weights: [300, 400, 500, 600, 700, 800, 900], italic: true, category: 'body' },
   { family: 'Instrument Serif', label: 'Instrument Serif', weights: [400], italic: true, category: 'serif' },
 ]

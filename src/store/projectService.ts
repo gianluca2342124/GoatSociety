@@ -1,5 +1,6 @@
 // Project lifecycle: create, open, autosave, import and export.
 import { useEditor } from './editor'
+import { migrateBrand } from '../model/brand'
 import { useLibrary } from './library'
 import { useUI } from './ui'
 import type { FormatPreset, MatchData, Project } from '../model/types'
@@ -139,7 +140,7 @@ export async function importProjectFile(file: File, opts: { applyBrand?: boolean
     const project = migrateProject(structuredClone(bundle.project))
     project.id = uid('prj')
     project.updatedAt = Date.now()
-    if (opts.applyBrand && bundle.brand) useLibrary.getState().setBrand({ ...bundle.brand })
+    if (opts.applyBrand && bundle.brand) useLibrary.getState().setBrand(migrateBrand(bundle.brand))
     await saveProject(project)
     await useLibrary.getState().refreshAssets()
     await useLibrary.getState().refreshProjects()

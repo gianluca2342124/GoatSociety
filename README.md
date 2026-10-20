@@ -1,6 +1,6 @@
 # GOAT SOCIETY STUDIO
 
-Estudio gráfico **local** para crear contenido de fútbol premium (carruseles y posts para TikTok, Instagram y Telegram) con la identidad de **GOAT SOCIETY**.
+Estudio gráfico **local** para crear contenido de fútbol premium (carruseles y posts para TikTok e Instagram) con la identidad de **GOAT SOCIETY** y la dirección de arte **GOAT EDITORIAL**: fondo negro, texto blanco enorme, un solo color de acento y un mensaje por diapositiva.
 
 - Sin suscripciones, sin cuentas, sin APIs de pago, sin marcas de agua de terceros.
 - Todo se guarda en tu navegador (IndexedDB): proyectos, escudos, logos, fondos, modelos 3D y ajustes de marca.
@@ -41,7 +41,36 @@ La carpeta `dist/` es estática: puedes copiarla a cualquier hosting estático g
 
 ---
 
-## 5. Cómo se usa el editor
+## 5. Dirección de arte GOAT EDITORIAL
+
+> Fondo negro. Texto blanco grande. Un único color de acento. Un mensaje por diapositiva. Visuales de fútbol grandes. Impacto inmediato. Mínimas distracciones.
+
+Todas las plantillas siguen el sistema descrito en [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md):
+
+- **Color**: fondo `#070707`, texto `#F5F5F5`, secundario `#B9B9B9`, separadores `#242424` y **un acento por diapositiva**: verde `#2BE477`, amarillo `#FFD43B`, rojo `#FF4055` o azul `#3B8BFF`. El dorado queda solo para la marca.
+- **Tipografía** (local): Anton para titulares y cifras, Barlow Condensed para etiquetas y nombres, Inter Tight para frases de apoyo y Archivo Black como display. Escala fija: titulares 130–170 px, cifras 230–340 px, secundario 55–85 px, apoyo 38–55 px, etiquetas 32–45 px (sobre 1080×1920).
+- **Sin aspecto de dashboard**: composiciones abiertas, sin tarjetas, píldoras, brillos ni texturas innecesarias. Las tarjetas solo donde se justifican.
+- **Componentes**: comparativa audaz (cifras enormes + barra proporcional gruesa), cifra dominante, cara a cara, racha en letras, ranking con barras, probabilidad 1X2 con barra segmentada, pronóstico sin tarjeta y bloqueado con desenfoque real y candado sólido, pizarras con campo realista y una sola acción destacada.
+
+### Acento e intensidad por diapositiva
+
+Sin nada seleccionado, el panel derecho muestra **Estilo GOAT EDITORIAL**:
+
+- **Acento de la diapositiva**: verde, amarillo, rojo, azul o *Auto* (el del proyecto o el de la marca). Todo lo que usa `$accent` (palabras `[[resaltadas]]`, barras del líder, candados, flechas tácticas…) cambia a la vez.
+- **Intensidad visual**: **Mínimo** (solo el mensaje), **Editorial** (por defecto) o **Cinemático** (añade focos, viñeta y grano). Es un ajuste no destructivo: los elementos se ocultan o muestran según su opción «Visible en intensidad» (sección Apariencia), nunca se borran.
+- **Aplicar GOAT EDITORIAL**: convierte una diapositiva antigua al nuevo estilo (fondo negro sólido, acentos dorados → acento, barras editoriales, listas sin tarjetas, pronóstico sin tarjeta, atmósfera solo en Cinemático). También para **todo el proyecto**. Se puede deshacer.
+- **Igualar todas**: usa el acento y la intensidad de la diapositiva actual en todo el proyecto.
+
+### Vista móvil y zonas seguras
+
+- **Vista previa** abre por defecto a **tamaño real de móvil** (≈390 px de ancho): si se lee ahí en 2 segundos, funciona en el feed. Puedes activar **Zonas seguras** (las áreas que tapan las pestañas, los botones y la descripción de TikTok) y **Simular interfaz**.
+- En el lienzo, el botón **Móvil** de la barra de zoom pone el diseño a tamaño de teléfono y el icono de móvil muestra las zonas seguras. Nada de esto se exporta.
+
+### Proyectos antiguos
+
+Los proyectos guardados se abren sin cambios visuales salvo dos migraciones seguras: los textos que imprimían el enlace de la comunidad pasan a «Link en la bio» y el kit de marca actualiza solo los valores que seguían en el ajuste por defecto anterior (fondo, grises, verde/rojo, tipografías). Usa **Aplicar GOAT EDITORIAL** para convertir el resto cuando quieras.
+
+## 6. Cómo se usa el editor
 
 ### Flujo rápido (5 minutos)
 
@@ -63,9 +92,9 @@ La carpeta `dist/` es estática: puedes copiarla a cualquier hosting estático g
 
 ### Datos compartidos del partido
 
-- Los textos de las plantillas usan **datos vinculados** como `{home}`, `{away}`, `{competition}`, `{date}`, `{time}`, `{venue}`, `{headline}`, `{pick}`, `{handle}`, `{telegram}`, `{page}` / `{pages}`… Cambiar «Barcelona» en **Partido** lo cambia en todo el carrusel.
+- Los textos de las plantillas usan **datos vinculados** como `{home}`, `{away}`, `{competition}`, `{date}`, `{time}`, `{venue}`, `{headline}`, `{pick}`, `{handle}`, `{disclaimer}`, `{page}` / `{pages}`… Cambiar «Barcelona» en **Partido** lo cambia en todo el carrusel.
 - En **Partido** puedes cambiar el ámbito a **Solo esta diapositiva** para sobrescribir un dato en una diapositiva concreta (aparece «sobrescrito aquí» y un botón para volver al valor global).
-- En cualquier texto, `[[palabra]]` la resalta con el color de acento (p. ej. `El PSG no gana en [[París]]`).
+- En cualquier texto, `[[palabra]]` la resalta con el **acento de la diapositiva** (p. ej. `El PSG no gana en [[París]]`).
 - Los datos de ejemplo están marcados como **ficticios** (banner amarillo y aviso al exportar) hasta que pulses «Ya he introducido mis datos reales».
 
 ### Estadísticas y gráficos
@@ -106,7 +135,7 @@ Viñeta, foco de estadio, torres de focos, rayos de luz, niebla, iluminación ra
 
 ---
 
-## 6. Escudos de los equipos
+## 7. Escudos de los equipos
 
 - **Equipos → Escudo** → **Subir** (PNG, JPG, WebP o SVG). El escudo se aplica a **todas** las diapositivas del proyecto.
 - También puedes subirlo en **Imágenes** y elegir «Escudo del equipo local/visitante».
@@ -114,15 +143,15 @@ Viñeta, foco de estadio, torres de focos, rayos de luz, niebla, iluminación ra
 - Sin imagen se usa un **escudo genérico original** con los colores del equipo (forma y patrón configurables). No se incluyen escudos oficiales.
 - Los SVG se sanean (se eliminan scripts, eventos y referencias externas) antes de guardarse.
 
-## 7. Reemplazar el logo de GOAT SOCIETY
+## 8. Reemplazar el logo de GOAT SOCIETY
 
 1. **Marca (Kit de marca) → Logo → Subir**.
 2. Elige el tratamiento de color: original, marfil, oro o negro.
 3. Las cabeceras, insignias y marcas de agua usan tu logo automáticamente (opción «Usar mi logo subido» en cada elemento de marca).
 
-En el kit de marca también cambias nombre, usuario, enlace de Telegram, aviso legal, paleta (todas las plantillas usan los colores de marca), tipografías por función y una marca de agua global opcional.
+En el kit de marca también cambias nombre, usuario, aviso legal, paleta (incluido el **acento por defecto**), tipografías por función y una marca de agua global opcional. El apartado opcional **Destino de la comunidad** es solo de uso interno: ninguna plantilla lo muestra (las llamadas a la acción son neutras, como «Enlace en la bio»); si quieres imprimirlo, escribe `{community}` en un texto.
 
-## 8. Modelos 3D opcionales (GLB / GLTF)
+## 9. Modelos 3D opcionales (GLB / GLTF)
 
 1. **Mascota → Modelo 3D (GLB/GLTF)** o **Imágenes → subir un `.glb`**.
 2. En las propiedades del elemento: cámara (giro, inclinación, distancia, campo de visión), material (original, obsidiana, oro, marfil, cromo) e iluminación (cinemática, estudio, contorno rojo/verde, dorada).
@@ -130,13 +159,13 @@ En el kit de marca también cambias nombre, usuario, enlace de Telegram, aviso l
 
 Recomendación: usa `.glb` (lleva las texturas dentro). Un `.gltf` con texturas externas no puede resolverlas desde el almacenamiento local. La aplicación **no incluye un modelo 3D de cabra**: si no tienes uno, la mascota facetada 2.5D ofrece el acabado premium sin depender de él.
 
-## 9. Guardar proyectos
+## 10. Guardar proyectos
 
 - **Autoguardado** continuo en IndexedDB (indicador «Guardado» en la barra superior). Ctrl+S fuerza el guardado.
 - **Mis proyectos** (pantalla inicial): abrir, duplicar, exportar o eliminar.
 - **Exportar proyecto** (`.goat.json`) incluye el proyecto, el kit de marca y todos los recursos que usa (escudos, fondos, logo, modelos) codificados dentro del archivo: sirve como copia de seguridad o para pasar el proyecto a otro equipo. **Importar** lo restaura como proyecto nuevo.
 
-## 10. Exportar carruseles
+## 11. Exportar carruseles
 
 **Exportar** (Ctrl+E):
 
@@ -145,11 +174,11 @@ Recomendación: usa `.glb` (lleva las texturas dentro). Un `.gltf` con texturas 
 - Resolución **1×** (p. ej. 1080×1920) o **2×** (2160×3840).
 - Fondo transparente opcional (PNG/WebP).
 - Nombres secuenciales: `goat-society-psg-barcelona-01.png`, `-02.png`…
-- Se exporta **solo el diseño**: sin guías, sin selección, sin interfaz de TikTok/Instagram. La simulación de interfaz móvil existe solo en la vista previa.
+- Se exporta **solo el diseño**: sin guías, sin selección, sin zonas seguras ni interfaz de TikTok/Instagram. La vista a tamaño real, las zonas seguras y la simulación de interfaz existen solo en el editor y en la vista previa.
 
 Formatos de lienzo: Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuadrado 1080×1080 y horizontal 1920×1080. **Tamaño del lienzo** permite cambiar el formato de un proyecto recomponiendo las plantillas o escalando proporcionalmente.
 
-## 11. Atajos de teclado
+## 12. Atajos de teclado
 
 | Atajo | Acción |
 | --- | --- |
@@ -168,7 +197,7 @@ Formatos de lienzo: Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuad
 
 ---
 
-## 12. Biblioteca de plantillas
+## 13. Biblioteca de plantillas
 
 | Nº | Plantilla | Categoría |
 | --- | --- | --- |
@@ -194,9 +223,9 @@ Formatos de lienzo: Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuad
 
 Todas son composiciones paramétricas de elementos editables (no imágenes planas) y se adaptan a los cuatro formatos de lienzo.
 
-## 13. Arquitectura (resumen técnico)
+## 14. Arquitectura (resumen técnico)
 
-- **React + TypeScript + Vite**, **Tailwind CSS v4**, **Zustand + Immer** (historial de deshacer con agrupación de cambios), **React Konva** para la interacción del lienzo, **Three.js** (carga diferida) para 3D, **idb** para IndexedDB, **JSZip**, **lucide**, fuentes OFL incluidas vía **@fontsource** (Anton, Bebas Neue, Big Shoulders, Barlow Condensed, Oswald, Archivo, Inter, Instrument Serif).
+- **React + TypeScript + Vite**, **Tailwind CSS v4**, **Zustand + Immer** (historial de deshacer con agrupación de cambios), **React Konva** para la interacción del lienzo, **Three.js** (carga diferida) para 3D, **idb** para IndexedDB, **JSZip**, **lucide**, fuentes OFL incluidas vía **@fontsource** (Anton, Archivo Black, Barlow Condensed, Inter Tight, Bebas Neue, Big Shoulders, Oswald, Archivo, Inter, Instrument Serif).
 - `src/model`: modelo de documento (proyecto → diapositivas → elementos), tokens de marca/datos y cálculo de estadísticas.
 - `src/render/painters`: un pintor Canvas 2D por tipo de elemento. El editor (Konva) los invoca desde formas personalizadas y el exportador los invoca sobre un lienzo a la resolución final: **una sola vía de composición**.
 - `src/templates`: plantillas como funciones que generan elementos según el formato.
@@ -204,19 +233,19 @@ Todas son composiciones paramétricas de elementos editables (no imágenes plana
 - `src/brand/goat.ts`: malla facetada de la mascota con normales para la iluminación.
 - `src/db`: persistencia IndexedDB, saneado de SVG y formato `.goat.json`.
 
-## 14. Pruebas
+## 15. Pruebas
 
 ```bash
 npm test           # pruebas unitarias (Vitest): estadísticas, tokens, proyección táctica,
                    # formaciones, plantillas, guardado/carga en IndexedDB, .goat.json, SVG, historial
 npm run test:e2e   # flujo completo en navegador (Playwright): crear carrusel, equipos,
                    # subir escudos, fecha, titular, estadísticas, pizarra táctica, pronóstico
-                   # bloqueado, Telegram, guardar, recargar, exportar ZIP y verificar las imágenes
+                   # bloqueado, comunidad, guardar, recargar, exportar ZIP y verificar las imágenes
 ```
 
 Para la prueba e2e se necesita Chromium de Playwright (`npx playwright install chromium` si no lo tienes).
 
-## 15. Limitaciones conocidas
+## 16. Limitaciones conocidas
 
 - Las referencias visuales (capturas) no estaban en el repositorio cuando se construyó la app; el diseño se basa en su descripción. Si las añades en `/references`, sirven como guía para futuros ajustes.
 - No se incluyen escudos oficiales de clubes ni un modelo 3D de cabra: se usan escudos genéricos originales y la mascota facetada 2.5D hasta que subas los tuyos.

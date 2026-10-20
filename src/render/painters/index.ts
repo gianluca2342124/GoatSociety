@@ -13,6 +13,7 @@ import { paintPrediction } from './prediction'
 import { paintTactics } from './tactics'
 import { paintBrandMark, paintMascot } from './brand'
 import { paint3D } from './three'
+import { paintProbability, paintRanking } from './editorial'
 
 type Painter = (ctx: Ctx, el: never, rc: RenderCtx) => void
 
@@ -30,6 +31,8 @@ export const PAINTERS: Record<SlideElement['type'], Painter> = {
   matchList: paintMatchList as Painter,
   prediction: paintPrediction as Painter,
   resultsList: paintResultsList as Painter,
+  ranking: paintRanking as Painter,
+  probability: paintProbability as Painter,
   tactics: paintTactics as Painter,
   stadium3d: paint3D as Painter,
   model3d: paint3D as Painter,
@@ -106,7 +109,7 @@ export function paintElementLocal(ctx: Ctx, el: SlideElement, rc: RenderCtx) {
 
 /** Paint an element including its own transform (used by the exporter). */
 export function paintElement(ctx: Ctx, el: SlideElement, rc: RenderCtx) {
-  if (!el.visible || el.opacity <= 0) return
+  if (!el.visible || el.opacity <= 0 || !rc.shown(el)) return
   ctx.save()
   ctx.translate(el.x, el.y)
   if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180)
