@@ -471,7 +471,7 @@ export function paintFormRow(ctx: Ctx, el: FormRowElement, rc: RenderCtx) {
   const { width: w, height: h } = el
   const size = Math.min(h, (w - el.gap * (n - 1)) / n)
   const total = n * size + (n - 1) * el.gap
-  let x = (w - total) / 2
+  let x = el.align === 'left' ? 0 : el.align === 'right' ? w - total : (w - total) / 2
   const y = (h - size) / 2
   if (el.shape === 'letter' || el.shape === 'dot') {
     list.forEach((r) => {

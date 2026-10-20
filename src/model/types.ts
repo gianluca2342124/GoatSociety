@@ -239,6 +239,8 @@ export interface FormRowElement extends BaseElement {
   gap: number
   /** Show newest first (left). */
   newestFirst: boolean
+  /** Horizontal alignment of the results inside the box (default center). */
+  align?: 'left' | 'center' | 'right'
 }
 
 export interface TableElement extends BaseElement {
@@ -366,6 +368,8 @@ export interface RankingElement extends BaseElement {
   highlightIndex: number
   showRank: boolean
   showBars: boolean
+  /** Bar thickness (px). Undefined = automatic (≈14 % of the row, max 36). */
+  barHeight?: number
   accentColor: ColorValue
   textColor: ColorValue
   mutedColor: ColorValue

@@ -60,7 +60,9 @@ Escala (px en una story de 1080×1920; `TYPE` en `src/templates/kit.ts`, multipl
 | Aviso legal | 26–30 (`$dim`) |
 
 Tracking mínimo (≤ 0,04 em). Mayúsculas en titulares y etiquetas; frases de apoyo en
-minúsculas. Interlineado de titulares 1,04 (deja sitio a Á/Ú/Ç).
+minúsculas. Interlineado de titulares 1,04 (Anton compacto). La cedilla de Anton (BARÇA)
+puede rozar la línea siguiente: termina el titular con la palabra que lleva Ç o sube el
+interlineado a 1,12 en esa plantilla.
 
 ## 4. Retícula y zonas seguras (story 1080×1920)
 

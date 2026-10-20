@@ -318,8 +318,7 @@ export const performanceComparison: TemplateDef = {
     }
     // 16:9 keeps the vertical duel (two columns would push the two values together)
     // with a one-line headline; the reading line stays at a comfortable measure.
-    const lh = LH
-    const hs = (headH(t, 140, t.landscape ? 1 : 2, lh) - 8) / t.s + 8
+    const hs = (headH(t, 140, t.landscape ? 1 : 2) - 8) / t.s + 8
     const S = sizer(t, hs + 100 + 150 + 50 + 440 + 60 + 130)
     const f = S(1000) / 1000 / t.s
     const hy = t.contentTop
@@ -335,7 +334,7 @@ export const performanceComparison: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        head(t, claim, { y: hy, h: hh }, 140 * f, { lineHeight: lh }),
+        head(t, claim, { y: hy, h: hh }, 140 * f),
         ...duel(t.left, w, cy, cs, S(46, 28), by, bh, 236 * t.s),
         support(t, reading, { y: sy, w: t.landscape ? Math.min(w, 1000) : w, h: Math.max(S(130, 60), t.contentBottom - sy) }, 48, { name: 'Lectura' }),
       ],
@@ -358,7 +357,6 @@ export const formTrends: TemplateDef = {
     const w = wins(lead)
     // Number first, team last (a hanging Ç never lands on the next line).
     const claim = `[[${n ? w : 4} ${n && w === 1 ? 'victoria' : 'victorias'}]] en\u00A0${n || 5} para {${lead}.short}`
-    const lh = LH
     const nWord = NUM[n || 5] ?? String(n)
     const src = `Últimos ${nWord} partidos  ·  el más reciente, a la izquierda`
     // Each row is as wide as its own results, so both rows share the same letter columns.
@@ -392,7 +390,7 @@ export const formTrends: TemplateDef = {
         elements: [
           ...cinematic(t),
           signature(t),
-          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 120, { lineHeight: lh }),
+          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 120),
           ...row(lead, c.rx, y0, rowH, cs, fx, fw, fh, fg),
           ...row(other(lead), c.rx, r2, rowH, cs, fx, fw, fh, fg),
           trend(c.rx, r2 + rowH + gapT, c.rw, Math.max(10, end - (r2 + rowH + gapT)), tvs),
@@ -402,7 +400,7 @@ export const formTrends: TemplateDef = {
     }
     const k = vk(t)
     const hy = t.contentTop
-    const hh = headH(t, 150 * k, 2, lh)
+    const hh = headH(t, 150 * k)
     const cs = px(t, 104, 52)
     const fh = px(t, 112, 56)
     const fg = px(t, 34, 16)
@@ -422,7 +420,7 @@ export const formTrends: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        head(t, claim, { y: hy, h: hh }, 150 * k, { lineHeight: lh }),
+        head(t, claim, { y: hy, h: hh }, 150 * k),
         ...row(lead, t.left, r1, rowH, cs, fx, fw, fh, fg),
         ...row(other(lead), t.left, r2, rowH, cs, fx, fw, fh, fg),
         ...(fitV >= 140 * t.s ? [trend(t.left, tz.y, t.cw, tz.h, tvs)] : []),

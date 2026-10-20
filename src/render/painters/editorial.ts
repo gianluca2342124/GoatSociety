@@ -42,8 +42,8 @@ export function paintRanking(ctx: Ctx, el: RankingElement, rc: RenderCtx) {
     const textW = w - x - valueW - 24
     const sub = rc.text(r.sub)
     const capN = capHeightOf(nameFont, nameSize, 700, false)
-    const subSize = Math.max(24, nameSize * 0.58)
-    const barH = el.showBars ? Math.max(8, Math.min(22, rowH * 0.1)) : 0
+    const subSize = Math.max(30, nameSize * 0.6)
+    const barH = el.showBars ? Math.max(8, Math.min(rowH * 0.22, el.barHeight ?? Math.min(36, rowH * 0.14))) : 0
     const block = capN + (sub ? subSize * 1.35 : 0) + (barH ? barH + rowH * 0.1 : 0)
     let ty = cy - block / 2
     drawLabel(ctx, rc.text(r.label), x, ty, { family: nameFont, size: nameSize, weight: 700, color: textC, uppercase: true, baseline: 'top', maxWidth: textW })

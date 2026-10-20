@@ -250,6 +250,9 @@ export function FormRowProps({ el }: { el: FormRowElement }) {
           { value: 'pill', label: 'Píldora' },
         ]}
       />
+      <Row label="Alineación">
+        <Segmented value={el.align ?? 'center'} onChange={(v) => set({ align: v })} options={[{ value: 'left', label: 'Izquierda' }, { value: 'center', label: 'Centro' }, { value: 'right', label: 'Derecha' }]} />
+      </Row>
       <Toggle label="Mostrar letras" checked={el.showLetters} onChange={(v) => set({ showLetters: v })} />
       <Toggle label="Más reciente a la izquierda" checked={el.newestFirst} onChange={(v) => set({ newestFirst: v })} />
       <Slider label="Separación" min={0} max={60} step={1} value={el.gap} onChange={(v) => set({ gap: v })} />
@@ -456,6 +459,7 @@ export function RankingProps({ el }: { el: RankingElement }) {
         </div>
         <Toggle label="Mostrar posición" checked={el.showRank} onChange={(v) => set({ showRank: v })} />
         <Toggle label="Barras proporcionales" checked={el.showBars} onChange={(v) => set({ showBars: v })} />
+        {el.showBars && <Slider label="Grosor de barra" min={4} max={60} step={1} value={el.barHeight ?? 26} onChange={(v) => set({ barHeight: v })} />}
         <ColorField label="Acento" value={el.accentColor} onChange={(v) => set({ accentColor: v })} />
         <ColorField label="Barras" value={el.barColor} onChange={(v) => set({ barColor: v })} />
         <Slider label="Tamaño del nombre" min={20} max={120} step={1} value={el.nameSize} onChange={(v) => set({ nameSize: v })} />

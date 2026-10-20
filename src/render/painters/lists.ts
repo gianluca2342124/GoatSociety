@@ -39,7 +39,8 @@ export function paintPlayerList(ctx: Ctx, el: PlayerListElement, rc: RenderCtx) 
     top = ts * 1.9
   }
   if (!players.length) {
-    drawLabel(ctx, el.filter === 'absences' ? 'Sin bajas confirmadas' : 'Sin jugadores', right ? w : 0, top + 30, { family: rc.font('$body'), size: 26, weight: 500, color: mutedC, align: right ? 'right' : 'left' })
+    const es = el.variant === 'editorial' ? Math.max(32, el.nameSize * 0.7) : 26
+    drawLabel(ctx, el.filter === 'absences' ? 'Sin bajas confirmadas' : 'Sin jugadores', right ? w : 0, top + es * 1.1, { family: rc.font('$body'), size: es, weight: 500, color: mutedC, align: right ? 'right' : 'left', maxWidth: w })
     return
   }
   if (el.variant === 'editorial') {
@@ -227,7 +228,11 @@ export function paintResultsList(ctx: Ctx, el: ResultsListElement, rc: RenderCtx
 
 // ── GOAT EDITORIAL open rows (no cards, hairline separators) ───────────────
 
-const STATUS_COLOR: Record<Player['status'], string> = { available: '#B9B9B9', injured: '#FF4055', suspended: '#FF4055', out: '#FF4055', doubt: '#FFD43B' }
+/** Confirmed absences carry the slide accent; doubts stay neutral (one accent per slide). */
+function statusColor(status: Player['status'], accent: string, text: string, muted: string): string {
+  if (status === 'available') return muted
+  return status === 'doubt' ? text : accent
+}
 
 function hairlineAt(ctx: Ctx, rc: RenderCtx, y: number, w: number) {
   ctx.fillStyle = rc.color('$line')
@@ -252,7 +257,9 @@ function paintPlayerRowsEditorial(ctx: Ctx, el: PlayerListElement, rc: RenderCtx
     const subSize = Math.max(26, nameSize * 0.62)
     const hasStat = el.showStat && !!p.stat
     const hasStatus = el.showStatus && p.status !== 'available'
-    const sideW = hasStat ? Math.min(w * 0.34, rowH * 1.6) : hasStatus ? w * 0.36 : 0
+    const statusSize = Math.max(30, nameSize * 0.7)
+    const statusW = hasStatus ? labelWidth(STATUS_LABEL[p.status], { family: rc.font('$label'), size: statusSize, weight: 700, uppercase: true }) + 6 : 0
+    const sideW = hasStat ? Math.min(w * 0.34, rowH * 1.6) : hasStatus ? Math.min(w * 0.5, statusW) : 0
     let x = right ? w : 0
     if (el.showNumber) {
       const nw = drawLabel(ctx, String(p.number), x, cy, { family: rc.font('$numbers'), size: nameSize, color: rc.color('$dim'), align })
@@ -267,7 +274,7 @@ function paintPlayerRowsEditorial(ctx: Ctx, el: PlayerListElement, rc: RenderCtx
     const ex = right ? 0 : w
     const eAlign = right ? 'left' : 'right'
     if (hasStatus) {
-      drawLabel(ctx, STATUS_LABEL[p.status], ex, cy, { family: rc.font('$label'), size: Math.max(30, nameSize * 0.7), weight: 700, color: STATUS_COLOR[p.status], align: eAlign, uppercase: true, maxWidth: sideW })
+      drawLabel(ctx, STATUS_LABEL[p.status], ex, cy, { family: rc.font('$label'), size: statusSize, weight: 700, color: statusColor(p.status, accent, textC, mutedC), align: eAlign, uppercase: true, maxWidth: sideW })
     } else if (hasStat) {
       const ss = Math.min(rowH * 0.62, nameSize * 2)
       const capS = capHeightOf(rc.font('$numbers'), ss, 400, false)
