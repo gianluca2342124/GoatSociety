@@ -279,7 +279,7 @@ export function prediction(p: Partial<PredictionElement> = {}): PredictionElemen
     blurIntensity: 22,
     overlayOpacity: 0.35,
     lockStyle: 'padlock',
-    teaser: 'Desbloquéalo en {brand}',
+    teaser: 'Solo para miembros',
     accentColor: '$primary',
     cardColor: '$surface',
     textColor: '$text',

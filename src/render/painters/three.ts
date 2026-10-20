@@ -24,6 +24,8 @@ export function paint3D(ctx: Ctx, el: Stadium3DElement | Model3DElement, rc: Ren
     ctx.fillStyle = withAlpha(rc.color('$surface'), 0.7)
     ctx.fill()
   }
-  const label = el.type === 'model3d' && !el.assetId ? 'SUBE UN MODELO GLB/GLTF' : 'RENDERIZANDO 3D…'
-  drawLabel(ctx, label, w / 2, h / 2, { family: rc.font('$label'), size: Math.min(34, w * 0.05), weight: 700, color: rc.color('$text'), align: 'center', letterSpacing: 3 })
+  const error = rc.error3d(el)
+  const label = el.type === 'model3d' && !el.assetId ? 'SUBE UN MODELO GLB/GLTF' : error ? 'NO SE PUDO RENDERIZAR EL 3D' : 'RENDERIZANDO 3D…'
+  drawLabel(ctx, label, w / 2, h / 2, { family: rc.font('$label'), size: Math.min(34, w * 0.05), weight: 700, color: error ? rc.color('$negative') : rc.color('$text'), align: 'center', letterSpacing: 3, maxWidth: w * 0.9 })
+  if (error) drawLabel(ctx, error.slice(0, 90), w / 2, h / 2 + Math.min(44, w * 0.06), { family: rc.font('$body'), size: Math.min(22, w * 0.032), weight: 500, color: rc.color('$muted'), align: 'center', maxWidth: w * 0.9 })
 }

@@ -1,7 +1,7 @@
 import type { BrandKit, MatchData, Project, Slide, SlideElement } from '../model/types'
 import { applyOverrides, resolveColor, resolveFont, resolveText } from '../model/tokens'
 import { getImage } from './assetCache'
-import { EDITOR_3D_SCALE, get3DRender } from './three/render3dCache'
+import { EDITOR_3D_SCALE, get3DError, get3DRender } from './three/render3dCache'
 
 export interface RenderCtx {
   match: MatchData
@@ -13,6 +13,7 @@ export interface RenderCtx {
   mode: 'editor' | 'export'
   image: (id: string | null | undefined) => HTMLImageElement | HTMLCanvasElement | null
   render3d: (el: SlideElement) => HTMLCanvasElement | null
+  error3d: (el: SlideElement) => string | null
   color: (v: string | undefined) => string
   font: (v: string) => string
   text: (s: string) => string
@@ -34,6 +35,7 @@ export function makeRenderCtx(project: Project, slide: Slide, brand: BrandKit, m
     mode,
     image: (id) => (id ? getImage(id) : null),
     render3d: (el) => get3DRender(el, project, slide, brand, scale3d),
+    error3d: (el) => get3DError(el, project, slide, brand, scale3d),
     color: (v) => resolveColor(v, cctx),
     font: (v) => resolveFont(v, brand),
     text: (s) => resolveText(s, { match, brand, page, pages }),

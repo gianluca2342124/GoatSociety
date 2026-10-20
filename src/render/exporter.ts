@@ -35,12 +35,19 @@ export function fontsForSlide(slide: Slide, brand: BrandKit): { family: string; 
   return out
 }
 
+/** Problems found while preparing exports (shown to the user, never silent). */
+export const exportWarnings: string[] = []
+
 /** Wait for everything a slide needs: fonts, local images and 3D renders. */
 export async function prepareSlide(project: Project, slide: Slide, brand: BrandKit, scale: number): Promise<void> {
   await ensureFonts(fontsForSlide(slide, brand))
   await preloadAssets(collectAssetIds({ ...project, slides: [slide] }, brand))
   for (const el of slide.elements) {
-    if ((el.type === 'stadium3d' || el.type === 'model3d') && el.visible) await ensure3DRender(el, project, slide, brand, scale)
+    if ((el.type === 'stadium3d' || el.type === 'model3d') && el.visible) {
+      if (el.type === 'model3d' && !el.assetId) continue
+      const r = await ensure3DRender(el, project, slide, brand, scale)
+      if (!r) exportWarnings.push(`«${slide.name}»: no se pudo renderizar «${el.name}» (3D). Revisa que el navegador tenga WebGL activo.`)
+    }
   }
 }
 

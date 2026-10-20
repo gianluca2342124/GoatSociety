@@ -28,6 +28,7 @@ interface UIState {
   view: 'home' | 'editor'
   leftTab: LeftTab
   panelOpen: boolean
+  rightOpen: boolean
   zoom: number
   autoFit: boolean
   pan: { x: number; y: number }
@@ -54,7 +55,9 @@ let toastId = 0
 export const useUI = create<UIState>((set) => ({
   view: 'home',
   leftTab: 'templates',
-  panelOpen: true,
+  // Small laptop screens start with collapsed side panels to give the canvas room.
+  panelOpen: typeof window === 'undefined' || window.innerWidth >= 1240,
+  rightOpen: typeof window === 'undefined' || window.innerWidth >= 1060,
   zoom: 0.4,
   autoFit: true,
   pan: { x: 0, y: 0 },

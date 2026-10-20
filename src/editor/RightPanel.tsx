@@ -374,7 +374,8 @@ export function RightPanel() {
   const slide = useActiveSlide()
   const selection = useEditor((s) => s.selection)
   const [tab, setTab] = useState<'props' | 'layers'>('props')
-  if (!slide) return null
+  const open = useUI((s) => s.rightOpen)
+  if (!slide || !open) return null
   const els = slide.elements.filter((e) => selection.includes(e.id))
   return (
     <aside className="flex w-[300px] shrink-0 flex-col border-l border-line bg-panel" aria-label="Propiedades">

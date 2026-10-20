@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Stage, Layer, Group, Shape, Rect, Transformer, Line } from 'react-konva'
 import type Konva from 'konva'
 import type { KonvaEventObject } from 'konva/lib/Node'
-import { useActiveSlide, useEditor } from '../../store/editor'
+import { activeSlideOf, useActiveSlide, useEditor } from '../../store/editor'
 import { useUI } from '../../store/ui'
 import { useLibrary } from '../../store/library'
 import { useAssetVersion } from '../../render/assetCache'
@@ -87,6 +87,44 @@ function ElementNode({
   )
 }
 
+function ContextMenu({ x, y, onClose }: { x: number; y: number; onClose: () => void }) {
+  const ed = useEditor.getState()
+  const sel = useEditor((s) => s.selection)
+  const hasClip = useEditor((s) => !!s.clipboard?.length)
+  const slide = activeSlideOf(useEditor.getState())
+  const els = slide?.elements.filter((e) => sel.includes(e.id)) ?? []
+  const allLocked = els.length > 0 && els.every((e) => e.locked)
+  const items: { label: string; kbd?: string; run: () => void; disabled?: boolean; danger?: boolean }[] = [
+    { label: 'Copiar', kbd: 'Ctrl+C', run: ed.copySelection, disabled: !els.length },
+    { label: 'Pegar', kbd: 'Ctrl+V', run: ed.paste, disabled: !hasClip },
+    { label: 'Duplicar', kbd: 'Ctrl+D', run: ed.duplicateSelection, disabled: !els.length },
+    { label: 'Traer al frente', kbd: 'Ctrl+⇧+]', run: () => ed.reorderSelection('top'), disabled: !els.length },
+    { label: 'Enviar al fondo', kbd: 'Ctrl+⇧+[', run: () => ed.reorderSelection('bottom'), disabled: !els.length },
+    { label: allLocked ? 'Desbloquear' : 'Bloquear', run: () => ed.updateElements(sel, (e) => void (e.locked = !allLocked)), disabled: !els.length },
+    { label: 'Eliminar', kbd: 'Supr', run: ed.deleteSelection, disabled: !els.length, danger: true },
+  ]
+  return (
+    <div className="animate-in absolute z-30 w-52 rounded-lg border border-line-2 bg-panel-2 p-1 shadow-2xl" style={{ left: x, top: y }} role="menu" onMouseLeave={onClose}>
+      {items.map((it) => (
+        <button
+          key={it.label}
+          type="button"
+          role="menuitem"
+          disabled={it.disabled}
+          className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[12px] hover:bg-white/6 disabled:opacity-35 ${it.danger ? 'text-loss' : ''}`}
+          onClick={() => {
+            it.run()
+            onClose()
+          }}
+        >
+          {it.label}
+          {it.kbd && <span className="text-[10px] text-dim">{it.kbd}</span>}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function EditorCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<Konva.Stage>(null)
@@ -109,6 +147,10 @@ export function EditorCanvas() {
   const dragStart = useRef<Map<string, { x: number; y: number }>>(new Map())
   const [spaceDown, setSpaceDown] = useState(false)
   const panning = useRef<{ x: number; y: number; px: number; py: number } | null>(null)
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number; add: boolean } | null>(null)
+  const marqueeRef = useRef(marquee)
+  marqueeRef.current = marquee
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
   // Resize observer
   useEffect(() => {
@@ -290,10 +332,48 @@ export function EditorCanvas() {
     }
     const t = e.target
     if (t === stageRef.current || t.name() === 'background' || t.name() === 'pasteboard') {
-      select([])
+      const add = e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey
+      if (!add) select([])
       if (tacticsEditId) useUI.getState().set({ tacticsEditId: null, tacticsSel: null })
+      // Start a rubber-band selection in slide coordinates.
+      const ptr = stageRef.current!.getPointerPosition()
+      if (ptr && e.evt.button === 0) {
+        const x = (ptr.x - pan.x) / zoom
+        const y = (ptr.y - pan.y) / zoom
+        setMarquee({ x0: x, y0: y, x1: x, y1: y, add })
+      }
     }
   }
+  useEffect(() => {
+    if (!marquee) return
+    const move = (ev: MouseEvent) => {
+      const rect = containerRef.current?.getBoundingClientRect()
+      if (!rect || !marqueeRef.current) return
+      const { zoom: z, pan: p } = useUI.getState()
+      setMarquee({ ...marqueeRef.current, x1: (ev.clientX - rect.left - p.x) / z, y1: (ev.clientY - rect.top - p.y) / z })
+    }
+    const up = () => {
+      const m = marqueeRef.current
+      setMarquee(null)
+      if (!m) return
+      const x0 = Math.min(m.x0, m.x1)
+      const x1 = Math.max(m.x0, m.x1)
+      const y0 = Math.min(m.y0, m.y1)
+      const y1 = Math.max(m.y0, m.y1)
+      if (x1 - x0 < 4 && y1 - y0 < 4) return
+      const s = activeSlideOf(useEditor.getState())
+      if (!s) return
+      const hits = s.elements.filter((el) => el.visible && !el.locked && el.x < x1 && el.x + el.width > x0 && el.y < y1 && el.y + el.height > y0).map((el) => el.id)
+      const cur = useEditor.getState().selection
+      useEditor.getState().select(m.add ? [...new Set([...cur, ...hits])] : hits)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+    return () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+  }, [marquee !== null])
   useEffect(() => {
     const move = (e: MouseEvent) => {
       const p = panning.current
@@ -394,7 +474,22 @@ export function EditorCanvas() {
 
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-hidden" style={{ cursor: spaceDown ? (panning.current ? 'grabbing' : 'grab') : 'default', background: 'radial-gradient(ellipse at 50% 40%, #15181d 0%, #0b0c0f 70%)' }} data-testid="canvas-workspace">
-      <Stage ref={stageRef} width={size.w} height={size.h} onMouseDown={onStageMouseDown} onWheel={onWheel} onTouchStart={(e) => e.target === stageRef.current && select([])}>
+      <Stage
+        ref={stageRef}
+        width={size.w}
+        height={size.h}
+        onContextMenu={(e) => {
+          e.evt.preventDefault()
+          let n: Konva.Node | null = e.target
+          while (n && n.name() !== 'element') n = n.getParent()
+          if (n && !useEditor.getState().selection.includes(n.id())) select([n.id()])
+          const rect = containerRef.current!.getBoundingClientRect()
+          setMenu({ x: e.evt.clientX - rect.left, y: e.evt.clientY - rect.top })
+        }}
+        onMouseDown={(e) => {
+          setMenu(null)
+          onStageMouseDown(e)
+        }} onWheel={onWheel} onTouchStart={(e) => e.target === stageRef.current && select([])}>
         <Layer>
           <Group x={pan.x} y={pan.y} scaleX={zoom} scaleY={zoom}>
             <Rect name="pasteboard" x={-20000} y={-20000} width={40000} height={40000} fill="rgba(0,0,0,0)" />
@@ -423,6 +518,19 @@ export function EditorCanvas() {
           <Group x={pan.x} y={pan.y} scaleX={zoom} scaleY={zoom}>
             {showGrid && <Shape listening={false} sceneFunc={gridScene} />}
             {showSafeArea && <Shape listening={false} sceneFunc={safeScene} />}
+            {marquee && (
+              <Rect
+                x={Math.min(marquee.x0, marquee.x1)}
+                y={Math.min(marquee.y0, marquee.y1)}
+                width={Math.abs(marquee.x1 - marquee.x0)}
+                height={Math.abs(marquee.y1 - marquee.y0)}
+                fill="rgba(203,170,98,0.08)"
+                stroke="#CBAA62"
+                strokeWidth={1 / zoom}
+                dash={[5 / zoom, 4 / zoom]}
+                listening={false}
+              />
+            )}
             {guides.map((g, i) => (
               <Line key={i} points={g.points} stroke="#CBAA62" strokeWidth={1 / zoom} dash={[6 / zoom, 4 / zoom]} listening={false} />
             ))}
@@ -448,6 +556,7 @@ export function EditorCanvas() {
         </Layer>
       </Stage>
       {editingEl && editingEl.type === 'text' && <TextEditOverlay el={editingEl} zoom={zoom} pan={pan} />}
+      {menu && <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Check, CloudOff, Download, FilePlus2, FolderOpen, Frame, Keyboard, Loader2, Palette, Play, Redo2, Save, Undo2, Upload } from 'lucide-react'
+import { Check, CloudOff, Download, FilePlus2, FolderOpen, Frame, Keyboard, Loader2, Palette, PanelRight, Play, Redo2, Save, Undo2, Upload } from 'lucide-react'
 import { useEditor } from '../store/editor'
 import { useUI } from '../store/ui'
 import { exportProjectFile, goHome, importProjectFile, saveNow } from '../store/projectService'
@@ -12,6 +12,7 @@ export function TopBar() {
   const canRedo = useEditor((s) => s.future.length > 0)
   const update = useEditor((s) => s.update)
   const saveState = useUI((s) => s.saveState)
+  const rightOpen = useUI((s) => s.rightOpen)
   const fileRef = useRef<HTMLInputElement>(null)
   return (
     <header className="flex h-[52px] shrink-0 items-center gap-1 border-b border-line bg-ink-2 px-2">
@@ -48,7 +49,7 @@ export function TopBar() {
       </button>
       <div className="mx-1 h-6 w-px bg-line" />
       <input
-        className="w-[220px] min-w-0 rounded-md border border-transparent bg-transparent px-2 py-1 text-[13px] font-semibold outline-none hover:border-line focus:border-gold/60"
+        className="w-[220px] min-w-[80px] shrink rounded-md border border-transparent bg-transparent px-2 py-1 text-[13px] font-semibold outline-none hover:border-line focus:border-gold/60"
         aria-label="Nombre del proyecto"
         value={project.name}
         onChange={(e) => update((d) => void (d.name = e.target.value), { key: 'project-name' })}
@@ -73,16 +74,19 @@ export function TopBar() {
       <div className="flex-1" />
       <button type="button" className="btn btn-ghost text-[12px]" title="Tamaño del lienzo" onClick={() => useUI.getState().set({ modal: 'canvasSize' })}>
         <Frame size={15} /> <span className="hidden lg:inline">{FORMATS[project.format.preset].label}</span>
-        <span className="text-dim">{project.format.width}×{project.format.height}</span>
+        <span className="hidden text-dim md:inline">{project.format.width}×{project.format.height}</span>
       </button>
       <button type="button" className="icon-btn" title="Kit de marca" aria-label="Kit de marca" onClick={() => useUI.getState().set({ leftTab: 'brand', panelOpen: true })}>
         <Palette size={17} />
+      </button>
+      <button type="button" className="icon-btn" title="Mostrar/ocultar propiedades" aria-label="Panel de propiedades" aria-pressed={rightOpen} data-active={rightOpen} onClick={() => useUI.getState().set({ rightOpen: !rightOpen })}>
+        <PanelRight size={17} />
       </button>
       <button type="button" className="icon-btn" title="Atajos de teclado (?)" aria-label="Atajos de teclado" onClick={() => useUI.getState().set({ modal: 'shortcuts' })}>
         <Keyboard size={17} />
       </button>
       <button type="button" className="btn" onClick={() => useUI.getState().set({ modal: 'preview' })}>
-        <Play size={14} /> Vista previa
+        <Play size={14} /> <span className="hidden lg:inline">Vista previa</span>
       </button>
       <button type="button" className="btn btn-gold" data-testid="open-export" onClick={() => useUI.getState().set({ modal: 'export' })}>
         <Download size={14} /> Exportar

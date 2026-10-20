@@ -82,9 +82,6 @@ export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) 
   // Header
   const headH = Math.min(70, h * 0.12)
   drawLabel(ctx, `${rc.brand.name} · PRONÓSTICO`, pad, headH * 0.75, { family: rc.font('$label'), size: Math.min(26, headH * 0.42), weight: 700, color: accent, uppercase: true, letterSpacing: 4, maxWidth: w * 0.6 })
-  if (el.showConfidence && pred && !locked) {
-    drawLabel(ctx, `CONFIANZA ${Math.round(pred.confidence)}%`, w - pad, headH * 0.75, { family: rc.font('$label'), size: Math.min(24, headH * 0.38), weight: 600, color: withAlpha(textC, 0.7), align: 'right', letterSpacing: 2.5 })
-  }
   ctx.fillStyle = withAlpha(accent, 0.25)
   ctx.fillRect(pad, headH + 12, w - pad * 2, 1.5)
   let y = headH + 36
@@ -110,8 +107,11 @@ export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) 
   const pickH = bodyH * (locked ? 0.4 : 0.34)
   const gap = bodyH * 0.05
   const oddsH = el.showOdds && pred.odds ? Math.min(76, bodyH * 0.15) : 0
-  const confH = el.showConfidence ? 10 : 0
-  const noteH = el.showNote && pred.note ? Math.min(bodyH * 0.2, 130) : 0
+  const confLabel = Math.min(22, bodyH * 0.05)
+  const confH = el.showConfidence ? 10 + confLabel * 1.8 : 0
+  const noteStyle = { family: rc.font('$body'), size: Math.min(28, bodyH * 0.06), weight: 500, italic: false, letterSpacing: 0, lineHeight: 1.35, uppercase: false }
+  // Measure the note so the whole block can be centered precisely.
+  const noteH = el.showNote && pred.note ? Math.min(bodyH * 0.2, fitText(pred.note, noteStyle, w - pad * 2, bodyH * 0.2, 14).height + 4) : 0
   const total = marketH + pickH + gap + (oddsH ? oddsH + gap : 0) + (confH ? confH + 24 : 0) + noteH
   const parts: Record<Part, { y: number; h: number }> = {} as Record<Part, { y: number; h: number }>
   let cursor = bodyTop + Math.max(0, (bodyH - total) / 2)
@@ -154,17 +154,23 @@ export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) 
       }
       case 'conf': {
         const cw = w - pad * 2
-        roundRect(c, pad, box.y, cw, box.h, box.h / 2)
+        const pct = Math.max(0, Math.min(100, pred.confidence))
+        // Locked teasers show a qualitative level instead of the exact number.
+        const level = pct >= 70 ? 'ALTA' : pct >= 50 ? 'MEDIA' : 'MODERADA'
+        drawLabel(c, 'CONFIANZA', pad, box.y + confLabel * 0.5, { family: rc.font('$label'), size: confLabel, weight: 700, color: withAlpha(textC, 0.6), letterSpacing: 3 })
+        drawLabel(c, locked ? level : `${Math.round(pct)}%`, w - pad, box.y + confLabel * 0.5, { family: rc.font('$label'), size: confLabel, weight: 800, color: accent, align: 'right', letterSpacing: 2 })
+        const by = box.y + confLabel * 1.8
+        roundRect(c, pad, by, cw, 10, 5)
         c.fillStyle = 'rgba(255,255,255,0.1)'
         c.fill()
-        roundRect(c, pad, box.y, (cw * Math.max(0, Math.min(100, decoy ? 50 : pred.confidence))) / 100, box.h, box.h / 2)
+        roundRect(c, pad, by, (cw * (decoy ? 50 : pct)) / 100, 10, 5)
         c.fillStyle = accent
         c.fill()
         break
       }
       case 'note': {
-        const style = { family: rc.font('$body'), size: Math.min(28, bodyH * 0.06), weight: 500, italic: false, letterSpacing: 0, lineHeight: 1.35, uppercase: false }
-        const lay = fitText(decoy ? scramble(pred.note) : pred.note, style, w - pad * 2, box.h, 14)
+        const style = noteStyle
+        const lay = fitText(decoy ? scramble(pred.note) : pred.note, style, w - pad * 2, Math.max(box.h, bodyH * 0.2), 14)
         c.save()
         c.translate(pad, box.y)
         drawLayout(c, lay, { ...style, size: lay.fontSize }, { width: w - pad * 2, height: box.h, align: 'center', verticalAlign: 'top', fill: withAlpha(textC, 0.72), accent })

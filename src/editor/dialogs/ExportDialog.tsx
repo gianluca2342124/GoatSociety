@@ -4,7 +4,7 @@ import { useEditor } from '../../store/editor'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
 import { Modal, Row, Segmented, Slider, Spinner, Toggle } from '../../ui/controls'
-import { downloadBlob, exportCarouselZip, exportSlideBlob, slideFileName, type ExportFormat } from '../../render/exporter'
+import { downloadBlob, exportCarouselZip, exportSlideBlob, exportWarnings, slideFileName, type ExportFormat } from '../../render/exporter'
 
 export function ExportDialog() {
   const project = useEditor((s) => s.project)!
@@ -27,6 +27,7 @@ export function ExportDialog() {
   const run = async () => {
     setBusy(true)
     setProgress(0)
+    exportWarnings.length = 0
     try {
       if (scope === 'current') {
         const { blob, name } = await exportSlideBlob(project, index, brand, opts)
@@ -37,6 +38,7 @@ export function ExportDialog() {
         downloadBlob(blob, name)
         toast(`Carrusel exportado: ${project.slides.length} imágenes en ${name}`, 'success')
       }
+      for (const w of new Set(exportWarnings)) toast(w, 'error')
       close()
     } catch (e) {
       console.error(e)
