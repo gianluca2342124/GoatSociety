@@ -112,8 +112,8 @@ function buildUpData(vertical: boolean, scale: number, homeFormation: string, aw
     players: [...home, ...away],
     annotations: [
       // The pivot drops between the centre-backs: line of three.
-      action('run', [{ x: 20.2, y: 34 }, { x: 11.5, y: 34 }]),
-      annotation('ball', [{ x: 6.4, y: 35.6 }], '$text'),
+      action('run', [{ x: 20.2, y: 34 }, { x: 11.5, y: 34 }], 1.1),
+      annotation('ball', [{ x: 7.6, y: 36.2 }], '$text'),
     ],
   })
 }
@@ -193,8 +193,8 @@ export const formationBattle: TemplateDef = {
     const vertical = t.story
     if (vertical) {
       // Away defends the top goal, home the bottom one: each name sits next to its half.
-      const th = px(t, 140)
-      const gap = px(t, 40)
+      const th = px(t, 135)
+      const gap = px(t, 30)
       const top = t.contentTop + th + gap
       const bottom = t.contentBottom - th - gap
       const fit = fitPitch('full', true, t.W, bottom - top)
@@ -267,7 +267,7 @@ function cutInsideData(vertical: boolean, scale: number, homeFormation: string, 
     [7, 80, 13],
     [6, 82, 28],
     [8, 84, 45],
-    [11, 72, 60],
+    [11, 71, 52],
     [9, 64, 26],
     [10, 62, 44],
   ])
@@ -314,7 +314,7 @@ export const keyMovement: TemplateDef = {
   description: 'Un movimiento concreto en el último tercio: una flecha gruesa y tres pasos.',
   build: (t, match) => {
     const k = vk(t)
-    const head = '{home.short} [[rompe]] por dentro'
+    const head = '{home.short} [[rompe]]\npor dentro'
     const els: SlideElement[] = [...cinematic(t), signature(t)]
     if (t.landscape) {
       const colW = t.cw * 0.38
@@ -413,7 +413,7 @@ export const stadium3D: TemplateDef = {
             width: t.W - sx,
             height: t.H,
             tactics: counterData(match.home.formation, match.away.formation),
-            camera: { azimuth: 180, elevation: 50, distance: 84, fov: 36, targetX: 74, targetY: 27 },
+            camera: { azimuth: 180, elevation: 52, distance: 70, fov: 36, targetX: 70, targetY: 24 },
             lighting: { exposure: 0.5, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3 },
             background: 'transparent',
             showStands: false,
@@ -428,6 +428,8 @@ export const stadium3D: TemplateDef = {
     const sy = t.contentTop + hh + px(t, 16)
     const sh = px(t, 70)
     const top = sy + sh + px(t, 30)
+    // Same framing as the story: wider frames move the camera closer so the pitch still fills them.
+    const dist = 60 * Math.min(1, Math.sqrt((t.H - top) / t.W / 1.07))
     return {
       background: ink(),
       elements: [
@@ -439,7 +441,7 @@ export const stadium3D: TemplateDef = {
           width: t.W,
           height: t.H - top,
           tactics: counterData(match.home.formation, match.away.formation),
-          camera: { azimuth: 180, elevation: 48, distance: t.story ? 72 : 78, fov: 36, targetX: 74, targetY: 24 },
+          camera: { azimuth: 180, elevation: 52, distance: dist, fov: 36, targetX: 68, targetY: 22 },
           lighting: { exposure: 0.5, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3 },
           background: 'transparent',
           showStands: false,

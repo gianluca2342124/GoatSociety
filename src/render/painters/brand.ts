@@ -27,7 +27,9 @@ export function paintMascot(ctx: Ctx, el: MascotElement, rc: RenderCtx) {
     contrast: el.contrast,
   }
   const key = hashKey(['goat', opts])
-  cachedPaint(ctx, key, el.width, el.height, (c) => paintGoat(c, el.width, el.height, opts), { direct: rc.mode === 'export' })
+  // Padding keeps the rim glow from being cut at the element box.
+  const pad = Math.ceil(Math.min(el.width, el.height) * 0.06)
+  cachedPaint(ctx, key, el.width, el.height, (c) => paintGoat(c, el.width, el.height, opts), { direct: rc.mode === 'export', pad })
 }
 
 /** Small flat goat icon (cached). */
