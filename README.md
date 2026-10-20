@@ -199,27 +199,33 @@ Formatos de lienzo: Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuad
 
 ## 13. Biblioteca de plantillas
 
-| Nº | Plantilla | Categoría |
-| --- | --- | --- |
-| 01 | Matchday Elite | Previas |
-| 02 | The Big Statement | Previas |
-| 03 | Head to Head | Previas |
-| 04 | Matchday Agenda | Previas |
-| 05 | Statistical Dominance | Estadísticas |
-| 06 | The Numbers | Estadísticas |
-| 07 | Key Players | Estadísticas |
-| 08 | Performance Comparison | Estadísticas |
-| 09 | Form & Trends | Estadísticas |
-| 10 | Tactical Board | Táctica |
-| 11 | Formation Battle | Táctica |
-| 12 | Key Tactical Movement | Táctica |
-| 13 | Premium Prediction | Pronósticos |
-| 14 | Locked Prediction | Pronósticos |
-| 15 | Prediction Reveal | Pronósticos |
-| 16 | Verified Results | Pronósticos |
-| 17 | GOAT SOCIETY Community | Comunidad |
-| 18 | Final Carousel Slide (4 variantes de texto) | Comunidad |
-| 19 | Estadio 3D | Táctica |
+| Nº | Plantilla | Categoría | Composición GOAT EDITORIAL |
+| --- | --- | --- | --- |
+| 01 | Matchday Elite | Previas | Dos escudos grandes, titular y fecha |
+| 02 | The Big Statement | Previas | Titular gigante a sangre (solo tipografía) |
+| 03 | Head to Head | Previas | Afirmación + tres cifras enormes (victorias / empates / victorias) |
+| 04 | Matchday Agenda | Previas | Agenda en filas abiertas con hora, escudos y equipos |
+| 05 | Statistical Dominance | Estadísticas | Comparativa audaz: cifras enormes y barras proporcionales |
+| 06 | The Numbers | Estadísticas | Una sola cifra dominante con etiqueta y frase de apoyo |
+| 07 | Key Players | Estadísticas | El duelo de los dos jugadores clave |
+| 08 | Performance Comparison | Estadísticas | Una métrica cara a cara con escudos grandes |
+| 09 | Form & Trends | Estadísticas | Racha en letras (V/E/D) y una tendencia |
+| 10 | Tactical Board | Táctica | Pizarra a todo ancho con una acción destacada |
+| 11 | Formation Battle | Táctica | Duelo de sistemas sobre campo cenital |
+| 12 | Key Tactical Movement | Táctica | Un movimiento, una flecha gruesa, tres pasos |
+| 13 | Premium Prediction | Pronósticos | Pronóstico sin tarjeta: pick enorme y cuota en acento |
+| 14 | Locked Prediction | Pronósticos | Pronóstico desenfocado con candado y llamada al perfil |
+| 15 | Prediction Reveal | Pronósticos | La misma composición con el pronóstico revelado |
+| 16 | Verified Results | Pronósticos | % de acierto calculado y filas abiertas de resultados |
+| 17 | GOAT SOCIETY Community | Comunidad | Declaración tipográfica: «Únete a GOAT SOCIETY» |
+| 18 | Final Carousel Slide (4 variantes de texto) | Comunidad | Cierre con mensaje y usuario |
+| 19 | Estadio 3D | Táctica | Escena 3D con una sola acción en acento |
+| 20 | Photo Cover | Previas | Editorial con foto (sube tu imagen en «Foto») |
+| 21 | Giant Stat | Estadísticas | Cifra gigante a todo ancho |
+| 22 | Ranking | Estadísticas | Ranking con barras gruesas proporcionales |
+| 23 | Win Probability | Pronósticos | Probabilidad 1X2 con barra segmentada (opinión, no garantía) |
+| 24 | Bajas y dudas | Estadísticas | Bajas de ambos equipos en filas abiertas |
+| 25 | Community · Mascota | Comunidad | La mascota como protagonista |
 
 Todas son composiciones paramétricas de elementos editables (no imágenes planas) y se adaptan a los cuatro formatos de lienzo.
 
