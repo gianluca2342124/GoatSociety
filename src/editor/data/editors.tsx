@@ -80,15 +80,15 @@ export function StatRowsEditor({ rows, onChange, homeLabel, awayLabel, homeColor
             </div>
             <div className="mt-2 flex items-center gap-1.5">
               <input className="field w-16 px-2 py-1 text-[11px]" aria-label="Unidad" placeholder="unidad" value={r.unit} onChange={(e) => set(i, { unit: e.target.value })} />
-              <select className="field w-auto px-2 py-1 text-[11px]" aria-label="Decimales" value={r.decimals} onChange={(e) => set(i, { decimals: Number(e.target.value) })}>
+              <select className="field w-[84px] py-1 pl-2 text-[11px]" aria-label="Decimales" value={r.decimals} onChange={(e) => set(i, { decimals: Number(e.target.value) })}>
                 {[0, 1, 2, 3].map((d) => (
                   <option key={d} value={d}>
-                    {d} dec.
+                    {d} decim.
                   </option>
                 ))}
               </select>
-              <label className="flex items-center gap-1 text-[10px] text-muted" title="Un valor menor es mejor (p. ej. goles encajados)">
-                <input type="checkbox" checked={!!r.lowerIsBetter} onChange={(e) => set(i, { lowerIsBetter: e.target.checked })} /> menor = mejor
+              <label className="flex items-center gap-1 text-[10px] whitespace-nowrap text-muted" title="Un valor menor es mejor (p. ej. goles encajados)">
+                <input type="checkbox" checked={!!r.lowerIsBetter} onChange={(e) => set(i, { lowerIsBetter: e.target.checked })} /> ↓ mejor
               </label>
               <div className="ml-auto">
                 <RowTools onUp={() => onChange(move(rows, i, -1))} onDown={() => onChange(move(rows, i, 1))} onDelete={() => onChange(rows.filter((_, k) => k !== i))} />

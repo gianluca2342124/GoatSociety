@@ -9,7 +9,10 @@ import { useUI } from '../../store/ui'
 import { TEMPLATES, buildMatchCarousel, buildTemplateSlide, type TemplateDef } from '../../templates'
 import { CATEGORY_LABELS, type TemplateCategory } from '../../templates/types'
 import { useSlideThumb, useTemplateThumb } from '../thumbs'
-import type { EffectElement, Project, Slide } from '../../model/types'
+import type { EffectElement, MascotElement, Project, Slide } from '../../model/types'
+import { createElement } from '../../model/elements'
+import { resolveColor } from '../../model/tokens'
+import { GoatCanvas } from '../../ui/GoatGlyph'
 import { insertElement, canvasSize } from './insert'
 import { EFFECT_OPTIONS, IconPreview, MASCOT_PRESETS } from '../props/basicProps'
 import { ICONS } from '../../render/icons'
@@ -384,6 +387,35 @@ export function TacticsPanel() {
   )
 }
 
+function MascotPreview({ patch }: { patch: Partial<MascotElement> }) {
+  const brand = useLibrary((s) => s.brand)
+  const match = useEditor((s) => s.project!.match)
+  const el = createElement('mascot', patch)
+  const c = (v: string) => resolveColor(v, { match, brand })
+  return (
+    <GoatCanvas
+      width={46}
+      height={58}
+      options={{
+        variant: el.variant,
+        base: c(el.baseColor),
+        shadow: c(el.shadowColor),
+        rim: c(el.rimColor),
+        rimIntensity: el.rimIntensity,
+        backlight: c(el.backlightColor),
+        backlightAmount: el.variant === 'background' ? 0.4 : el.backlight * 0.6,
+        lightAngle: el.lightAngle,
+        eye: c(el.eyeColor),
+        eyeGlow: el.eyeGlow,
+        fog: 0,
+        fadeBottom: el.fadeBottom,
+        facetGap: el.facetGap * 0.3,
+        contrast: el.contrast,
+      }}
+    />
+  )
+}
+
 export function MascotPanel() {
   const { W, H } = canvasSize()
   const size = Math.min(W * 0.75, H * 0.5)
@@ -392,7 +424,9 @@ export function MascotPanel() {
       <PanelTitle title="Mascota y marca" sub="Mascota original facetada con iluminación real por faceta." />
       <div className="grid grid-cols-2 gap-2 px-4">
         {MASCOT_PRESETS.map((p) => (
-          <InsertTile key={p.label} label={p.label} onClick={() => insertElement('mascot', { ...p.patch, width: size * 0.78, height: size, name: `Mascota · ${p.label}` })} />
+          <InsertTile key={p.label} label={p.label} onClick={() => insertElement('mascot', { ...p.patch, width: size * 0.78, height: size, name: `Mascota · ${p.label}` })}>
+            <MascotPreview patch={p.patch} />
+          </InsertTile>
         ))}
       </div>
       <div className="label-xs px-4 pt-5 pb-2">Marca GOAT SOCIETY</div>

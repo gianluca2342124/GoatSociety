@@ -329,7 +329,7 @@ export function stadium3d(p: Partial<Stadium3DElement> = {}): Stadium3DElement {
     type: 'stadium3d',
     tactics: defaultTactics({ playerSize: 18 }),
     camera: { azimuth: 180, elevation: 34, distance: 88, fov: 38, targetX: 60, targetY: 34 },
-    lighting: { exposure: 1.05, floodlights: 1, fog: 0.4, accent: '$primary', rim: 0.6 },
+    lighting: { exposure: 1.3, floodlights: 1.35, fog: 0.3, accent: '$primary', rim: 0.7 },
     background: 'transparent',
     showStands: true,
     ...p,
