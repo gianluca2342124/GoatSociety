@@ -27,10 +27,12 @@ function sizer(t: TCtx, total: number, room = t.ch) {
 /** Font size for kit helpers (they multiply by t.s) from a format px value. */
 const fs = (t: TCtx, v: number) => v / t.s
 
-/** Box of the prediction element: a touch wider than the column so the pick reaches 170 px. */
+/**
+ * Box of the prediction element: the content column, so long picks never
+ * cross the side margins (the painter sizes the pick at min(170, w·0.17)).
+ */
 function predBox(t: TCtx): { x: number; w: number } {
-  const w = t.landscape ? t.cw : Math.min(t.W - 80, 1000)
-  return { x: t.cx - w / 2, w }
+  return { x: t.left, w: t.cw }
 }
 
 /** Lines the pick will take in the editorial painter (Anton ≈ 0.46 em per uppercase glyph). */
@@ -295,9 +297,9 @@ export const winProbability: TemplateDef = {
     const NH = 40 * 1.22 + 4
     const G4 = 60
     const DH = 40
-    // Extra leading: a cedilla (BARÇA) must not touch the line below.
-    const hhOf = (lines: number) => HS * 1.14 * lines + 8
-    const em = antonEm(`${favTeam.shortName || favTeam.name} parte como favorito`)
+    // The team closes the headline, so a cedilla (BARÇA) never hangs over another line.
+    const hhOf = (lines: number) => HS * 1.04 * lines + 8
+    const em = antonEm(`El favorito es ${favTeam.shortName || favTeam.name}`)
     const { z, lines } = headlineSizer(t, em, HS, t.cw, (n) => hhOf(n) + G1 + CS + G2 + PH + G3 + NH + G4 + DH)
     const HH = hhOf(lines)
     const cs = z(CS)
@@ -312,7 +314,8 @@ export const winProbability: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        hl(t, `${fav} parte como [[favorito]]`, { y: t.contentTop, h: z(HH) }, fs(t, z(HS)), { lineHeight: 1.14 }),
+        // The favourite in the accent: the same color as its figure and its bar segment.
+        hl(t, `El favorito es [[${fav}]]`, { y: t.contentTop, h: z(HH) }, fs(t, z(HS))),
         crestOf('home', x0, cy, cs),
         crestOf('away', x0 + span - cs, cy, cs),
         E.probability({
@@ -324,7 +327,7 @@ export const winProbability: TemplateDef = {
           home: P.home,
           draw: P.draw,
           away: P.away,
-          valueSize: z(122),
+          valueSize: z(178),
           labelSize: z(42),
           barHeight: z(30),
         }),

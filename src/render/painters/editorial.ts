@@ -4,7 +4,7 @@ import type { ProbabilityElement, RankingElement, RankingRow } from '../../model
 import { formatNumber } from '../../model/stats'
 import type { RenderCtx } from '../context'
 import { roundRect, type Ctx } from '../paint/canvas'
-import { drawLabel } from '../text/draw'
+import { drawLabel, labelWidth } from '../text/draw'
 import { capHeightOf } from '../text/layout'
 import { teamColors } from './stats'
 
@@ -108,7 +108,7 @@ export function paintProbability(ctx: Ctx, el: ProbabilityElement, rc: RenderCtx
   const labelSize = Math.min(el.labelSize, h * 0.12)
   const capK = capHeightOf(valueFont, 100, 400, false) / 100 || 0.72
   const gapA = labelSize * 0.7
-  const gapB = Math.max(18, h * 0.07)
+  const gapB = Math.max(18, Math.min(h * 0.12, el.valueSize * 0.2))
   const valueSize = Math.max(10, Math.min(el.valueSize, (h - labelSize - gapA - gapB - barH) / capK))
   const cap = valueSize * capK
   const capL = capHeightOf(labelFont, labelSize, 600, false)
@@ -122,8 +122,23 @@ export function paintProbability(ctx: Ctx, el: ProbabilityElement, rc: RenderCtx
     const maxW = colW - 16
     drawLabel(ctx, labels[k], x, y0, { family: labelFont, size: labelSize, weight: 600, color: mutedC, align, baseline: 'top', uppercase: true, maxWidth: maxW })
     const v = raw[k]
-    const txt = v == null || !Number.isFinite(v) ? '—' : `${formatNumber(v, Number.isInteger(v) ? 0 : 1, ',')}%`
-    drawLabel(ctx, txt, x, y0 + capL + gapA, { family: valueFont, size: valueSize, color: valueColor(k), align, baseline: 'top', maxWidth: maxW })
+    const num = v == null || !Number.isFinite(v) ? '—' : formatNumber(v, Number.isInteger(v) ? 0 : 1, ',')
+    const hasPct = num !== '—'
+    // The % sign is set smaller so three big figures fit side by side.
+    let vs = valueSize
+    let ps = vs * 0.55
+    const widthAt = (a: number, b: number) => labelWidth(num, { family: valueFont, size: a }) + (hasPct ? a * 0.04 + labelWidth('%', { family: valueFont, size: b }) : 0)
+    let tw = widthAt(vs, ps)
+    if (tw > maxW) {
+      const f = maxW / tw
+      vs *= f
+      ps *= f
+      tw = widthAt(vs, ps)
+    }
+    const left = align === 'left' ? x : align === 'right' ? x - tw : x - tw / 2
+    const vy = y0 + capL + gapA + (cap - vs * capK)
+    const nw = drawLabel(ctx, num, left, vy, { family: valueFont, size: vs, color: valueColor(k), baseline: 'top' })
+    if (hasPct) drawLabel(ctx, '%', left + nw + vs * 0.04, vy, { family: valueFont, size: ps, color: valueColor(k), baseline: 'top' })
   })
   // One thick segmented bar with accurate proportions.
   const by = y0 + capL + gapA + cap + gapB

@@ -344,31 +344,32 @@ export const keyMovement: TemplateDef = {
 
 // ── 19 · Estadio 3D: el contragolpe ─────────────────────────────────────────
 function counterData(homeFormation: string, awayFormation: string): TacticsData {
+  // Ball won in midfield, through ball and a run in behind the high line.
   const home = team('home', [
     [1, 5, 34],
-    [3, 30, 10],
-    [5, 26, 26],
-    [4, 26, 44],
-    [2, 32, 60],
-    [6, 38, 36],
-    [8, 46, 30],
-    [10, 50, 46],
-    [11, 55, 12],
-    [9, 57, 36],
-    [7, 54, 58],
+    [3, 36, 10],
+    [5, 30, 26],
+    [4, 30, 44],
+    [2, 38, 60],
+    [6, 46, 36],
+    [8, 58, 30],
+    [10, 56, 48],
+    [11, 64, 11],
+    [9, 66, 38],
+    [7, 62, 58],
   ])
   const away = team('away', [
     [1, 100, 34],
-    [2, 66, 10],
-    [5, 64, 28],
-    [4, 64, 42],
-    [3, 66, 58],
-    [6, 52, 30],
-    [8, 50, 40],
-    [7, 42, 12],
-    [10, 44, 34],
-    [11, 42, 56],
-    [9, 36, 30],
+    [2, 69, 9],
+    [5, 70, 26],
+    [4, 70, 42],
+    [3, 69, 58],
+    [6, 60, 26],
+    [8, 58, 40],
+    [7, 52, 14],
+    [10, 54, 34],
+    [11, 52, 56],
+    [9, 46, 30],
   ])
   return defaultTactics({
     homeFormation,
@@ -380,9 +381,9 @@ function counterData(homeFormation: string, awayFormation: string): TacticsData 
     highlightColor: '$accent',
     players: [...home, ...away],
     annotations: [
-      annotation('ball', [{ x: 47.2, y: 31 }], '$text'),
-      annotation('pass', [{ x: 48, y: 29 }, { x: 62, y: 20 }, { x: 76, y: 15 }], '$text', '', 0.5),
-      action('run', [{ x: 57, y: 12 }, { x: 74, y: 9 }, { x: 88, y: 20 }]),
+      annotation('ball', [{ x: 59.3, y: 31 }], '$text'),
+      annotation('pass', [{ x: 60, y: 29 }, { x: 71, y: 21 }, { x: 84, y: 17 }], '$text', '', 0.5),
+      action('run', [{ x: 65.5, y: 11 }, { x: 78, y: 9 }, { x: 89, y: 20 }]),
     ],
   })
 }
@@ -412,7 +413,7 @@ export const stadium3D: TemplateDef = {
             width: t.W - sx,
             height: t.H,
             tactics: counterData(match.home.formation, match.away.formation),
-            camera: { azimuth: 180, elevation: 30, distance: 62, fov: 34, targetX: 66, targetY: 26 },
+            camera: { azimuth: 180, elevation: 50, distance: 84, fov: 36, targetX: 74, targetY: 27 },
             lighting: { exposure: 0.5, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3 },
             background: 'transparent',
             showStands: false,

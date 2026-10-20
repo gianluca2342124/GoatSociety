@@ -303,20 +303,22 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
   // Natural sizes at full scale (1080 wide story), shrunk below if needed.
   const stampS = el.mode === 'revealed' && el.revealStamp ? 46 : 0
   const marketS = 44
-  const pickS = Math.min(170, w * 0.17)
-  const oddsS = el.showOdds && pred.odds ? Math.min(210, w * 0.2) : 0
+  const pickS = Math.min(170, w * 0.182)
+  const oddsS = el.showOdds && pred.odds ? Math.min(230, w * 0.235) : 0
+  const oddsGap = Math.max(16, oddsS * 0.1)
   const confS = el.showConfidence ? 50 : 0
   const noteStyle = { family: rc.font('$body'), size: 44, weight: 500, italic: false, letterSpacing: 0, lineHeight: 1.25, uppercase: false }
   const pickText = pred.pick || 'Pronóstico'
-  const pickStyle = { family: headFont, size: pickS, weight: 400, italic: false, letterSpacing: 0, lineHeight: 0.95, uppercase: true }
-  const pickLay = fitText(pickText, pickStyle, w, pickS * 2.05, 40)
+  // Leading leaves room for Spanish accents on two-line picks (MÁS, Á…).
+  const pickStyle = { family: headFont, size: pickS, weight: 400, italic: false, letterSpacing: 0, lineHeight: 1.04, uppercase: true }
+  const pickLay = fitText(pickText, pickStyle, w, pickS * 2.15, 40)
   const noteLay = el.showNote && pred.note ? fitText(pred.note, noteStyle, w, 44 * 1.25 * 3, 28) : null
   const capOf = (f: string, s: number, wt = 400) => capHeightOf(f, s, wt, false)
   const heights: Record<Part, number> = {
     stamp: stampS ? capOf(labelFont, stampS, 700) : 0,
     market: capOf(labelFont, marketS, 600),
     pick: pickLay.height,
-    odds: oddsS ? capOf(numFont, oddsS) + 16 + capOf(labelFont, 38, 600) : 0,
+    odds: oddsS ? capOf(numFont, oddsS) + oddsGap + capOf(labelFont, 38, 600) : 0,
     conf: confS ? capOf(rc.font('$body'), confS, 600) : 0,
     note: noteLay ? noteLay.height : 0,
   }
@@ -344,7 +346,7 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
         drawLabel(c, pred.market || 'Mercado', cx, b.y, { family: labelFont, size: marketS * k, weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true, maxWidth: w })
         break
       case 'pick': {
-        const lay = decoy ? fitText(scramble(pickText), pickStyle, w, pickS * 2.05, 40) : pickLay
+        const lay = decoy ? fitText(scramble(pickText), pickStyle, w, pickS * 2.15, 40) : pickLay
         c.save()
         c.translate((w * (1 - k)) / 2, b.y)
         c.scale(k, k)
@@ -355,7 +357,7 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
       case 'odds': {
         const os = oddsS * k
         drawLabel(c, decoy ? scramble(pred.odds) : pred.odds, cx, b.y, { family: numFont, size: os, color: accent, align: 'center', baseline: 'top', maxWidth: w })
-        drawLabel(c, 'cuota', cx, b.y + capOf(numFont, os) + 16 * k, { family: labelFont, size: 38 * k, weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true })
+        drawLabel(c, 'cuota', cx, b.y + capOf(numFont, os) + oddsGap * k, { family: labelFont, size: 38 * k, weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true })
         break
       }
       case 'conf': {
