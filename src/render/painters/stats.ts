@@ -15,16 +15,21 @@ function colorDistance(a: string, b: string): number {
 }
 
 /** Ensure home/away colors are visible on dark and distinguishable from each other. */
+/** Neutral grays are deliberate design choices (e.g. a dimmed opponent): keep them exact. */
+function isNeutral(c: string): boolean {
+  const { r, g, b } = parseColor(c)
+  return Math.max(r, g, b) - Math.min(r, g, b) < 8
+}
+
 export function teamColors(rc: RenderCtx, home: string, away: string): [string, string] {
-  let h = visibleOnDark(rc.color(home), 0.05)
-  let a = visibleOnDark(rc.color(away), 0.05)
+  const hr = rc.color(home)
+  const ar = rc.color(away)
+  const h = isNeutral(hr) ? hr : visibleOnDark(hr, 0.05)
+  let a = isNeutral(ar) ? ar : visibleOnDark(ar, 0.05)
   if (colorDistance(h, a) < 90) {
     const alt = visibleOnDark(rc.match.away.secondary, 0.05)
-    a = colorDistance(h, alt) >= 90 ? alt : '#F3F0E8'
+    a = colorDistance(h, alt) >= 90 ? alt : '#F5F5F5'
   }
-  // Very light colors (white kits) read as ivory, keep them slightly warm.
-  if (luminance(h) > 0.85) h = mix(h, '#CBAA62', 0.15)
-  if (luminance(a) > 0.85) a = mix(a, '#CBAA62', 0.15)
   return [h, a]
 }
 

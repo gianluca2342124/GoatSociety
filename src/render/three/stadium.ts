@@ -48,16 +48,18 @@ function pitchTexture(colors: Record<string, string>, stripes: boolean, lineOpac
   return tex
 }
 
-function tube(points: THREE.Vector3[], radius: number, color: string, emissive = 0.9): THREE.Mesh {
+// Tactical lines are flat graphics: unlit and outside tone mapping so the
+// slide accent keeps its exact, saturated color.
+function tube(points: THREE.Vector3[], radius: number, color: string): THREE.Mesh {
   const curve = new THREE.CatmullRomCurve3(points)
   const geo = new THREE.TubeGeometry(curve, Math.max(8, points.length * 2), radius, 10, false)
-  const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: emissive, roughness: 0.4 })
+  const mat = new THREE.MeshBasicMaterial({ color, toneMapped: false })
   return new THREE.Mesh(geo, mat)
 }
 
 function cone(at: THREE.Vector3, dir: THREE.Vector3, size: number, color: string): THREE.Mesh {
   const geo = new THREE.ConeGeometry(size * 0.55, size * 1.4, 18)
-  const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.9 })
+  const mat = new THREE.MeshBasicMaterial({ color, toneMapped: false })
   const m = new THREE.Mesh(geo, mat)
   m.position.copy(at)
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize())
@@ -247,7 +249,8 @@ export async function renderStadium(r: Resolved3D): Promise<HTMLCanvasElement> {
       const end = pts[pts.length - 1]
       const before = pts[pts.length - 2]
       const dir = end.clone().sub(before)
-      const radius = a.kind === 'press' ? 0.32 : 0.2
+      // Thickness follows the annotation width (meters), like the 2D boards.
+      const radius = Math.max(0.12, a.width * 0.4) * (a.kind === 'press' ? 1.5 : 1)
       if (a.kind === 'pass') {
         // Dashed: alternate segments
         const curve = new THREE.CatmullRomCurve3(pts)
@@ -257,7 +260,7 @@ export async function renderStadium(r: Resolved3D): Promise<HTMLCanvasElement> {
           scene.add(tube(seg, radius * 0.8, color))
         }
       } else scene.add(tube(pts, radius, color))
-      scene.add(cone(end, dir, a.kind === 'press' ? 1.4 : 1.1, color))
+      scene.add(cone(end, dir, Math.max(1.1, radius * 5.2) * (a.kind === 'press' ? 1.25 : 1), color))
     }
   }
 
