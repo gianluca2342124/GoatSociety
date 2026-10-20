@@ -441,7 +441,7 @@ export const stadium3D: TemplateDef = {
           width: t.W,
           height: t.H - top,
           tactics: counterData(match.home.formation, match.away.formation),
-          camera: { azimuth: 180, elevation: 52, distance: dist, fov: 36, targetX: 68, targetY: 22 },
+          camera: { azimuth: 180, elevation: 52, distance: dist, fov: 36, targetX: t.story ? 68 : 71, targetY: 22 },
           lighting: { exposure: 0.5, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3 },
           background: 'transparent',
           showStands: false,
