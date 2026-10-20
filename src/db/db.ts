@@ -1,6 +1,9 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { AssetRecord, Project, TeamLibraryEntry } from '../model/types'
 
+/** Assets are persisted as raw bytes (most portable across browsers). */
+export type StoredAsset = Omit<AssetRecord, 'blob'> & { data: ArrayBuffer; blob?: Blob }
+
 export interface ProjectMeta {
   id: string
   name: string
@@ -17,7 +20,7 @@ export interface ProjectMeta {
 interface GoatDB extends DBSchema {
   projects: { key: string; value: Project }
   projectMeta: { key: string; value: ProjectMeta; indexes: { updatedAt: number } }
-  assets: { key: string; value: AssetRecord; indexes: { kind: string; createdAt: number } }
+  assets: { key: string; value: StoredAsset; indexes: { kind: string; createdAt: number } }
   teams: { key: string; value: TeamLibraryEntry }
   kv: { key: string; value: unknown }
 }

@@ -82,7 +82,7 @@ export function polygonPath(ctx: Ctx, pts: { x: number; y: number }[], close = t
 
 const supportsFilter = (() => {
   try {
-    if (typeof document === 'undefined') return false
+    if (typeof document === 'undefined' || /jsdom/i.test(navigator.userAgent)) return false
     const c = document.createElement('canvas').getContext('2d')
     return !!c && typeof (c as Ctx).filter === 'string'
   } catch {

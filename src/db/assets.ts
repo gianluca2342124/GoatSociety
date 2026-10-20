@@ -1,15 +1,34 @@
 import type { AssetKind, AssetMeta, AssetRecord } from '../model/types'
 import { uid } from '../model/ids'
-import { db } from './db'
+import { db, type StoredAsset } from './db'
 import { sanitizeSvg } from './svg'
 
 export const ACCEPTED_IMAGE = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif']
 export const ACCEPTED_MODEL_EXT = ['.glb', '.gltf']
 
-function toMeta(a: AssetRecord): AssetMeta {
-  const { blob: _blob, ...meta } = a
-  void _blob
-  return meta
+function toMeta(a: AssetRecord | StoredAsset): AssetMeta {
+  const { id, name, kind, mime, width, height, size, createdAt } = a
+  return { id, name, kind, mime, width, height, size, createdAt }
+}
+
+export async function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  if (typeof blob.arrayBuffer === 'function') return blob.arrayBuffer()
+  return new Promise<ArrayBuffer>((res, rej) => {
+    const r = new FileReader()
+    r.onload = () => res(r.result as ArrayBuffer)
+    r.onerror = () => rej(r.error)
+    r.readAsArrayBuffer(blob)
+  })
+}
+
+async function toStored(rec: AssetRecord): Promise<StoredAsset> {
+  const { blob, ...rest } = rec
+  return { ...rest, data: await blobToArrayBuffer(blob) }
+}
+
+function fromStored(s: StoredAsset): AssetRecord {
+  const { data, blob, ...rest } = s
+  return { ...rest, blob: blob instanceof Blob ? blob : new Blob([data], { type: s.mime }) }
 }
 
 async function imageSize(blob: Blob): Promise<{ width: number; height: number }> {
@@ -50,7 +69,7 @@ export async function addAsset(file: File | Blob, opts: { name?: string; kind: A
   if (opts.kind === 'model3d' || lower.endsWith('.glb') || lower.endsWith('.gltf')) {
     if (!(lower.endsWith('.glb') || lower.endsWith('.gltf'))) throw new AssetError('Formato 3D no compatible. Usa .glb o .gltf')
     mime = lower.endsWith('.glb') ? 'model/gltf-binary' : 'model/gltf+json'
-    blob = new Blob([await file.arrayBuffer()], { type: mime })
+    blob = new Blob([await blobToArrayBuffer(file)], { type: mime })
   } else {
     if (!mime && lower.endsWith('.svg')) mime = 'image/svg+xml'
     if (!ACCEPTED_IMAGE.includes(mime)) throw new AssetError('Formato no compatible. Usa PNG, JPG, WebP o SVG.')
@@ -73,7 +92,7 @@ export async function addAsset(file: File | Blob, opts: { name?: string; kind: A
     size: blob.size,
     createdAt: Date.now(),
   }
-  await (await db()).put('assets', rec)
+  await (await db()).put('assets', await toStored(rec))
   return toMeta(rec)
 }
 
@@ -84,15 +103,16 @@ export async function listAssets(): Promise<AssetMeta[]> {
 
 export async function getAssetBlob(id: string): Promise<Blob | null> {
   const rec = await (await db()).get('assets', id)
-  return rec?.blob ?? null
+  return rec ? fromStored(rec).blob : null
 }
 
 export async function getAsset(id: string): Promise<AssetRecord | undefined> {
-  return (await db()).get('assets', id)
+  const rec = await (await db()).get('assets', id)
+  return rec ? fromStored(rec) : undefined
 }
 
 export async function putAssetRecord(rec: AssetRecord): Promise<void> {
-  await (await db()).put('assets', rec)
+  await (await db()).put('assets', await toStored(rec))
 }
 
 export async function deleteAsset(id: string): Promise<void> {

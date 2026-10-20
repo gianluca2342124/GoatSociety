@@ -54,7 +54,7 @@ export const formationBattle: TemplateDef = {
         glow(t, t.cx, pz.y + pz.h * 0.55, t.cw * 0.7, '$secondary', 0.5, 0.7),
         ...header(t),
         kicker(t, 'Duelo de sistemas', zone(t, 0, 0.04).y),
-        text(t, '{away.short}  [[{away.formation}]]', zone(t, 0.05, 0.13), { name: 'Sistema visitante', fontFamily: '$headline', fontSize: 110 * t.s, accentColor: '$away', lineHeight: 1 }),
+        text(t, '{away.short}  [[{away.formation}]]', zone(t, 0.05, 0.13), { name: 'Sistema visitante', fontFamily: '$headline', fontSize: 110 * t.s, accentColor: '$awayLight', lineHeight: 1 }),
         E.tactics({
           name: 'Duelo de sistemas',
           x: t.left - 40,
@@ -63,7 +63,7 @@ export const formationBattle: TemplateDef = {
           height: pz.h,
           tactics: defaultTactics({ homeFormation: match.home.formation, awayFormation: match.away.formation, camera: 'perspective', tilt: 0.75, vertical: !t.landscape, playerSize: 21 * t.s, showLabels: false }),
         }),
-        text(t, '{home.short}  [[{home.formation}]]', zone(t, 0.91, 0.99), { name: 'Sistema local', fontFamily: '$headline', fontSize: 110 * t.s, accentColor: '$home', lineHeight: 1 }),
+        text(t, '{home.short}  [[{home.formation}]]', zone(t, 0.91, 0.99), { name: 'Sistema local', fontFamily: '$headline', fontSize: 110 * t.s, accentColor: '$homeLight', lineHeight: 1 }),
         ...footer(t),
       ],
     }

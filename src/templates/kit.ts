@@ -132,7 +132,8 @@ export function text(t: TCtx, content: string, box: { x?: number; y: number; w?:
 
 /** Small spaced uppercase label (editorial kicker). */
 export function kicker(t: TCtx, content: string, y: number, p: Partial<TextElement> = {}): TextElement {
-  const size = (p.fontSize ?? 30) * Math.max(0.8, t.s)
+  // Scale with vertical density too, so short formats never collide with the headline below.
+  const size = (p.fontSize ?? 30) * Math.max(0.62, Math.min(t.s, t.v + 0.12))
   return text(t, content, { y, h: size * 1.5 }, {
     name: 'Etiqueta',
     fontFamily: '$label',

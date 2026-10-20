@@ -1,6 +1,7 @@
 import type { AssetKind, AssetRecord, BrandKit, Project } from '../model/types'
 import { SCHEMA_VERSION, defaultBackground, sampleAgenda } from '../model/defaults'
 import { uid } from '../model/ids'
+import { blobToArrayBuffer } from './assets'
 
 export const BUNDLE_FORMAT = 'goat-society-studio/project'
 
@@ -62,15 +63,7 @@ export function base64ToBytes(b64: string): Uint8Array {
 }
 
 async function blobBytes(blob: Blob): Promise<Uint8Array> {
-  if (typeof blob.arrayBuffer === 'function') return new Uint8Array(await blob.arrayBuffer())
-  return new Uint8Array(
-    await new Promise<ArrayBuffer>((res, rej) => {
-      const r = new FileReader()
-      r.onload = () => res(r.result as ArrayBuffer)
-      r.onerror = () => rej(r.error)
-      r.readAsArrayBuffer(blob)
-    }),
-  )
+  return new Uint8Array(await blobToArrayBuffer(blob))
 }
 
 export async function buildBundle(project: Project, getAsset: (id: string) => Promise<AssetRecord | undefined>, brand?: BrandKit): Promise<ProjectBundle> {

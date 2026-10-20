@@ -40,6 +40,10 @@ export function resolveColor(value: ColorValue | undefined, ctx: { match: MatchD
       return ctx.match.away.primary
     case '$awayAlt':
       return ctx.match.away.secondary
+    case '$homeLight':
+      return visibleOnDark(ctx.match.home.primary, 0.12)
+    case '$awayLight':
+      return visibleOnDark(ctx.match.away.primary, 0.12)
     default:
       return p.text
   }

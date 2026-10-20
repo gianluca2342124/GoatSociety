@@ -45,6 +45,8 @@ export const PALETTE_TOKENS: { token: string; label: string }[] = [
   { token: '$homeAlt', label: 'Local 2' },
   { token: '$away', label: 'Visitante' },
   { token: '$awayAlt', label: 'Visitante 2' },
+  { token: '$homeLight', label: 'Local (legible)' },
+  { token: '$awayLight', label: 'Visitante (legible)' },
 ]
 
 export const FONT_TOKENS: { token: string; label: string }[] = [

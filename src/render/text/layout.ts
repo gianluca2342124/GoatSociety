@@ -48,7 +48,7 @@ function mctx(): CanvasRenderingContext2D {
 
 export const supportsLetterSpacing = (() => {
   try {
-    if (typeof document === 'undefined') return false
+    if (typeof document === 'undefined' || /jsdom/i.test(navigator.userAgent)) return false
     return 'letterSpacing' in (document.createElement('canvas').getContext('2d') as object)
   } catch {
     return false

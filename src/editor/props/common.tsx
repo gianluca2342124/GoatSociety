@@ -218,6 +218,7 @@ export function AssetPicker({ value, onChange, kinds, uploadKind, label = 'Image
           ref={input}
           type="file"
           hidden
+          data-testid="asset-file-input"
           accept={models ? '.glb,.gltf' : 'image/png,image/jpeg,image/webp,image/svg+xml'}
           onChange={async (e) => {
             const f = e.target.files?.[0]
