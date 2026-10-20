@@ -1,0 +1,246 @@
+import type { PredictionElement } from '../../model/types'
+import { mix, withAlpha } from '../../model/tokens'
+import type { RenderCtx } from '../context'
+import { blurredCopy, deviceScale, ellipsePath, makeCanvas, roundRect, setShadow, type Ctx } from '../paint/canvas'
+import { grainTexture, seeded } from '../paint/noise'
+import { drawLabel, drawLayout, labelWidth } from '../text/draw'
+import { fitText } from '../text/layout'
+import { paintCrestBox } from './crest'
+import { paintIconGlyph } from './basic'
+
+/** Deterministic decoy text so a locked export never contains the real pick. */
+export function scramble(text: string, seed = 17): string {
+  const rnd = seeded(seed + text.length)
+  const letters = 'ABCDEFGHIJKLMNOPRSTUVZ'
+  return text.replace(/[A-Za-zÀ-ÿ0-9]/g, (ch) => {
+    if (/[0-9]/.test(ch)) return String(Math.floor(rnd() * 10))
+    return letters[Math.floor(rnd() * letters.length)]
+  })
+}
+
+function drawLock(ctx: Ctx, style: PredictionElement['lockStyle'], cx: number, cy: number, size: number, accent: string) {
+  if (style === 'none') return
+  ctx.save()
+  // Glowing medallion
+  setShadow(ctx, withAlpha(accent, 0.8), size * 0.5)
+  ellipsePath(ctx, cx, cy, size / 2, size / 2)
+  const g = ctx.createLinearGradient(cx, cy - size / 2, cx, cy + size / 2)
+  g.addColorStop(0, mix(accent, '#ffffff', 0.18))
+  g.addColorStop(1, mix(accent, '#000000', 0.25))
+  ctx.fillStyle = g
+  ctx.fill()
+  ctx.restore()
+  ellipsePath(ctx, cx, cy, size / 2 + size * 0.09, size / 2 + size * 0.09)
+  ctx.strokeStyle = withAlpha(accent, 0.45)
+  ctx.lineWidth = Math.max(1.5, size * 0.025)
+  ctx.stroke()
+  const icon = style === 'shield' ? 'shield' : style === 'keyhole' ? 'key' : 'lock'
+  const is = size * 0.5
+  paintIconGlyph(ctx, icon, cx - is / 2, cy - is / 2, is, '#08090B', 2.6)
+}
+
+export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) {
+  const { width: w, height: h } = el
+  const pred = rc.match.predictions[el.predictionIndex] ?? rc.match.predictions[0]
+  const accent = rc.color(el.accentColor)
+  const textC = rc.color(el.textColor)
+  const cardC = rc.color(el.cardColor)
+  const locked = el.mode === 'locked'
+  const r = el.cornerRadius
+  const pad = Math.min(56, w * 0.07)
+
+  // Card body
+  ctx.save()
+  setShadow(ctx, 'rgba(0,0,0,0.55)', 50, 0, 24)
+  roundRect(ctx, 0, 0, w, h, r)
+  const bg = ctx.createLinearGradient(0, 0, w * 0.3, h)
+  bg.addColorStop(0, mix(cardC, '#ffffff', 0.06))
+  bg.addColorStop(1, mix(cardC, '#000000', 0.35))
+  ctx.fillStyle = bg
+  ctx.fill()
+  ctx.restore()
+  // Accent glow inside top
+  ctx.save()
+  roundRect(ctx, 0, 0, w, h, r)
+  ctx.clip()
+  const glow = ctx.createRadialGradient(w * 0.5, 0, 0, w * 0.5, 0, w * 0.75)
+  glow.addColorStop(0, withAlpha(accent, 0.2))
+  glow.addColorStop(1, withAlpha(accent, 0))
+  ctx.fillStyle = glow
+  ctx.fillRect(0, 0, w, h)
+  ctx.restore()
+  // Border
+  roundRect(ctx, 1, 1, w - 2, h - 2, r)
+  const bgrad = ctx.createLinearGradient(0, 0, w, h)
+  bgrad.addColorStop(0, withAlpha(accent, 0.9))
+  bgrad.addColorStop(0.5, withAlpha(accent, 0.18))
+  bgrad.addColorStop(1, withAlpha(accent, 0.6))
+  ctx.strokeStyle = bgrad
+  ctx.lineWidth = 2
+  ctx.stroke()
+
+  // Header
+  const headH = Math.min(70, h * 0.12)
+  drawLabel(ctx, `${rc.brand.name} · PRONÓSTICO`, pad, headH * 0.75, { family: rc.font('$label'), size: Math.min(26, headH * 0.42), weight: 700, color: accent, uppercase: true, letterSpacing: 4, maxWidth: w * 0.6 })
+  if (el.showConfidence && pred && !locked) {
+    drawLabel(ctx, `CONFIANZA ${Math.round(pred.confidence)}%`, w - pad, headH * 0.75, { family: rc.font('$label'), size: Math.min(24, headH * 0.38), weight: 600, color: withAlpha(textC, 0.7), align: 'right', letterSpacing: 2.5 })
+  }
+  ctx.fillStyle = withAlpha(accent, 0.25)
+  ctx.fillRect(pad, headH + 12, w - pad * 2, 1.5)
+  let y = headH + 36
+
+  if (el.showMatch) {
+    const mh = Math.min(96, h * 0.15)
+    const cs = mh * 0.86
+    paintCrestOffset(ctx, rc, 'home', pad, y + (mh - cs) / 2, cs)
+    paintCrestOffset(ctx, rc, 'away', w - pad - cs, y + (mh - cs) / 2, cs)
+    const name = `${rc.match.home.shortName || rc.match.home.name}  vs  ${rc.match.away.shortName || rc.match.away.name}`
+    drawLabel(ctx, name, w / 2, y + mh * 0.42, { family: rc.font('$label'), size: mh * 0.36, weight: 700, color: textC, align: 'center', uppercase: true, letterSpacing: 1.5, maxWidth: w - pad * 2 - cs * 2 - 30 })
+    drawLabel(ctx, `${rc.match.competition}  ·  ${rc.text('{date}')}  ·  ${rc.match.time}`, w / 2, y + mh * 0.82, { family: rc.font('$body'), size: mh * 0.17, weight: 500, color: withAlpha(textC, 0.6), align: 'center', uppercase: true, letterSpacing: 1.5, maxWidth: w - pad * 2 - cs * 2 - 30 })
+    y += mh + 28
+  }
+
+  const bodyTop = y
+  const bodyH = h - bodyTop - pad * 0.8
+  if (!pred) return
+
+  // ── Body layout (vertically centered block) ─────────────────────────────
+  type Part = 'market' | 'pick' | 'odds' | 'conf' | 'note'
+  const marketH = Math.min(56, bodyH * 0.12)
+  const pickH = bodyH * (locked ? 0.4 : 0.34)
+  const gap = bodyH * 0.05
+  const oddsH = el.showOdds && pred.odds ? Math.min(76, bodyH * 0.15) : 0
+  const confH = el.showConfidence ? 10 : 0
+  const noteH = el.showNote && pred.note ? Math.min(bodyH * 0.2, 130) : 0
+  const total = marketH + pickH + gap + (oddsH ? oddsH + gap : 0) + (confH ? confH + 24 : 0) + noteH
+  const parts: Record<Part, { y: number; h: number }> = {} as Record<Part, { y: number; h: number }>
+  let cursor = bodyTop + Math.max(0, (bodyH - total) / 2)
+  parts.market = { y: cursor, h: marketH }
+  cursor += marketH
+  parts.pick = { y: cursor, h: pickH }
+  cursor += pickH + gap
+  parts.odds = { y: cursor, h: oddsH }
+  if (oddsH) cursor += oddsH + gap
+  parts.conf = { y: cursor, h: confH }
+  if (confH) cursor += confH + 24
+  parts.note = { y: cursor, h: noteH }
+
+  const drawPart = (c: Ctx, part: Part, decoy: boolean) => {
+    const box = parts[part]
+    if (!box.h) return
+    switch (part) {
+      case 'market':
+        drawLabel(c, pred.market || 'Mercado', w / 2, box.y + box.h * 0.4, { family: rc.font('$label'), size: Math.min(30, bodyH * 0.07), weight: 600, color: withAlpha(textC, 0.62), align: 'center', uppercase: true, letterSpacing: 5, maxWidth: w - pad * 2 })
+        break
+      case 'pick': {
+        const pickText = decoy ? scramble(pred.pick) : pred.pick
+        const style = { family: rc.font(el.headlineFont), size: Math.min(150, box.h * 0.85), weight: 400, italic: false, letterSpacing: 1, lineHeight: 0.95, uppercase: true }
+        const lay = fitText(pickText, style, w - pad * 2, box.h, 28)
+        c.save()
+        c.translate(pad, box.y)
+        drawLayout(c, lay, { ...style, size: lay.fontSize, letterSpacing: lay.letterSpacing }, { width: w - pad * 2, height: box.h, align: 'center', verticalAlign: 'middle', fill: textC, accent })
+        c.restore()
+        break
+      }
+      case 'odds': {
+        const oh = box.h
+        const label = `CUOTA  ${decoy ? scramble(pred.odds) : pred.odds}`
+        const ow = Math.max(oh * 3.6, labelWidth(label, { family: rc.font('$numbers'), size: oh * 0.46, weight: 800, letterSpacing: 1.5 }) + oh * 1.4)
+        roundRect(c, w / 2 - ow / 2, box.y, ow, oh, oh / 2)
+        c.fillStyle = accent
+        c.fill()
+        drawLabel(c, label, w / 2, box.y + oh / 2, { family: rc.font('$numbers'), size: oh * 0.46, weight: 800, color: '#08090B', align: 'center', letterSpacing: 1.5 })
+        break
+      }
+      case 'conf': {
+        const cw = w - pad * 2
+        roundRect(c, pad, box.y, cw, box.h, box.h / 2)
+        c.fillStyle = 'rgba(255,255,255,0.1)'
+        c.fill()
+        roundRect(c, pad, box.y, (cw * Math.max(0, Math.min(100, decoy ? 50 : pred.confidence))) / 100, box.h, box.h / 2)
+        c.fillStyle = accent
+        c.fill()
+        break
+      }
+      case 'note': {
+        const style = { family: rc.font('$body'), size: Math.min(28, bodyH * 0.06), weight: 500, italic: false, letterSpacing: 0, lineHeight: 1.35, uppercase: false }
+        const lay = fitText(decoy ? scramble(pred.note) : pred.note, style, w - pad * 2, box.h, 14)
+        c.save()
+        c.translate(pad, box.y)
+        drawLayout(c, lay, { ...style, size: lay.fontSize }, { width: w - pad * 2, height: box.h, align: 'center', verticalAlign: 'top', fill: withAlpha(textC, 0.72), accent })
+        c.restore()
+      }
+    }
+  }
+  const ALL: Part[] = ['market', 'pick', 'odds', 'conf', 'note']
+  const hidden: Part[] = !locked ? [] : el.hiddenPosition === 'all' ? ALL : el.hiddenPosition === 'pickAndOdds' ? ['pick', 'odds'] : ['pick']
+  for (const part of ALL) if (!hidden.includes(part)) drawPart(ctx, part, false)
+
+  if (!locked) {
+    if (el.mode === 'revealed' && el.revealStamp) {
+      ctx.save()
+      ctx.translate(w - pad - 10, headH + 70)
+      ctx.rotate(-0.12)
+      const st = el.revealStamp.toUpperCase()
+      const fs = Math.min(30, w * 0.035)
+      const sw = labelWidth(st, { family: rc.font('$label'), size: fs, weight: 800, letterSpacing: 2 }) + fs * 2.6
+      roundRect(ctx, -sw, -fs, sw, fs * 2, 8)
+      ctx.strokeStyle = rc.color('$positive')
+      ctx.lineWidth = 3
+      ctx.stroke()
+      ctx.fillStyle = withAlpha(rc.color('$positive'), 0.12)
+      ctx.fill()
+      paintIconGlyph(ctx, 'unlock', -sw + fs * 0.55, -fs * 0.5, fs, rc.color('$positive'), 2.6)
+      drawLabel(ctx, st, -sw + fs * 1.85, 0, { family: rc.font('$label'), size: fs, weight: 800, color: rc.color('$positive'), letterSpacing: 2 })
+      ctx.restore()
+    }
+    return
+  }
+
+  // ── Locked: hidden parts drawn offscreen with decoy text, blurred, frosted, locked.
+  const present = hidden.filter((p) => parts[p].h > 0)
+  const regionY = Math.min(...present.map((p) => parts[p].y)) - 14
+  const regionBottom = Math.max(...present.map((p) => parts[p].y + parts[p].h)) + 14
+  const regionH = regionBottom - regionY
+  const s = deviceScale(ctx)
+  const off = makeCanvas(w * s, (regionH + 40) * s)
+  const octx = off.getContext('2d')!
+  octx.scale(s, s)
+  octx.translate(0, -regionY + 20)
+  for (const part of hidden) drawPart(octx, part, true)
+  const blurred = blurredCopy(off, Math.max(1, el.blurIntensity) * s)
+  const bp = (blurred.width - off.width) / 2 / s
+  ctx.save()
+  roundRect(ctx, pad * 0.5, regionY, w - pad, regionH, Math.min(26, r))
+  ctx.clip()
+  ctx.fillStyle = withAlpha(mix(cardC, '#000000', 0.15), 0.6)
+  ctx.fillRect(0, regionY, w, regionH)
+  ctx.drawImage(blurred, -bp, regionY - 20 - bp, w + bp * 2, regionH + 40 + bp * 2)
+  ctx.fillStyle = withAlpha('#08090B', el.overlayOpacity)
+  ctx.fillRect(0, regionY, w, regionH)
+  ctx.globalAlpha *= 0.22
+  ctx.globalCompositeOperation = 'overlay'
+  const pat = ctx.createPattern(grainTexture(128, 21, 1), 'repeat')
+  if (pat) {
+    ctx.fillStyle = pat
+    ctx.fillRect(0, regionY, w, regionH)
+  }
+  ctx.restore()
+  roundRect(ctx, pad * 0.5, regionY, w - pad, regionH, Math.min(26, r))
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+  const ts = el.teaser ? Math.min(34, w * 0.042) : 0
+  const lockSize = Math.min(150, (regionH - ts * 3) * 0.62, w * 0.2)
+  const block = lockSize + (ts ? ts * 2.4 : 0)
+  const lcy = regionY + (regionH - block) / 2 + lockSize / 2
+  drawLock(ctx, el.lockStyle, w / 2, lcy, lockSize, accent)
+  if (el.teaser) drawLabel(ctx, rc.text(el.teaser), w / 2, lcy + lockSize / 2 + ts * 1.5, { family: rc.font('$label'), size: ts, weight: 700, color: textC, align: 'center', uppercase: true, letterSpacing: 3, maxWidth: w - pad * 2 })
+}
+
+function paintCrestOffset(ctx: Ctx, rc: RenderCtx, side: 'home' | 'away', x: number, y: number, size: number) {
+  ctx.save()
+  ctx.translate(x, y)
+  paintCrestBox(ctx, side === 'home' ? rc.match.home : rc.match.away, size, size, rc)
+  ctx.restore()
+}
