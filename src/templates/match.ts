@@ -21,14 +21,21 @@ export const matchdayElite: TemplateDef = {
   description: 'Portada de partido: dos escudos grandes, un titular y la fecha.',
   build: (t) => {
     if (t.landscape) {
-      // Text column on the left, the two crests share the right half.
-      const colW = t.cw * 0.54
-      const sy = t.contentBottom - px(t, 90)
-      const hb = sy - px(t, 28)
+      // Text column on the left, the two crests share the right half; both
+      // blocks sit on the same horizontal axis.
+      const colW = t.cw * 0.47
+      const hs = 150 * vk(t)
+      const sh = px(t, 60)
+      const gapS = px(t, 28)
+      const mid = t.contentTop + t.ch / 2
+      // Room for a three-line headline + the date line, centered on the axis.
+      const block = hs * 1.04 * 3 + gapS + sh
+      const sy = Math.min(t.contentBottom - sh, mid + block / 2 - sh)
+      const hb = sy - gapS
       const gap = px(t, 40)
       const cs = Math.min((t.cw - colW - px(t, 70) - gap) / 2, t.ch * 0.42)
       const rx = t.right - cs * 2 - gap
-      const cy = t.contentTop + (t.ch - cs) / 2
+      const cy = mid - cs / 2
       return {
         background: ink(),
         elements: [
@@ -36,7 +43,7 @@ export const matchdayElite: TemplateDef = {
           signature(t),
           crestOf('home', rx, cy, cs),
           crestOf('away', rx + cs + gap, cy, cs),
-          hl(t, '{headline}', { y: t.contentTop, w: colW, h: hb - t.contentTop }, 150 * vk(t), { verticalAlign: 'bottom' }),
+          hl(t, '{headline}', { y: t.contentTop, w: colW, h: hb - t.contentTop }, hs, { verticalAlign: 'bottom' }),
           support(t, '{competition}  ·  {weekday} {time}', { y: sy, w: colW, h: px(t, 90) }, 44, { name: 'Fecha y competición' }),
         ],
       }
@@ -169,38 +176,52 @@ export const matchdayAgenda: TemplateDef = {
   description: 'Agenda del día en filas abiertas: hora grande, escudos y nombres.',
   build: (t) => {
     const k = vk(t)
+    // Break before the accent so the claim reads «HOY SE JUEGA / LA CHAMPIONS».
+    const title = 'Hoy se juega\n[[la Champions]]'
     if (t.landscape) {
-      const colW = t.cw * 0.36
-      const lx = t.left + t.cw * 0.42
+      // Headline column on the left, open list on the right (wide enough
+      // that long team names never touch).
+      const colW = t.cw * 0.4
+      const lx = t.left + t.cw * 0.44
       const lw = t.right - lx
-      const hh = t.ch * 0.5
-      const hy = t.contentTop + (t.ch - hh) / 2 - px(t, 40)
+      const n = 5
+      const rowH = Math.min(px(t, 165), (t.ch * 0.96) / (n - 0.2))
+      const ly = t.contentTop + (t.ch - rowH * (n - 0.2)) / 2
+      // Two lines that fit the column (Anton ≈ 5.5 em for «LA CHAMPIONS»).
+      const hs = Math.min(130 * k, colW / (5.6 * t.s))
+      const hh = hs * t.s * 1.04 * 2 + px(t, 8)
+      const dh = px(t, 64)
+      const hy = t.contentTop + (t.ch - hh - dh - px(t, 20)) / 2
       return {
         background: ink(),
         elements: [
           ...cinematic(t),
           signature(t),
-          hl(t, 'Hoy se juega la [[Champions]]', { y: hy, w: colW, h: hh }, 130 * k, { verticalAlign: 'bottom' }),
-          support(t, '{weekday}  ·  {date}', { y: hy + hh + px(t, 24), w: colW, h: px(t, 70) }, 44, { name: 'Fecha' }),
-          E.matchList({ name: 'Agenda', x: lx, y: t.contentTop, width: lw, height: t.ch, rowHeight: t.ch / 5, maxItems: 5, variant: 'editorial' }),
+          hl(t, title, { y: hy, w: colW, h: hh }, hs, { verticalAlign: 'bottom' }),
+          support(t, '{weekday}  ·  {date}', { y: hy + hh + px(t, 20), w: colW, h: dh }, 44, { name: 'Fecha' }),
+          E.matchList({ name: 'Agenda', x: lx, y: ly, width: lw, height: rowH * n, rowHeight: rowH, maxItems: n, variant: 'editorial' }),
         ],
       }
     }
-    const hh = px(t, 330)
-    const sy = t.contentTop + hh + px(t, 10)
-    const sh = px(t, 70)
-    const ly = sy + sh + px(t, 40)
-    const lh = t.contentBottom - ly
+    // Two-line headline, the date, then the open list down to the safe line.
+    const hs = (t.story ? 145 : 135) * k
+    const hh = hs * 1.04 * 2 + px(t, 8)
+    const sy = t.contentTop + hh + px(t, 6)
+    const sh = px(t, 60)
+    const ly = sy + sh + px(t, 36)
+    // Square is short: four rows keep names above 40px.
+    const n = t.H / t.W < 1.1 ? 4 : 5
+    const rowH = Math.min(210 * t.s, (t.contentBottom - ly) / (n - 0.2))
     // Keep the right edge clear of the TikTok buttons on stories.
-    const lw = t.story ? t.cw - 60 : t.cw
+    const lw = t.story ? t.cw - 72 : t.cw
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
         signature(t),
-        hl(t, 'Hoy se juega la [[Champions]]', { y: t.contentTop, h: hh }, 150 * k),
+        hl(t, title, { y: t.contentTop, h: hh }, hs),
         support(t, '{weekday}  ·  {date}', { y: sy, h: sh }, 46, { name: 'Fecha' }),
-        E.matchList({ name: 'Agenda', x: t.left, y: ly, width: lw, height: lh, rowHeight: Math.min(210, lh / 5), maxItems: 5, variant: 'editorial' }),
+        E.matchList({ name: 'Agenda', x: t.left, y: ly, width: lw, height: rowH * n, rowHeight: rowH, maxItems: n, variant: 'editorial' }),
       ],
     }
   },
@@ -211,31 +232,32 @@ export const photoCover: TemplateDef = {
   number: 20,
   name: 'Photo Cover',
   category: 'match',
-  description: 'Portada editorial con foto: sube la foto de un jugador o del estadio en el elemento «Foto». Sin foto, un escudo gigante recortado sostiene la composición.',
+  description: 'Portada editorial con foto: sube la foto de un jugador o del estadio en el elemento «Foto» (también vale un PNG recortado). Sin foto, un escudo gigante recortado sostiene la composición.',
   build: (t) => {
     const k = vk(t)
-    const fade = 0.35
-    // Photo area: top of the slide (full width), fading into black.
-    const ih = t.landscape ? t.H * 0.86 : t.story ? t.H * 0.76 : t.H * 0.76
-    const solid = ih * (1 - fade)
-    // Fallback visual (covered by the photo once uploaded): a giant crest,
-    // zoomed past the frame and dimmed, fading out before the type.
-    const cs = t.landscape ? t.H * 1.15 : t.W * 1.2
-    const cx = t.landscape ? t.W - cs * 0.85 : t.cx - cs / 2
-    const cy = t.landscape ? -cs * 0.18 : solid * 0.46 - cs / 2
-    const fadeTop = solid - (t.landscape ? t.H * 0.3 : solid * 0.32)
+    const fs = 160 * k
+    // Type at the foot of the content zone.
     const subH = px(t, 130)
     const subY = t.contentBottom - px(t, 40) - subH
     const hb = subY - px(t, 28)
     const hw = t.landscape ? t.cw * 0.62 : t.cw
     const hh = px(t, 420)
-    return {
-      background: ink(),
-      elements: [
-        ...cinematic(t, 'grain'),
-        crestOf('home', cx, cy, cs, { name: 'Escudo de fondo' }),
-        E.shape({
-          name: 'Fundido escudo',
+    // Photo: full bleed from the top, fading into black behind the type.
+    const ih = t.landscape ? t.H : t.H * 0.76
+    // Fallback visual (also the backdrop of a cut-out PNG): the home crest,
+    // zoomed past the frame and dimmed. An opaque photo covers it.
+    const cs = t.landscape ? t.H * 1.1 : t.W * 1.3
+    const cx = t.landscape ? t.W * 1.1 - cs : t.cx - cs / 2
+    const cy = t.landscape ? -cs * 0.3 : ih * 0.36 - cs / 2
+    // Reading scrim above photo and crest: clear at the top, ≈85 % black where
+    // a two-line headline starts, solid below it, so white type always reads.
+    const textTop = hb - fs * t.s * 1.04 * 2
+    const s0 = Math.max(t.H * 0.1, textTop - px(t, 400))
+    const sh = t.H - s0
+    const at = (y: number) => Math.min(1, Math.max(0, (y - s0) / sh))
+    const scrim = t.landscape
+      ? E.shape({
+          name: 'Sombra de lectura',
           shape: 'rect',
           x: 0,
           y: 0,
@@ -243,11 +265,39 @@ export const photoCover: TemplateDef = {
           height: t.H,
           cornerRadius: 0,
           locked: true,
-          fill: { kind: 'linear', angle: 180, stops: [{ offset: 0, color: '$bg', opacity: 0.42 }, { offset: fadeTop / t.H, color: '$bg', opacity: 0.55 }, { offset: solid / t.H, color: '$bg', opacity: 1 }, { offset: 1, color: '$bg', opacity: 1 }] },
-        }),
-        E.image({ name: 'Foto', x: 0, y: 0, width: t.W, height: ih, fit: 'cover', focusX: 0.5, focusY: 0.35, fadeBottom: fade }),
+          fill: { kind: 'linear', angle: 90, stops: [{ offset: 0, color: '$bg', opacity: 1 }, { offset: 0.3, color: '$bg', opacity: 0.92 }, { offset: 0.66, color: '$bg', opacity: 0 }] },
+        })
+      : E.shape({
+          name: 'Sombra de lectura',
+          shape: 'rect',
+          x: 0,
+          y: s0,
+          width: t.W,
+          height: sh,
+          cornerRadius: 0,
+          locked: true,
+          fill: {
+            kind: 'linear',
+            angle: 180,
+            stops: [
+              { offset: 0, color: '$bg', opacity: 0 },
+              { offset: at((s0 + textTop) / 2), color: '$bg', opacity: 0.42 },
+              { offset: at(textTop), color: '$bg', opacity: 0.86 },
+              { offset: at(textTop + px(t, 140)), color: '$bg', opacity: 1 },
+              { offset: 1, color: '$bg', opacity: 1 },
+            ],
+          },
+        })
+    return {
+      background: ink(),
+      elements: [
+        ...cinematic(t, 'grain'),
+        crestOf('home', cx, cy, cs, { name: 'Escudo de fondo' }),
+        E.shape({ name: 'Atenuado escudo', shape: 'rect', x: 0, y: 0, width: t.W, height: t.H, cornerRadius: 0, locked: true, fill: { kind: 'solid', color: '$bg', opacity: 0.5 } }),
+        E.image({ name: 'Foto', x: 0, y: 0, width: t.W, height: ih, fit: 'cover', focusX: 0.5, focusY: 0.3, fadeBottom: 0.35 }),
+        scrim,
         signature(t),
-        hl(t, '{headline}', { y: hb - hh, w: hw, h: hh }, 160 * k, { verticalAlign: 'bottom' }),
+        hl(t, '{headline}', { y: hb - hh, w: hw, h: hh }, fs, { verticalAlign: 'bottom' }),
         support(t, '{subheadline}', { y: subY, w: hw, h: subH }, 50 * Math.max(0.85, k), { name: 'Apoyo' }),
       ],
     }

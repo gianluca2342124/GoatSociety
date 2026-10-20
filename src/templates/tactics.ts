@@ -1,11 +1,108 @@
 import * as E from '../model/elements'
-import { TACTICAL_PRESETS, defaultTactics } from '../tactics/presets'
+import { uid } from '../model/ids'
+import type { PitchView, SlideElement, TacticalAnnotation, TacticalPlayer, TacticsData } from '../model/types'
+import { annotation, defaultTactics } from '../tactics/presets'
+import { regionFor } from '../tactics/projection'
 import type { TemplateDef } from './types'
-import { BG, atmosphere, body, footer, glow, header, headline, kicker, text, zone } from './kit'
+import type { TCtx } from './kit'
+import { cinematic, hl, ink, label, px, signature, support } from './kit'
 
-function preset(id: string) {
-  const p = TACTICAL_PRESETS.find((x) => x.id === id)!
-  return p.build()
+// GOAT EDITORIAL · Táctica
+// Black background, a large realistic pitch seen from above, flat players,
+// ONE action drawn as ONE thick arrow in the slide accent, everything else dimmed.
+
+/** Vertical type factor: 1 on story/portrait, ≈0.85 on square/landscape. */
+const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
+
+/** Neutral kits. Pure white is tinted ivory by the painter and very dark grays are lifted, so use these. */
+const WHITE = '#EBEBEB'
+const DARK = '#444444'
+
+type Team = 'home' | 'away'
+type P = [number: number, x: number, y: number, extra?: Partial<TacticalPlayer>]
+
+function team(side: Team, list: P[]): TacticalPlayer[] {
+  return list.map(([number, x, y, extra]) => ({ id: uid('tp'), team: side, number, label: '', x, y, highlight: false, ...extra }))
+}
+
+/** Thick accent movement line (the one action of the slide). */
+function action(kind: TacticalAnnotation['kind'], points: { x: number; y: number }[], width = 0.95): TacticalAnnotation {
+  return annotation(kind, points, '$accent', '', width)
+}
+
+/** Pixel size of a pitch view fitted inside maxW × maxH (camera 'top'). */
+function fitPitch(view: PitchView, vertical: boolean, maxW: number, maxH: number) {
+  const r = regionFor(view)
+  const rw = r.x1 - r.x0
+  const rh = r.y1 - r.y0
+  const sw = vertical ? rh : rw
+  const sh = vertical ? rw : rh
+  const scale = Math.min(maxW / sw, maxH / sh)
+  return { w: sw * scale, h: sh * scale, scale }
+}
+
+/** Flat editorial board on the realistic pitch. */
+function board(over: Partial<TacticsData>): TacticsData {
+  return defaultTactics({
+    camera: 'top',
+    playerStyle: 'flat',
+    labelStyle: 'text',
+    showNumbers: true,
+    showLabels: true,
+    glow: 0,
+    highlightColor: '$accent',
+    ...over,
+  })
+}
+
+// ── 10 · Pizarra: salida de balón con tres ─────────────────────────────────
+function buildUpData(t: TCtx, vertical: boolean, scale: number, homeFormation: string, awayFormation: string): TacticsData {
+  // Home (white) builds from its own goal, the opponent presses with two forwards.
+  const home = team('home', [
+    [1, 4, 34],
+    [5, 11, 14, { highlight: true }],
+    [4, 11, 54, { highlight: true }],
+    [6, 23, 34, { highlight: true }],
+    [3, 28, 5],
+    [2, 28, 63],
+    [8, 33, 21],
+    [10, 34, 47],
+    [11, 58, 8],
+    [9, 62, 34],
+    [7, 58, 60],
+  ])
+  const away = team('away', [
+    [9, 22, 22],
+    [10, 22, 46],
+    [7, 44, 8],
+    [8, 42, 26],
+    [6, 42, 42],
+    [11, 44, 60],
+    [2, 62, 12],
+    [4, 60, 28],
+    [5, 60, 40],
+    [3, 62, 56],
+    [1, 100, 34],
+  ])
+  const r = Math.max(14, 2.6 * scale)
+  return board({
+    view: 'defensiveThird',
+    vertical,
+    homeFormation,
+    awayFormation,
+    homeColor: WHITE,
+    awayColor: DARK,
+    playerSize: r,
+    dimOthers: 0.42,
+    showLabels: false,
+    players: [...home, ...away],
+    annotations: [
+      // The pivot drops between the centre-backs: line of three.
+      action('run', [{ x: 20.2, y: 34 }, { x: 11.5, y: 34 }]),
+      annotation('ball', [{ x: 6.4, y: 35.6 }], '$text'),
+    ],
+  })
+  void t
 }
 
 export const tacticalBoard: TemplateDef = {
@@ -13,30 +110,60 @@ export const tacticalBoard: TemplateDef = {
   number: 10,
   name: 'Tactical Board',
   category: 'tactics',
-  description: 'Pizarra táctica realista con jugadores y flechas editables.',
+  description: 'Pizarra táctica: el campo a todo el ancho y una sola acción en acento.',
   build: (t, match) => {
-    const pz = zone(t, 0.15, 0.94)
-    const p = preset('buildup')
+    const k = vk(t)
+    const head = '{home.short} sale\n[[con tres]]'
+    const sub = 'El pivote baja entre los centrales y forma la línea de tres.'
+    if (t.landscape) {
+      const colW = t.cw * 0.4
+      const fit = fitPitch('defensiveThird', true, t.right - (t.left + colW + px(t, 60)), t.ch)
+      const pxx = t.right - fit.w
+      const py = t.contentTop + (t.ch - fit.h) / 2
+      const hh = px(t, 320)
+      return {
+        background: ink(),
+        elements: [
+          ...cinematic(t),
+          signature(t),
+          hl(t, head, { y: t.contentTop, w: colW, h: hh }, 130 * k),
+          support(t, sub, { y: t.contentTop + hh + px(t, 30), w: colW, h: px(t, 200) }, 46, { name: 'Explicación' }),
+          E.tactics({ name: 'Pizarra', x: pxx, y: py, width: fit.w, height: fit.h, tactics: buildUpData(t, true, fit.scale, match.home.formation, match.away.formation) }),
+        ],
+      }
+    }
+    const hy = t.contentTop
+    const hh = px(t, t.story ? 300 : 250)
+    const sy = hy + hh + px(t, 18)
+    const sh = px(t, 130)
+    const top = sy + sh + px(t, 40)
+    const fit = fitPitch('defensiveThird', true, t.W, t.contentBottom - top)
+    const py = top + (t.contentBottom - top - fit.h) / 2
     return {
-      background: BG.noir(),
+      background: ink(),
       elements: [
-        ...atmosphere(t, 'pitch'),
-        ...header(t),
-        kicker(t, 'Pizarra táctica  ·  {home.formation}', zone(t, 0, 0.04).y),
-        headline(t, 'Así construye [[{home.short}]]', zone(t, 0.04, 0.13), 120 * t.s),
-        E.tactics({
-          name: 'Pizarra',
-          x: t.left - 20,
-          y: pz.y,
-          width: t.cw + 40,
-          height: pz.h,
-          tactics: defaultTactics({ ...p, homeFormation: match.home.formation, awayFormation: match.away.formation, camera: 'top', vertical: !t.landscape, playerSize: 26 * t.s }),
-        }),
-        body(t, 'Salida de tres con el pivote incrustado entre centrales.', { y: zone(t, 0.95, 1).y, h: 50 }, 28 * t.s, { align: 'center', name: 'Explicación' }),
-        ...footer(t),
+        ...cinematic(t),
+        signature(t),
+        hl(t, head, { y: hy, h: hh }, 140 * k, { verticalAlign: 'bottom' }),
+        support(t, sub, { y: sy, h: sh }, 48, { name: 'Explicación' }),
+        E.tactics({ name: 'Pizarra', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: buildUpData(t, true, fit.scale, match.home.formation, match.away.formation) }),
       ],
     }
   },
+}
+
+// ── 11 · Duelo de sistemas ──────────────────────────────────────────────────
+function systemsData(vertical: boolean, scale: number, homeFormation: string, awayFormation: string): TacticsData {
+  return board({
+    view: 'full',
+    vertical,
+    homeFormation,
+    awayFormation,
+    homeColor: '$accent',
+    awayColor: WHITE,
+    playerSize: Math.max(12, Math.min(40, 3.95 * scale)),
+    showLabels: false,
+  })
 }
 
 export const formationBattle: TemplateDef = {
@@ -44,30 +171,110 @@ export const formationBattle: TemplateDef = {
   number: 11,
   name: 'Formation Battle',
   category: 'tactics',
-  description: 'Las dos alineaciones enfrentadas sobre un campo en perspectiva.',
+  description: 'Las dos alineaciones sobre un campo cenital: un equipo en acento, el otro en blanco.',
   build: (t, match) => {
-    const pz = zone(t, 0.15, 0.9)
-    return {
-      background: BG.emerald(),
-      elements: [
-        ...atmosphere(t, 'emerald'),
-        glow(t, t.cx, pz.y + pz.h * 0.55, t.cw * 0.7, '$secondary', 0.5, 0.7),
-        ...header(t),
-        kicker(t, 'Duelo de sistemas', zone(t, 0, 0.04).y),
-        text(t, '{away.short}  [[{away.formation}]]', zone(t, 0.05, 0.13), { name: 'Sistema visitante', fontFamily: '$headline', fontSize: 110 * t.s, accentColor: '$awayLight', lineHeight: 1 }),
-        E.tactics({
-          name: 'Duelo de sistemas',
-          x: t.left - 40,
-          y: pz.y,
-          width: t.cw + 80,
-          height: pz.h,
-          tactics: defaultTactics({ homeFormation: match.home.formation, awayFormation: match.away.formation, camera: 'perspective', tilt: 0.75, vertical: !t.landscape, playerSize: 21 * t.s, showLabels: false }),
-        }),
-        text(t, '{home.short}  [[{home.formation}]]', zone(t, 0.91, 0.99), { name: 'Sistema local', fontFamily: '$headline', fontSize: 110 * t.s, accentColor: '$homeLight', lineHeight: 1 }),
-        ...footer(t),
-      ],
+    const k = vk(t)
+    const fs = 120 * k
+    const homeHead = '{home.short} [[{home.formation}]]'
+    const awayHead = '{away.short} {away.formation}'
+    const els: SlideElement[] = [...cinematic(t), signature(t)]
+    const vertical = t.story
+    if (vertical) {
+      // Away defends the top goal, home the bottom one: each name sits next to its half.
+      const th = px(t, 140)
+      const gap = px(t, 40)
+      const top = t.contentTop + th + gap
+      const bottom = t.contentBottom - th - gap
+      const fit = fitPitch('full', true, t.W, bottom - top)
+      const pxx = (t.W - fit.w) / 2
+      const py = top + (bottom - top - fit.h) / 2
+      els.push(
+        hl(t, awayHead, { y: py - gap - th, h: th }, fs, { name: 'Sistema visitante', verticalAlign: 'bottom', align: 'center' }),
+        E.tactics({ name: 'Duelo de sistemas', x: pxx, y: py, width: fit.w, height: fit.h, tactics: systemsData(true, fit.scale, match.home.formation, match.away.formation) }),
+        hl(t, homeHead, { y: py + fit.h + gap, h: th }, fs, { name: 'Sistema local', align: 'center' }),
+      )
+      return { background: ink(), elements: els }
     }
+    // Shorter formats: horizontal pitch, home attacks left → right.
+    const th = px(t, 130)
+    const top = t.contentTop + th + px(t, 24)
+    const fit = fitPitch('full', false, t.landscape ? t.cw : t.W, t.contentBottom - top)
+    const pxx = (t.W - fit.w) / 2
+    const py = top + (t.contentBottom - top - fit.h) / 2
+    const half = fit.w / 2
+    els.push(
+      hl(t, homeHead, { x: Math.max(t.left, pxx), y: py - th - px(t, 20), w: half - px(t, 20), h: th }, fs, { name: 'Sistema local', verticalAlign: 'bottom' }),
+      hl(t, awayHead, { x: pxx + half + px(t, 20), y: py - th - px(t, 20), w: Math.min(half, t.right - pxx - half) - px(t, 20), h: th }, fs, { name: 'Sistema visitante', verticalAlign: 'bottom', align: 'right' }),
+      E.tactics({ name: 'Duelo de sistemas', x: pxx, y: py, width: fit.w, height: fit.h, tactics: systemsData(false, fit.scale, match.home.formation, match.away.formation) }),
+    )
+    return { background: ink(), elements: els }
   },
+}
+
+// ── 12 · Movimiento clave: la diagonal del extremo ─────────────────────────
+function cutInsideData(vertical: boolean, scale: number, homeFormation: string, awayFormation: string): TacticsData {
+  // Right winger (accent) receives wide, drives inside across the full-back and shoots far post.
+  const home = team('home', [
+    [1, 5, 34],
+    [3, 52, 8],
+    [5, 40, 24],
+    [4, 40, 44],
+    [2, 60, 58],
+    [6, 62, 34],
+    [8, 72, 22],
+    [10, 79, 40],
+    [11, 86, 9],
+    [9, 93, 27],
+    [7, 79, 63, { highlight: true, label: 'Extremo' }],
+  ])
+  const away = team('away', [
+    [1, 101.5, 34],
+    [2, 93, 11],
+    [4, 95, 25],
+    [5, 95, 40],
+    [3, 89, 58, { highlight: true, label: 'Lateral' }],
+    [7, 80, 13],
+    [6, 82, 28],
+    [8, 84, 45],
+    [11, 72, 60],
+    [9, 64, 26],
+    [10, 62, 44],
+  ])
+  return board({
+    view: 'attackingThird',
+    vertical,
+    homeFormation,
+    awayFormation,
+    homeColor: '$accent',
+    awayColor: WHITE,
+    highlightColor: '$text',
+    playerSize: Math.max(14, Math.min(46, 2.7 * scale)),
+    dimOthers: 0.3,
+    players: [...home, ...away],
+    annotations: [
+      action('curve', [{ x: 80.5, y: 60.2 }, { x: 82, y: 49 }, { x: 91.5, y: 42 }], 1.0),
+      annotation('pass', [{ x: 92.5, y: 41 }, { x: 104.6, y: 31.6 }], '$text', '', 0.4),
+      annotation('ball', [{ x: 81.2, y: 64.6 }], '$text'),
+    ],
+  })
+}
+
+const STEPS = [
+  { n: '1', txt: 'Recibe pegado a la banda' },
+  { n: '2', txt: 'Conduce hacia dentro' },
+  { n: '3', txt: 'Remata antes de que cierre el lateral' },
+]
+
+function stepRows(t: TCtx, x: number, y: number, w: number, h: number, nSize: number, tSize: number): SlideElement[] {
+  const rowH = h / STEPS.length
+  const nw = px(t, 70, 40)
+  return STEPS.flatMap((s, i) => {
+    const ry = y + i * rowH
+    return [
+      hl(t, s.n, { x, y: ry, w: nw, h: rowH }, nSize, { name: `Paso ${s.n}`, verticalAlign: 'middle', fill: { kind: 'solid', color: '$accent' }, autoFit: false }),
+      support(t, s.txt, { x: x + nw + px(t, 18), y: ry, w: w - nw - px(t, 18), h: rowH }, tSize, { name: `Texto paso ${s.n}`, verticalAlign: 'middle', fontWeight: 600, fill: { kind: 'solid', color: '$text' } }),
+    ]
+  })
 }
 
 export const keyMovement: TemplateDef = {
@@ -75,46 +282,80 @@ export const keyMovement: TemplateDef = {
   number: 12,
   name: 'Key Tactical Movement',
   category: 'tactics',
-  description: 'Un movimiento concreto: recepción, conducción y ataque al espacio.',
-  build: (t) => {
-    const pz = zone(t, 0.13, 0.68)
-    const p = preset('cutinside')
-    const steps = [
-      { n: '1', txt: 'Recibe [[abierto]] pegado a la línea de banda.' },
-      { n: '2', txt: 'Conduce [[hacia dentro]] arrastrando al lateral.' },
-      { n: '3', txt: 'Ataca la [[espalda del lateral]] con el pase filtrado.' },
-    ]
-    const sz = zone(t, 0.72, 0.98)
-    const rowH = sz.h / steps.length
-    const stepEls = steps.flatMap((s, i) => {
-      const y = sz.y + i * rowH
-      const bs = Math.min(64 * t.s, rowH * 0.7)
-      return [
-        E.shape({ name: `Paso ${s.n}`, shape: 'ellipse', x: t.left, y: y + (rowH - bs) / 2, width: bs, height: bs, fill: { kind: 'solid', color: '$primary' } }),
-        text(t, s.n, { x: t.left, y: y + (rowH - bs) / 2, w: bs, h: bs }, { name: `Nº ${s.n}`, fontFamily: '$label', fontSize: bs * 0.6, fontWeight: 800, fill: { kind: 'solid', color: '#08090B' }, autoFit: false }),
-        text(t, s.txt, { x: t.left + bs + 28 * t.s, y, w: t.cw - bs - 28 * t.s, h: rowH }, { name: `Texto paso ${s.n}`, fontFamily: '$body', fontSize: 36 * t.s, fontWeight: 600, uppercase: false, align: 'left', lineHeight: 1.2, accentColor: '$primary', minFontSize: 16 }),
-      ]
-    })
-    return {
-      background: BG.noir(),
-      elements: [
-        ...atmosphere(t, 'pitch'),
-        ...header(t),
-        kicker(t, 'Movimiento clave', zone(t, 0, 0.04).y),
-        headline(t, 'La diagonal que [[rompe]] el partido', zone(t, 0.04, 0.125), 110 * t.s),
-        E.tactics({
-          name: 'Movimiento',
-          x: t.left - 60,
-          y: pz.y,
-          width: t.cw + 120,
-          height: pz.h,
-          tactics: defaultTactics({ ...p, view: 'half', camera: 'perspective', tilt: 0.45, vertical: true, playerSize: 28 * t.s, homeColor: '$home', awayColor: '$away' }),
-        }),
-        ...stepEls,
-        ...footer(t),
-      ],
+  description: 'Un movimiento concreto en el último tercio: una flecha gruesa y tres pasos.',
+  build: (t, match) => {
+    const k = vk(t)
+    const head = '{home.short} [[rompe]] por dentro'
+    const els: SlideElement[] = [...cinematic(t), signature(t)]
+    if (t.landscape) {
+      const colW = t.cw * 0.42
+      const fit = fitPitch('attackingThird', true, t.right - (t.left + colW + px(t, 60)), t.ch)
+      const hh = px(t, 300)
+      els.push(
+        hl(t, head, { y: t.contentTop, w: colW, h: hh }, 125 * k),
+        ...stepRows(t, t.left, t.contentTop + hh + px(t, 40), colW, t.contentBottom - (t.contentTop + hh + px(t, 40)), 76 * k, 46 * k),
+        E.tactics({ name: 'Movimiento', x: t.right - fit.w, y: t.contentTop + (t.ch - fit.h) / 2, width: fit.w, height: fit.h, tactics: cutInsideData(true, fit.scale, match.home.formation, match.away.formation) }),
+      )
+      return { background: ink(), accent: '$yellow', elements: els }
     }
+    const hh = px(t, t.story ? 270 : 230)
+    const stepsH = px(t, t.story ? 330 : 250)
+    const top = t.contentTop + hh + px(t, 40)
+    const bottom = t.contentBottom - stepsH - px(t, 30)
+    const fit = fitPitch('attackingThird', true, t.W, bottom - top)
+    const py = top + (bottom - top - fit.h) / 2
+    els.push(
+      hl(t, head, { y: t.contentTop, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
+      E.tactics({ name: 'Movimiento', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: cutInsideData(true, fit.scale, match.home.formation, match.away.formation) }),
+      ...stepRows(t, t.left, py + fit.h + px(t, 30), t.cw, stepsH, 76 * k, 47 * k),
+    )
+    return { background: ink(), accent: '$yellow', elements: els }
   },
+}
+
+// ── 19 · Estadio 3D: el contragolpe ─────────────────────────────────────────
+function counterData(homeFormation: string, awayFormation: string): TacticsData {
+  const home = team('home', [
+    [1, 5, 34],
+    [3, 30, 10],
+    [5, 26, 26],
+    [4, 26, 44],
+    [2, 32, 60],
+    [6, 38, 36],
+    [8, 46, 30],
+    [10, 50, 46],
+    [11, 55, 12],
+    [9, 57, 36],
+    [7, 54, 58],
+  ])
+  const away = team('away', [
+    [1, 100, 34],
+    [2, 66, 10],
+    [5, 64, 28],
+    [4, 64, 42],
+    [3, 66, 58],
+    [6, 52, 30],
+    [8, 50, 40],
+    [7, 42, 12],
+    [10, 44, 34],
+    [11, 42, 56],
+    [9, 36, 30],
+  ])
+  return defaultTactics({
+    homeFormation,
+    awayFormation,
+    homeColor: WHITE,
+    awayColor: DARK,
+    playerSize: 18,
+    showLabels: false,
+    highlightColor: '$accent',
+    players: [...home, ...away],
+    annotations: [
+      annotation('ball', [{ x: 47.2, y: 31 }], '$text'),
+      annotation('pass', [{ x: 48, y: 29 }, { x: 62, y: 20 }, { x: 76, y: 15 }], '$text', '', 0.5),
+      action('run', [{ x: 57, y: 12 }, { x: 74, y: 9 }, { x: 88, y: 20 }]),
+    ],
+  })
 }
 
 export const stadium3D: TemplateDef = {
@@ -122,31 +363,66 @@ export const stadium3D: TemplateDef = {
   number: 19,
   name: 'Estadio 3D',
   category: 'tactics',
-  description: 'Escena 3D real (Three.js) con jugadores, focos y flechas tácticas.',
-  build: (t) => {
-    const pz = zone(t, 0.14, 0.86)
-    const p = preset('counter')
+  description: 'Escena 3D (Three.js) a ras de césped: una sola acción en acento.',
+  build: (t, match) => {
+    const k = vk(t)
+    const head = '{home.short} [[mata]] a la contra'
+    const sub = 'Robo en el centro y carrera a la espalda.'
+    if (t.landscape) {
+      const colW = t.cw * 0.4
+      const hh = px(t, 300)
+      const sx = t.left + colW + px(t, 40)
+      return {
+        background: ink(),
+        elements: [
+          ...cinematic(t, 'stadium'),
+          E.stadium3d({
+            name: 'Estadio 3D',
+            x: sx,
+            y: 0,
+            width: t.W - sx,
+            height: t.H,
+            tactics: counterData(match.home.formation, match.away.formation),
+            camera: { azimuth: 180, elevation: 30, distance: 62, fov: 34, targetX: 66, targetY: 26 },
+            lighting: { exposure: 0.85, floodlights: 1.0, fog: 0.2, accent: '$text', rim: 0.3 },
+            background: 'transparent',
+            showStands: true,
+          }),
+          signature(t),
+          hl(t, head, { y: t.contentTop, w: colW, h: hh }, 125 * k),
+          support(t, sub, { y: t.contentTop + hh + px(t, 30), w: colW, h: px(t, 140) }, 46, { name: 'Explicación' }),
+        ],
+      }
+    }
+    const hh = px(t, t.story ? 280 : 240)
+    const sy = t.contentTop + hh + px(t, 16)
+    const sh = px(t, 70)
+    const top = sy + sh + px(t, 30)
     return {
-      background: BG.noir(),
+      background: ink(),
       elements: [
-        ...atmosphere(t, 'noir'),
-        ...header(t),
-        kicker(t, 'Escenario 3D  ·  {competition}', zone(t, 0, 0.04).y),
-        headline(t, 'El contragolpe [[letal]]', zone(t, 0.04, 0.13), 120 * t.s),
+        ...cinematic(t, 'stadium'),
         E.stadium3d({
           name: 'Estadio 3D',
           x: 0,
-          y: pz.y,
+          y: top,
           width: t.W,
-          height: pz.h,
-          tactics: defaultTactics({ ...p, playerSize: 18 }),
-          camera: { azimuth: 205, elevation: 38, distance: t.landscape ? 62 : 74, fov: 36, targetX: 70, targetY: 34 },
+          height: t.H - top,
+          tactics: counterData(match.home.formation, match.away.formation),
+          camera: { azimuth: 180, elevation: 38, distance: t.story ? 82 : 86, fov: 36, targetX: 70, targetY: 26 },
+          lighting: { exposure: 0.85, floodlights: 1.0, fog: 0.2, accent: '$text', rim: 0.3 },
+          background: 'transparent',
+          showStands: true,
         }),
-        body(t, 'Robo en tres cuartos y ataque vertical a la espalda de la defensa.', { y: zone(t, 0.89, 0.97).y, h: zone(t, 0.89, 0.97).h }, 32 * t.s, { align: 'center', fill: { kind: 'solid', color: '$text' } }),
-        ...footer(t),
+        signature(t),
+        hl(t, head, { y: t.contentTop, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
+        support(t, sub, { y: sy, h: sh }, 46, { name: 'Explicación' }),
       ],
     }
   },
 }
 
 export const TACTICS_TEMPLATES = [tacticalBoard, formationBattle, keyMovement, stadium3D]
+
+// Keep the label helper referenced for future step layouts.
+void label

@@ -1,47 +1,165 @@
 import * as E from '../model/elements'
 import type { TemplateDef } from './types'
-import { BG, bottomFade, footer, fx, glow, grain, hairline, header, headline, kicker, pill, text, vignette, zone } from './kit'
+import type { TCtx } from './kit'
+import { cinematic, cta, goatMark, hl, ink, label, px, signature, support } from './kit'
 
+// GOAT EDITORIAL · Comunidad
+// Black background, big white type, one accent ($accent), one message.
+// Brand slides replace the top-left signature with the small goat mark
+// (the brand name is already the message).
+
+/** Vertical type factor: 1 on story/portrait, ≈0.85 on square/landscape. */
+const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
+
+/** Anton headline leading used by kit.hl(). */
+const LH = 1.04
+
+/** Height of `lines` headline lines at story size `size` (scaled by t.s). */
+const hlH = (t: TCtx, size: number, lines: number) => size * t.s * (LH * lines + 0.06)
+
+/** Type factor for typography-only slides: 1 unless `need` (story px) overflows `share` of the safe zone. */
+const fit = (t: TCtx, share: number, need: number) => Math.min(1, (t.ch * share) / need)
+
+/** Mascot artwork aspect ratio (GOAT_VIEW 512×660). */
+const GOAT_RATIO = 512 / 660
+
+const accentFill = { kind: 'solid' as const, color: '$accent' }
+
+// ── 17 · Únete a GOAT SOCIETY (tipografía) ───────────────────────────────────
 export const community: TemplateDef = {
   id: 'community',
   number: 17,
   name: 'GOAT SOCIETY Community',
   category: 'brand',
-  description: 'Diapositiva cinematográfica con la mascota y llamada a Telegram.',
+  description: 'Cierre de comunidad tipográfico: «Únete a GOAT SOCIETY» enorme y llamada al enlace de la bio.',
   build: (t) => {
-    const mz = zone(t, -0.12, 0.58)
-    const mw = Math.min(t.cw * 1.05, mz.h * 0.8)
+    // Typography is the only visual: keep full size while the stack fits in
+    // ~80% of the safe zone (story, portrait, square), shrink only below that.
+    const k = fit(t, 0.8, hlH(t, 170, 2) + px(t, 132) + (64 * 1.25 + 56 * 1.3) * t.s)
+    const hs = 170 * k
+    const ss = 64 * k
+    const cs = 56 * k
+    const hh = hlH(t, hs, 2)
+    const sh = ss * t.s * 1.25
+    const ch = cs * t.s * 1.3
+    const g1 = px(t, 40)
+    const g2 = px(t, 92)
+    const total = hh + g1 + sh + g2 + ch
+    // Centred in the safe zone.
+    const y = t.contentTop + Math.max(0, (t.ch - total) * 0.5)
+    // Extra room above lets a longer brand name wrap to a third line; the
+    // headline stays bottom-aligned so the stack below never moves.
+    const extra = Math.min(hh * 0.5, y - t.contentTop)
     return {
-      background: BG.noir(),
+      background: ink(),
       elements: [
-        fx(t, 'noiseGradient', { color: '$tertiary', color2: '#1C0A0F', intensity: 0.55, spread: 0.3, seed: 21 }),
-        fx(t, 'lightRays', { color: '$negative', intensity: 0.22, spread: 0.6, seed: 9, height: t.H * 0.7 }),
-        E.mascot({ name: 'Mascota cinemática', variant: 'cinematic', x: t.cx - mw / 2, y: mz.y, width: mw, height: mz.h, rimColor: '$negative', backlightColor: '$tertiary', backlight: 1, eyeColor: '$primary', eyeGlow: 1, fog: 0.6, fadeBottom: 0.25 }),
-        bottomFade(t, 0.45, 0.95),
-        vignette(t, 0.9, 0.3),
-        grain(t, 0.08),
-        ...header(t),
-        kicker(t, 'La comunidad privada', zone(t, 0.6, 0.64).y, { fontSize: 30, fill: { kind: 'solid', color: '$negative' } }),
-        headline(t, 'Únete a [[{brand}]]', zone(t, 0.645, 0.8), 170 * t.s, { accentColor: '$primary' }),
-        text(t, 'Pronósticos, análisis y datos cada día. Sin ruido.', zone(t, 0.81, 0.87), { name: 'Descripción', fontFamily: '$body', fontSize: 36 * t.s, fontWeight: 500, uppercase: false, lineHeight: 1.3, fill: { kind: 'solid', color: '$text' } }),
-        pill(t, '{telegram.label}  ·  {telegram}', zone(t, 0.9, 0.9).y, 32, {
-          name: 'Botón Telegram',
-          fill: { kind: 'solid', color: '#08090B' },
-          background: { color: '$primary', opacity: 1, paddingX: 46, paddingY: 24, radius: 60 },
-          fontWeight: 800,
-          uppercase: true,
-        }),
-        ...footer(t, '{handle}'),
+        ...cinematic(t),
+        goatMark(t, t.left, t.top, 60),
+        hl(t, 'Únete a\n[[{brand}]]', { y: y - extra, h: hh + extra }, hs, { verticalAlign: 'bottom' }),
+        label(t, 'Análisis y pronósticos', { y: y + hh + g1, h: sh }, ss, { name: 'Descripción', fontWeight: 600 }),
+        cta(t, 'Link en la bio  ↗', { y: y + hh + g1 + sh + g2, h: ch }, cs, { fill: accentFill }),
       ],
     }
   },
 }
 
+// ── 25 · Comunidad con la mascota ────────────────────────────────────────────
+export const communityMascot: TemplateDef = {
+  id: 'community-mascot',
+  number: 25,
+  name: 'Community · Mascota',
+  category: 'brand',
+  description: 'La mascota como imagen principal, monocroma con un filo del color de acento, y llamada a la comunidad.',
+  build: (t) => {
+    const k = vk(t)
+    const hs = 136 * k
+    const ss = 52 * k
+    const cs = 54 * k
+    const hh = hlH(t, hs, 2)
+    const sh = ss * t.s * 1.25
+    const ch = cs * t.s * 1.3
+    const g1 = px(t, 22)
+    const g2 = px(t, 40)
+    const textH = hh + g1 + sh + g2 + ch
+    const mascot = (x: number, y: number, w: number, h: number) =>
+      E.mascot({
+        name: 'Mascota',
+        variant: 'cinematic',
+        x,
+        y,
+        width: w,
+        height: h,
+        baseColor: '#5B6067',
+        shadowColor: '#050506',
+        rimColor: '$accent',
+        rimIntensity: 0.32,
+        backlightColor: '$bg',
+        backlight: 0,
+        lightAngle: 75,
+        eyeColor: '$accent',
+        eyeGlow: 0.15,
+        fog: 0.15,
+        fadeBottom: 0.22,
+        contrast: 0.68,
+      })
+
+    if (t.H / t.W < 1.05) {
+      // Square and landscape: mascot on the left, text column on the right.
+      const mw = Math.min(t.ch * GOAT_RATIO, t.cw * 0.48)
+      const mh = mw / GOAT_RATIO
+      const tx = t.left + mw + px(t, 60)
+      const tw = t.right - tx
+      // A narrow column wraps the support line (≈12.7 em at Inter Tight 500).
+      const sh2 = ss * t.s * 1.22 * (tw >= ss * t.s * 12.9 ? 1 : 2)
+      const ty = t.contentTop + (t.ch - (hh + g1 + sh2 + g2 + ch)) / 2
+      return {
+        background: ink(),
+        elements: [
+          ...cinematic(t),
+          signature(t),
+          mascot(t.left, t.contentTop + (t.ch - mh) / 2, mw, mh),
+          hl(t, 'Únete a la comunidad', { x: tx, y: ty, w: tw, h: hh }, hs, { verticalAlign: 'bottom' }),
+          support(t, 'Análisis, datos y pronósticos.', { x: tx, y: ty + hh + g1, w: tw, h: sh2 }, ss, { name: 'Descripción' }),
+          cta(t, 'Accede desde mi perfil  ↗', { x: tx, y: ty + hh + g1 + sh2 + g2, w: tw, h: ch }, cs, { fill: accentFill }),
+        ],
+      }
+    }
+
+    // The beard fades out (fadeBottom), so a small real gap reads as air.
+    const gap = px(t, 22)
+    // The horn tips may rise a little above the safe zone, never into the signature.
+    const mTop = Math.max(t.top + px(t, 44, 28) + px(t, 40), t.contentTop - px(t, 36))
+    const room = t.contentBottom - textH - gap - mTop
+    const mh = Math.min(room, (t.W * 0.6) / GOAT_RATIO)
+    const mw = mh * GOAT_RATIO
+    const y0 = mTop + Math.max(0, (room - mh) * 0.5)
+    const ty = y0 + mh + gap
+    return {
+      background: ink(),
+      elements: [
+        ...cinematic(t),
+        signature(t),
+        mascot(t.cx - mw / 2, y0, mw, mh),
+        hl(t, 'Únete a la comunidad', { y: ty, h: hh }, hs, { align: 'center' }),
+        support(t, 'Análisis, datos y pronósticos.', { y: ty + hh + g1, h: sh }, ss, { name: 'Descripción', align: 'center' }),
+        cta(t, 'Accede desde mi perfil  ↗', { y: ty + hh + g1 + sh + g2, h: ch }, cs, { align: 'center', fill: accentFill }),
+      ],
+    }
+  },
+}
+
+// ── 18 · Cierre del carrusel ─────────────────────────────────────────────────
+
+/**
+ * Closing-slide copy variants (editor: "Variantes de cierre"). The editor
+ * writes `headline` into "Mensaje final" and `sub` into "Submensaje" (the
+ * handle line). Only neutral profile/bio calls to action.
+ */
 export const FINAL_VARIANTS = [
-  { id: 'perfil', headline: 'El análisis completo está en [[mi perfil]]', sub: 'Pronósticos y análisis en la comunidad' },
-  { id: 'unete', headline: 'Únete a [[{brand}]]', sub: 'El resto está dentro' },
-  { id: 'comunidad', headline: 'Pronósticos y análisis en [[la comunidad]]', sub: 'Acceso desde el enlace del perfil' },
-  { id: 'dentro', headline: 'El resto [[está dentro]]', sub: '{telegram}' },
+  { id: 'perfil', headline: 'El análisis completo está en [[mi perfil]]', sub: '{handle}' },
+  { id: 'pronostico', headline: 'Pronóstico completo en [[mi perfil]]', sub: '{handle}' },
+  { id: 'unete', headline: 'Únete a [[{brand}]]', sub: '{handle}' },
+  { id: 'comunidad', headline: 'La comunidad está en [[mi bio]]', sub: '{handle}' },
 ]
 
 export const finalSlide: TemplateDef = {
@@ -49,28 +167,35 @@ export const finalSlide: TemplateDef = {
   number: 18,
   name: 'Final Carousel Slide',
   category: 'brand',
-  description: 'Cierre elegante del carrusel con mensaje y marca (4 variantes de texto).',
+  description: 'Cierre del carrusel: una frase enorme que termina en el acento y el usuario debajo (4 variantes).',
   build: (t) => {
     const v = FINAL_VARIANTS[0]
-    const hz = zone(t, 0.36, 0.66)
+    // The default message sets on three lines (two on the wide 16:9 column).
+    const lines = t.landscape ? 2 : 3
+    const k = fit(t, 0.85, hlH(t, 160, lines) + px(t, 56) + 68 * 1.3 * t.s)
+    const hs = 160 * k
+    const us = 68 * k
+    const uh = us * t.s * 1.3
+    const gap = px(t, 56)
+    // Bottom-anchored: the handle sits at a fixed line and the headline grows
+    // upwards, so every variant (2–4 lines) keeps the same rhythm. The block
+    // is centred for the default message.
+    const hb = hlH(t, hs, lines)
+    const total = hb + gap + uh
+    const y = t.contentTop + Math.max(0, (t.ch - total) * 0.5)
+    const top = Math.max(t.contentTop, y - hlH(t, hs, 2))
+    const hh = y + hb - top
+    const uy = y + hb + gap
     return {
-      background: BG.ink(),
+      background: ink(),
       elements: [
-        fx(t, 'noiseGradient', { color: '#1E2A26', color2: '#121A17', intensity: 0.6, spread: 0.4, seed: 31 }),
-        E.mascot({ name: 'Mascota contorno', variant: 'outline', x: t.cx - t.cw * 0.5, y: t.contentTop - t.ch * 0.05, width: t.cw, height: t.ch * 1.05, opacity: 0.09, baseColor: '$primary', eyeColor: '$primary', eyeGlow: 0.5, locked: true }),
-        glow(t, t.cx, hz.y + hz.h / 2, t.cw * 0.6, '$primary', 0.1, 0.7),
-        vignette(t, 0.9, 0.3),
-        grain(t, 0.07),
-        E.brandMark({ name: 'Logotipo', variant: 'wordmark', x: t.cx - 240 * t.s, y: zone(t, 0.04, 0.3).y, width: 480 * t.s, height: Math.min(380 * t.s, zone(t, 0.04, 0.3).h) }),
-        hairline(t, hz.y - t.ch * 0.03, t.cw * 0.3),
-        headline(t, v.headline, hz, 170 * t.s, { name: 'Mensaje final' }),
-        hairline(t, hz.y + hz.h + t.ch * 0.03, t.cw * 0.3),
-        text(t, v.sub, zone(t, 0.73, 0.79), { name: 'Submensaje', fontFamily: '$serif', fontSize: 58 * t.s, italic: true, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
-        pill(t, 'Sígueme  ·  {handle}', zone(t, 0.86, 0.86).y, 30, { name: 'Usuario', background: { color: '$text', opacity: 0.08, paddingX: 40, paddingY: 20, radius: 60 } }),
-        ...footer(t, '{page} / {pages}'),
+        ...cinematic(t),
+        goatMark(t, t.left, t.top, 60),
+        hl(t, v.headline, { y: top, h: hh }, hs, { name: 'Mensaje final', verticalAlign: 'bottom' }),
+        label(t, v.sub, { y: uy, h: uh }, us, { name: 'Submensaje', fontWeight: 600, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
       ],
     }
   },
 }
 
-export const BRAND_TEMPLATES = [community, finalSlide]
+export const BRAND_TEMPLATES = [community, finalSlide, communityMascot]
