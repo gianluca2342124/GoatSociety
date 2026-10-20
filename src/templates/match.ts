@@ -13,29 +13,43 @@ const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
 /** Approximate Anton cap height / font size (used to stack labels under numbers). */
 const CAP = 0.74
 
+/** Team name centered under a crest (keeps the cover linked to the match data). */
+function crestName(t: TCtx, side: 'home' | 'away', x: number, y: number, w: number, size: number) {
+  return label(t, side === 'home' ? '{home.short}' : '{away.short}', { x: x - w * 0.15, y, w: w * 1.3, h: size * t.s * 1.25 }, size, {
+    name: side === 'home' ? 'Nombre local' : 'Nombre visitante',
+    align: 'center',
+    fontWeight: 700,
+    fill: { kind: 'solid', color: '$text' },
+  })
+}
+
 export const matchdayElite: TemplateDef = {
   id: 'matchday-elite',
   number: 1,
   name: 'Matchday Elite',
   category: 'match',
-  description: 'Portada de partido: dos escudos grandes, un titular y la fecha.',
+  description: 'Portada de partido: dos escudos grandes con sus nombres, un titular y la fecha.',
   build: (t) => {
+    const k = vk(t)
+    const ns = 46 * k
+    const nh = ns * t.s * 1.25
+    const ng = px(t, 22)
     if (t.landscape) {
       // Text column on the left, the two crests share the right half; both
       // blocks sit on the same horizontal axis.
       const colW = t.cw * 0.47
-      const hs = 150 * vk(t)
+      const hs = 150 * k
       const sh = px(t, 60)
       const gapS = px(t, 28)
       const mid = t.contentTop + t.ch / 2
       // Room for a three-line headline + the date line, centered on the axis.
-      const block = hs * 1.04 * 3 + gapS + sh
+      const block = hs * t.s * 1.04 * 3 + gapS + sh
       const sy = Math.min(t.contentBottom - sh, mid + block / 2 - sh)
       const hb = sy - gapS
       const gap = px(t, 40)
       const cs = Math.min((t.cw - colW - px(t, 70) - gap) / 2, t.ch * 0.42)
       const rx = t.right - cs * 2 - gap
-      const cy = mid - cs / 2
+      const cy = mid - (cs + ng + nh) / 2
       return {
         background: ink(),
         elements: [
@@ -43,18 +57,20 @@ export const matchdayElite: TemplateDef = {
           signature(t),
           crestOf('home', rx, cy, cs),
           crestOf('away', rx + cs + gap, cy, cs),
+          crestName(t, 'home', rx, cy + cs + ng, cs, ns),
+          crestName(t, 'away', rx + cs + gap, cy + cs + ng, cs, ns),
           hl(t, '{headline}', { y: t.contentTop, w: colW, h: hb - t.contentTop }, hs, { verticalAlign: 'bottom' }),
           support(t, '{competition}  ·  {weekday} {time}', { y: sy, w: colW, h: px(t, 90) }, 44, { name: 'Fecha y competición' }),
         ],
       }
     }
-    const k = vk(t)
     const sy = t.contentBottom - px(t, 100)
     const hb = sy - px(t, 30)
     const hh = px(t, 400)
     const hy = hb - hh
-    const cs = Math.min(400 * t.s, (hy - t.contentTop) * 0.86, t.cw * 0.43)
-    const cy = t.contentTop + (hy - t.contentTop - cs) / 2
+    const room = hy - t.contentTop - px(t, 20)
+    const cs = Math.min(400 * t.s, (room - ng - nh) * 0.9, t.cw * 0.43)
+    const cy = t.contentTop + (room - cs - ng - nh) / 2
     return {
       background: ink(),
       elements: [
@@ -62,6 +78,8 @@ export const matchdayElite: TemplateDef = {
         signature(t),
         crestOf('home', t.left, cy, cs),
         crestOf('away', t.right - cs, cy, cs),
+        crestName(t, 'home', t.left, cy + cs + ng, cs, ns),
+        crestName(t, 'away', t.right - cs, cy + cs + ng, cs, ns),
         hl(t, '{headline}', { y: hy, h: hh }, 170 * k, { verticalAlign: 'bottom' }),
         support(t, '{competition}  ·  {weekday} {time}', { y: sy, h: px(t, 100) }, 46, { name: 'Fecha y competición' }),
       ],
@@ -94,7 +112,7 @@ export const bigStatement: TemplateDef = {
     const subY = t.contentBottom - px(t, 30) - subH
     const hb = subY - px(t, 34)
     const hy = tagY + px(t, 150)
-    const size = t.landscape ? 190 * k : 220 * k
+    const size = t.landscape ? 230 * k : 220 * k
     return {
       background: ink(),
       elements: [
@@ -243,10 +261,14 @@ export const photoCover: TemplateDef = {
     const hw = t.landscape ? t.cw * 0.62 : t.cw
     const hh = px(t, 420)
     // Photo: full bleed from the top, fading into black behind the type.
+    // Landscape splits the frame: type on black at the left, photo on the right.
     const ih = t.landscape ? t.H : t.H * 0.76
+    const ix = t.landscape ? t.W * 0.36 : 0
+    const fade = 0.35
+    const fadeTop = ih * (1 - fade)
     // Fallback visual (also the backdrop of a cut-out PNG): the home crest,
     // zoomed past the frame and dimmed. An opaque photo covers it.
-    const cs = t.landscape ? t.H * 1.1 : t.W * 1.3
+    const cs = t.landscape ? t.H * 1.1 : t.W * 1.19
     const cx = t.landscape ? t.W * 1.1 - cs : t.cx - cs / 2
     const cy = t.landscape ? -cs * 0.3 : ih * 0.36 - cs / 2
     // Reading scrim above photo and crest: clear at the top, ≈85 % black where
@@ -265,7 +287,7 @@ export const photoCover: TemplateDef = {
           height: t.H,
           cornerRadius: 0,
           locked: true,
-          fill: { kind: 'linear', angle: 90, stops: [{ offset: 0, color: '$bg', opacity: 1 }, { offset: 0.3, color: '$bg', opacity: 0.92 }, { offset: 0.66, color: '$bg', opacity: 0 }] },
+          fill: { kind: 'linear', angle: 90, stops: [{ offset: 0, color: '$bg', opacity: 1 }, { offset: 0.38, color: '$bg', opacity: 1 }, { offset: 0.56, color: '$bg', opacity: 0.62 }, { offset: 0.74, color: '$bg', opacity: 0 }] },
         })
       : E.shape({
           name: 'Sombra de lectura',
@@ -293,8 +315,20 @@ export const photoCover: TemplateDef = {
       elements: [
         ...cinematic(t, 'grain'),
         crestOf('home', cx, cy, cs, { name: 'Escudo de fondo' }),
-        E.shape({ name: 'Atenuado escudo', shape: 'rect', x: 0, y: 0, width: t.W, height: t.H, cornerRadius: 0, locked: true, fill: { kind: 'solid', color: '$bg', opacity: 0.5 } }),
-        E.image({ name: 'Foto', x: 0, y: 0, width: t.W, height: ih, fit: 'cover', focusX: 0.5, focusY: 0.3, fadeBottom: 0.35 }),
+        // Dims the crest and hides it where the photo starts to fade, so it
+        // never ghosts through an uploaded photo.
+        E.shape({
+          name: 'Atenuado escudo',
+          shape: 'rect',
+          x: 0,
+          y: 0,
+          width: t.W,
+          height: t.H,
+          cornerRadius: 0,
+          locked: true,
+          fill: { kind: 'linear', angle: 180, stops: [{ offset: 0, color: '$bg', opacity: 0.5 }, { offset: (fadeTop * 0.6) / t.H, color: '$bg', opacity: 0.5 }, { offset: fadeTop / t.H, color: '$bg', opacity: 1 }, { offset: 1, color: '$bg', opacity: 1 }] },
+        }),
+        E.image({ name: 'Foto', x: ix, y: 0, width: t.W - ix, height: ih, fit: 'cover', focusX: 0.5, focusY: 0.3, fadeBottom: fade }),
         scrim,
         signature(t),
         hl(t, '{headline}', { y: hb - hh, w: hw, h: hh }, fs, { verticalAlign: 'bottom' }),

@@ -185,7 +185,8 @@ export function drawImageFit(
 export function paintImagePlaceholder(ctx: Ctx, w: number, h: number, rc: RenderCtx, label = 'IMAGEN') {
   ctx.save()
   roundRect(ctx, 0, 0, w, h, 12)
-  ctx.fillStyle = withAlpha(rc.color('$surface'), 0.9)
+  // Light veil only: content placed behind an empty photo slot stays visible.
+  ctx.fillStyle = withAlpha(rc.color('$surface'), 0.28)
   ctx.fill()
   ctx.setLineDash([10, 8])
   ctx.strokeStyle = withAlpha(rc.color('$muted'), 0.6)

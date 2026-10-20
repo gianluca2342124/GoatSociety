@@ -59,7 +59,7 @@ function predHeight(w: number, o: { lines: number; stamp?: boolean; conf?: boole
  * With `tag`, a muted label sits above the name between the crests.
  */
 function matchRow(t: TCtx, y: number, cs: number, nameSize: number, tag?: string): SlideElement[] {
-  const span = Math.min(t.cw, 936)
+  const span = Math.min(t.cw, 860)
   const x0 = t.cx - span / 2
   const gap = cs * 0.2
   const nx = x0 + cs + gap
@@ -88,6 +88,19 @@ function matchRow(t: TCtx, y: number, cs: number, nameSize: number, tag?: string
   return out
 }
 
+/** Approximate Anton advance of an uppercase string, in em (measured ≈ 0.44–0.46 per glyph). */
+const antonEm = (s: string) => s.length * 0.45
+
+/**
+ * Sizer for a stack whose headline may take one or two lines: one line when it
+ * fits the width at the scaled size (auto-fit may shrink it ≤ 12 %), else two.
+ */
+function headlineSizer(t: TCtx, em: number, hs: number, width: number, total: (lines: number) => number) {
+  const z1 = sizer(t, total(1))
+  if (em * z1(hs) <= width * 1.12) return { z: z1, lines: 1 }
+  return { z: sizer(t, total(2)), lines: 2 }
+}
+
 /** Disclaimer centered at the foot of the content zone. */
 function legal(t: TCtx, y: number, content = '{disclaimer}', lines = 1, p: Partial<TextElement> = {}) {
   const s = px(t, 28, 18)
@@ -113,7 +126,7 @@ export const premiumPrediction: TemplateDef = {
     const dy = t.contentBottom - z(DH)
     const top = t.contentTop + cs + z(G1)
     const ph = z(pe)
-    const py = top + Math.max(0, (dy - z(G2) - top - ph) * 0.35)
+    const py = top + Math.max(0, (dy - z(G2) - top - ph) * 0.5)
     return {
       background: ink(),
       elements: [
@@ -139,8 +152,6 @@ export const lockedPrediction: TemplateDef = {
     // The decoy only needs to read as "hidden": 90 % of its natural size.
     const pe = predHeight(bw, { lines: t.landscape ? pickLines(match, bw) : 2 }) * 0.9
     const HS = 140
-    const hLines = t.landscape ? 1 : 2
-    const HH = HS * 1.04 * hLines + 8
     const CS = 130
     const G1 = 70
     const G2 = 40
@@ -148,10 +159,15 @@ export const lockedPrediction: TemplateDef = {
     const CH = 70
     const G4 = 60
     const DH = 40
-    const z = sizer(t, CS + G1 + pe + G2 + HH + G3 + CH + G4 + DH)
+    const hhOf = (lines: number) => HS * 1.04 * lines + 8
+    const { z, lines } = headlineSizer(t, antonEm('Pronóstico bloqueado'), HS, t.cw, (n) => CS + G1 + pe + G2 + hhOf(n) + G3 + CH + G4 + DH)
+    const HH = hhOf(lines)
     const cs = z(CS)
-    const py = t.contentTop + cs + z(G1)
     const ph = z(pe)
+    const dy = t.contentBottom - z(DH)
+    // Header on top; the rest centered in the room left above the disclaimer.
+    const top = t.contentTop + cs + z(G1)
+    const py = top + Math.max(0, (dy - z(G4) - top - ph - z(G2) - z(HH) - z(G3) - z(CH)) * 0.5)
     const hy = py + ph + z(G2)
     const cy = hy + z(HH) + z(G3)
     return {
@@ -162,8 +178,8 @@ export const lockedPrediction: TemplateDef = {
         ...matchRow(t, t.contentTop, cs, z(84)),
         E.prediction({ name: 'Pronóstico bloqueado', mode: 'locked', x: bx, y: py, width: bw, height: ph, chrome: 'none', showMatch: false, showNote: false, showConfidence: false, hiddenPosition: 'pickAndOdds', blurIntensity: 18, overlayOpacity: 0.3, teaser: '' }),
         hl(t, 'Pronóstico [[bloqueado]]', { y: hy, h: z(HH) }, fs(t, z(HS)), { align: 'center' }),
-        cta(t, 'Desbloquéalo en mi perfil  ↗', { y: cy, h: z(CH) }, fs(t, z(54)), { align: 'center', fill: { kind: 'solid', color: '$accent' } }),
-        legal(t, t.contentBottom - z(DH)),
+        cta(t, 'Desbloquéalo en mi perfil  [[↗]]', { y: cy, h: z(CH) }, fs(t, z(54)), { align: 'center' }),
+        legal(t, dy),
       ],
     }
   },
@@ -187,8 +203,11 @@ export const predictionReveal: TemplateDef = {
     const DH = 40
     const z = sizer(t, CS + G1 + pe + G2 + CH + G3 + DH)
     const cs = z(CS)
-    const py = t.contentTop + cs + z(G1)
     const ph = z(pe)
+    const dy = t.contentBottom - z(DH)
+    // Header on top; prediction + CTA centered in the room left above the disclaimer.
+    const top = t.contentTop + cs + z(G1)
+    const py = top + Math.max(0, (dy - z(G3) - top - ph - z(G2) - z(CH)) * 0.5)
     const cy = py + ph + z(G2)
     return {
       background: ink(),
@@ -198,13 +217,15 @@ export const predictionReveal: TemplateDef = {
         ...matchRow(t, t.contentTop, cs, z(84)),
         E.prediction({ name: 'Pronóstico revelado', mode: 'revealed', revealStamp: 'Revelado', x: bx, y: py, width: bw, height: ph, chrome: 'none', showMatch: false, showNote: false, showConfidence: false, showOdds: true }),
         cta(t, 'El análisis completo está en mi perfil  [[↗]]', { y: cy, h: z(CH) }, fs(t, z(52)), { align: 'center' }),
-        legal(t, t.contentBottom - z(DH)),
+        legal(t, dy),
       ],
     }
   },
 }
 
 // ── 16 · Historial: % de acierto enorme + filas abiertas ───────────────────
+// The list draws the hero rate in the accent, so the headline stays white:
+// one accent focus (the percentage), one short line of context above it.
 export const verifiedResults: TemplateDef = {
   id: 'verified-results',
   number: 16,
@@ -214,25 +235,24 @@ export const verifiedResults: TemplateDef = {
   build: (t) => {
     const note = 'Resultados introducidos manualmente. Los resultados pasados no garantizan resultados futuros.'
     if (t.landscape) {
+      // Headline + legal line on the left, the whole record on the right.
       const colW = t.cw * 0.4
-      const lx = t.left + t.cw * 0.48
-      const lw = t.right - lx
+      const lx = t.left + t.cw * 0.47
       const dh = px(t, 28, 18) * 1.25 * 3 + 4
-      const dy = t.contentBottom - dh
       return {
         background: ink(),
         elements: [
           ...cinematic(t),
           signature(t),
-          hl(t, 'Resultados [[recientes]]', { y: t.contentTop, w: colW, h: px(t, 300) }, fs(t, px(t, 140))),
-          E.resultsList({ name: 'Resultados', x: lx, y: t.contentTop, width: lw, height: t.ch, maxItems: 5, variant: 'editorial', showSummary: true, showOdds: true }),
-          legal(t, dy, note, 3, { width: colW, align: 'left' }),
+          hl(t, 'Resultados recientes', { y: t.contentTop, w: colW, h: px(t, 300) }, fs(t, px(t, 140))),
+          E.resultsList({ name: 'Resultados', x: lx, y: t.contentTop, width: t.right - lx, height: t.ch, maxItems: 4, variant: 'editorial', showSummary: true, showOdds: true }),
+          legal(t, t.contentBottom - dh, note, 3, { width: colW, align: 'left' }),
         ],
       }
     }
-    const HS = 140
-    const HH = HS * 1.04 * 2 + 8
-    const G1 = 70
+    const HS = 104
+    const HH = HS * 1.1
+    const G1 = 60
     const G2 = 50
     const DH = 2 * 28 * 1.25 + 4
     const LIST = 1330 - HH - G1 - G2 - DH
@@ -244,9 +264,9 @@ export const verifiedResults: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        hl(t, 'Resultados [[recientes]]', { y: t.contentTop, h: z(HH) }, fs(t, z(HS))),
-        E.resultsList({ name: 'Resultados', x: t.left, y: ly, width: t.cw, height: dy - z(G2) - ly, maxItems: 5, variant: 'editorial', showSummary: true, showOdds: true }),
-        legal(t, dy, note, 2),
+        hl(t, 'Resultados recientes', { y: t.contentTop, h: z(HH) }, fs(t, z(HS))),
+        E.resultsList({ name: 'Resultados', x: t.left, y: ly, width: t.cw, height: dy - z(G2) - ly, maxItems: 4, variant: 'editorial', showSummary: true, showOdds: true }),
+        legal(t, dy, note, 2, { align: 'left' }),
       ],
     }
   },
@@ -259,23 +279,30 @@ export const winProbability: TemplateDef = {
   name: 'Win Probability',
   category: 'predictions',
   description: 'Probabilidad estimada 1X2: tres cifras y una barra proporcional, favorito en acento.',
-  build: (t) => {
-    // Estimated shares; the headline names the favourite (highest value).
+  build: (t, match) => {
+    // Estimated shares (editable on the element); the headline names the favourite.
     const P = { home: 34, draw: 24, away: 42 }
-    const fav = P.away > P.home ? '{away.short}' : '{home.short}'
+    const awayFav = P.away > P.home
+    const fav = awayFav ? '{away.short}' : '{home.short}'
+    const favTeam = awayFav ? match.away : match.home
     const HS = 150
-    const HH = HS * 1.04 * 2 + 8
-    const G1 = 120
-    const CS = 230
-    const G2 = 44
-    const PH = 300
-    const G3 = 56
-    const NH = 2 * 40 * 1.22 + 4
+    const G1 = 130
+    const CS = 260
+    // A taller box only adds air between the figures and the bar (the painter centers its block).
+    const G2 = 0
+    const PH = 400
+    const G3 = 10
+    const NH = 40 * 1.22 + 4
     const G4 = 60
     const DH = 40
-    const z = sizer(t, HH + G1 + CS + G2 + PH + G3 + NH + G4 + DH)
+    // Extra leading: a cedilla (BARÇA) must not touch the line below.
+    const hhOf = (lines: number) => HS * 1.14 * lines + 8
+    const em = antonEm(`${favTeam.shortName || favTeam.name} parte como favorito`)
+    const { z, lines } = headlineSizer(t, em, HS, t.cw, (n) => hhOf(n) + G1 + CS + G2 + PH + G3 + NH + G4 + DH)
+    const HH = hhOf(lines)
     const cs = z(CS)
-    const span = Math.min(t.cw, 1000)
+    // Same column as the headline; figures sized so the three columns breathe.
+    const span = Math.min(t.cw, 1240)
     const x0 = t.cx - span / 2
     const cy = t.contentTop + z(HH) + z(G1)
     const py = cy + cs + z(G2)
@@ -285,7 +312,7 @@ export const winProbability: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        hl(t, `${fav} parte como [[favorito]]`, { y: t.contentTop, h: z(HH) }, fs(t, z(HS))),
+        hl(t, `${fav} parte como [[favorito]]`, { y: t.contentTop, h: z(HH) }, fs(t, z(HS)), { lineHeight: 1.14 }),
         crestOf('home', x0, cy, cs),
         crestOf('away', x0 + span - cs, cy, cs),
         E.probability({
@@ -297,12 +324,12 @@ export const winProbability: TemplateDef = {
           home: P.home,
           draw: P.draw,
           away: P.away,
-          valueSize: z(200),
+          valueSize: z(122),
           labelSize: z(42),
           barHeight: z(30),
         }),
-        support(t, 'Probabilidades estimadas por {brand}. Es una opinión, no una garantía.', { x: x0, y: ny, w: span, h: z(NH) }, fs(t, z(40)), { name: 'Nota' }),
-        legal(t, t.contentBottom - z(DH)),
+        support(t, 'Probabilidades estimadas: opinión, no garantía.', { x: x0, y: ny, w: span, h: z(NH) }, fs(t, z(40)), { name: 'Nota' }),
+        legal(t, t.contentBottom - z(DH), '{disclaimer}', 1, { align: 'left' }),
       ],
     }
   },

@@ -128,9 +128,9 @@ export const communityMascot: TemplateDef = {
     // The beard fades out (fadeBottom), so a small real gap reads as air.
     const gap = px(t, 22)
     // The horn tips may rise a little above the safe zone, never into the signature.
-    const mTop = Math.max(t.top + px(t, 44, 28) + px(t, 40), t.contentTop - px(t, 36))
+    const mTop = Math.max(t.top + px(t, 44, 28) + px(t, 56), t.contentTop - px(t, 20))
     const room = t.contentBottom - textH - gap - mTop
-    const mh = Math.min(room, (t.W * 0.6) / GOAT_RATIO)
+    const mh = Math.min(room, (t.W * 0.64) / GOAT_RATIO)
     const mw = mh * GOAT_RATIO
     const y0 = mTop + Math.max(0, (room - mh) * 0.5)
     const ty = y0 + mh + gap
@@ -158,7 +158,7 @@ export const communityMascot: TemplateDef = {
 export const FINAL_VARIANTS = [
   { id: 'perfil', headline: 'El análisis completo está en [[mi perfil]]', sub: '{handle}' },
   { id: 'pronostico', headline: 'Pronóstico completo en [[mi perfil]]', sub: '{handle}' },
-  { id: 'unete', headline: 'Únete a [[{brand}]]', sub: '{handle}' },
+  { id: 'unete', headline: 'Únete a\n[[{brand}]]', sub: '{handle}' },
   { id: 'comunidad', headline: 'La comunidad está en [[mi bio]]', sub: '{handle}' },
 ]
 
@@ -170,8 +170,10 @@ export const finalSlide: TemplateDef = {
   description: 'Cierre del carrusel: una frase enorme que termina en el acento y el usuario debajo (4 variantes).',
   build: (t) => {
     const v = FINAL_VARIANTS[0]
-    // The default message sets on three lines (two on the wide 16:9 column).
-    const lines = t.landscape ? 2 : 3
+    // The default message sets on three lines; on 16:9 a narrower measure
+    // keeps the same rag instead of a long, low two-line sentence.
+    const lines = 3
+    const hw = t.landscape ? Math.min(t.cw, 980 * t.s) : t.cw
     const k = fit(t, 0.85, hlH(t, 160, lines) + px(t, 56) + 68 * 1.3 * t.s)
     const hs = 160 * k
     const us = 68 * k
@@ -191,7 +193,7 @@ export const finalSlide: TemplateDef = {
       elements: [
         ...cinematic(t),
         goatMark(t, t.left, t.top, 60),
-        hl(t, v.headline, { y: top, h: hh }, hs, { name: 'Mensaje final', verticalAlign: 'bottom' }),
+        hl(t, v.headline, { y: top, w: hw, h: hh }, hs, { name: 'Mensaje final', verticalAlign: 'bottom' }),
         label(t, v.sub, { y: uy, h: uh }, us, { name: 'Submensaje', fontWeight: 600, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
       ],
     }

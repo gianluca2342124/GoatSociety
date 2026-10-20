@@ -14,8 +14,17 @@ import { cinematic, crestOf, hl, ink, label, px, rule, signature, support } from
 
 type Side = 'home' | 'away'
 
-/** Headline leading: leaves room for a Ç sitting above an accented capital (Á/Ú). */
+/** Headline leading: accented capitals (Á/Ú) clear the line above. */
 const LH = 1.12
+
+/**
+ * Leading for a headline that starts with a team name. Anton's cedilla/comma
+ * hangs ~0.2em: with a name like "Barça" on the first line it would land on the
+ * next line's capitals and read as an accent ("PELÍGRO"), so those get more air.
+ */
+function lhFor(match: MatchData, ...sides: Side[]): number {
+  return sides.some((s) => /[Çç,;]/.test(match[s].shortName || match[s].name)) ? 1.24 : LH
+}
 
 /** Type factor for short formats (1 on story and 4:5). */
 const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
@@ -28,8 +37,8 @@ function head(t: TCtx, content: string, box: { x?: number; y: number; w?: number
 }
 
 /** Box height for an n-line headline (size in story px, already scaled for the format). */
-function headH(t: TCtx, size: number, lines = 2): number {
-  return size * t.s * LH * lines + 8
+function headH(t: TCtx, size: number, lines = 2, lh = LH): number {
+  return size * t.s * lh * lines + 8
 }
 
 /** Right edge for key data. On stories the TikTok/Reels buttons cover x > 940 between y 900 and 1550. */
@@ -86,6 +95,12 @@ function heroHeight(valueSize: number, withLabel: boolean, descLines: number): n
   return cap + Math.max(18, valueSize * 0.12) + (withLabel ? ls * 0.72 + Math.max(16, ls * 0.42) : 0) + descLines * ds * 1.22
 }
 
+/** Value size the hero painter will reach in a box of height `room` (mirrors its reserve). */
+function heroFit(room: number, valueSize: number, withDesc: boolean): number {
+  const reserve = Math.max(40, Math.min(85, valueSize * 0.3)) * 1.45 + (withDesc ? Math.max(36, Math.min(52, valueSize * 0.2)) * 2.9 : 0)
+  return Math.min(valueSize, (room - reserve) / 0.86)
+}
+
 /** Place a block of estimated height inside [a, b]: centered (bias 0.5) or biased. Returns y and the full room below it. */
 function place(a: number, b: number, est: number, bias = 0.5) {
   const y = a + Math.max(0, (b - a - est) * bias)
@@ -100,10 +115,11 @@ export const statisticalDominance: TemplateDef = {
   category: 'stats',
   description: 'Comparativa audaz: cifras enormes y barras proporcionales automáticas.',
   build: (t, match) => {
-    const claim = (n: number) => `{${leaderOf(match.stats.slice(0, n))}.short} [[manda]] en los números`
+    // The team name closes the claim, so nothing hangs over an accented capital.
+    const claim = (n: number) => `En los números [[manda {${leaderOf(match.stats.slice(0, n))}.short}]]`
     const src = 'Promedio por partido  ·  temporada actual'
     if (t.landscape) {
-      const c = cols(t)
+      const c = cols(t, 0.36)
       const sy = t.contentBottom - px(t, 50)
       return {
         background: ink(),
@@ -111,7 +127,7 @@ export const statisticalDominance: TemplateDef = {
           ...cinematic(t),
           signature(t),
           head(t, claim(3), { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 130),
-          E.statBars({ name: 'Comparativa', x: c.rx, y: t.contentTop, width: c.rw, height: t.ch, showCrests: true, maxRows: 3, statIds: [], valueSize: 120, labelSize: 38, barHeight: 24, rowGap: 44 }),
+          E.statBars({ name: 'Comparativa', x: c.rx, y: t.contentTop, width: c.rw, height: t.ch, showCrests: true, maxRows: 3, statIds: [], valueSize: 112, labelSize: 36, barHeight: 24, rowGap: 44 }),
           source(t, src, sy, c.lw),
         ],
       }
@@ -146,9 +162,11 @@ export const theNumbers: TemplateDef = {
   name: 'The Numbers',
   category: 'stats',
   description: 'Una sola cifra dominante que demuestra el titular.',
-  build: (t) => {
+  build: (t, match) => {
     const claim = '{home.short} [[sufre]] en casa'
+    const lh = lhFor(match, 'home')
     const src = '{competition}  ·  temporada actual'
+    // The support line is dropped when keeping it would shrink the number (1:1).
     const stat = (x: number, y: number, w: number, h: number, vs: number) =>
       E.statNumber({
         name: 'Cifra principal',
@@ -158,7 +176,7 @@ export const theNumbers: TemplateDef = {
         height: h,
         value: '3/3',
         label: 'Partidos en casa encajando',
-        description: '{home} aún no ha dejado la portería a cero como local.',
+        description: heroFit(h, vs, true) >= vs * 0.85 ? '{home} aún no ha dejado la portería a cero como local.' : '',
         valueSize: vs,
         layout: 'hero',
         align: 'left',
@@ -178,7 +196,7 @@ export const theNumbers: TemplateDef = {
         elements: [
           ...cinematic(t),
           signature(t),
-          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 150),
+          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 150, { lineHeight: lh }),
           stat(c.rx, z.y, c.rw, z.h, vs),
           source(t, src, sy, c.lw),
         ],
@@ -186,10 +204,12 @@ export const theNumbers: TemplateDef = {
     }
     const k = vk(t)
     const hy = t.contentTop
-    const hh = headH(t, 150 * k)
+    const hh = headH(t, 150 * k, 2, lh)
     const sy = t.contentBottom - px(t, 50)
     const vs = 340 * t.s * k
-    const z = place(hy + hh + px(t, 60), sy - px(t, 40), heroHeight(vs, true, 2), 0.42)
+    const a = hy + hh + px(t, 60)
+    const b = sy - px(t, 40)
+    const z = place(a, b, heroHeight(vs, true, heroFit(b - a, vs, true) >= vs * 0.85 ? 2 : 0), 0.42)
     return {
       background: ink(),
       // Negative stat: the slide suggests red as its single accent.
@@ -197,7 +217,7 @@ export const theNumbers: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        head(t, claim, { y: hy, h: hh }, 150 * k),
+        head(t, claim, { y: hy, h: hh }, 150 * k, { lineHeight: lh }),
         stat(t.left, z.y, t.cw, z.h, vs),
         source(t, src, sy),
       ],
@@ -295,30 +315,16 @@ export const performanceComparison: TemplateDef = {
         E.statBars({ name: 'Métrica', x, y: by, width: w, height: bh, statIds: ids, maxRows: 1, style: 'editorial', colorMode: 'leader', showCrests: false, valueSize: vs, labelSize: 55 * t.s, barHeight: 30 * t.s, rowGap: 0 }),
       ]
     }
-    if (t.landscape) {
-      const c = cols(t, 0.4)
-      const cs = px(t, 150)
-      const bh = px(t, 440)
-      const gapB = px(t, 50)
-      const cy = t.contentTop + Math.max(0, (t.ch - cs - gapB - bh) / 2)
-      const sh = px(t, 150)
-      return {
-        background: ink(),
-        elements: [
-          ...cinematic(t),
-          signature(t),
-          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: t.ch - sh - px(t, 40) }, 140),
-          ...duel(c.rx, c.rw, cy, cs, px(t, 46, 28), cy + cs + gapB, bh, 236 * vk(t)),
-          support(t, reading, { x: c.lx, y: t.contentBottom - sh, w: c.lw, h: sh }, 46, { name: 'Lectura', verticalAlign: 'bottom' }),
-        ],
-      }
-    }
-    const S = sizer(t, headH(t, 140) / t.s + 100 + 150 + 50 + 440 + 60 + 130)
+    // 16:9 keeps the vertical duel (two columns would push the two values together)
+    // with a one-line headline; the reading line stays at a comfortable measure.
+    const lh = lhFor(match, lead)
+    const hs = (headH(t, 140, t.landscape ? 1 : 2, lh) - 8) / t.s + 8
+    const S = sizer(t, hs + 100 + 150 + 50 + 440 + 60 + 130)
     const f = S(1000) / 1000 / t.s
     const hy = t.contentTop
-    const hh = S(headH(t, 140) / t.s)
+    const hh = S(hs)
     const cs = S(150, 64)
-    const cy = hy + hh + S(100)
+    const cy = hy + hh + S(t.landscape ? 70 : 100)
     const by = cy + cs + S(50)
     const bh = S(440, 190)
     const sy = by + bh + S(60)
@@ -328,9 +334,9 @@ export const performanceComparison: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        head(t, claim, { y: hy, h: hh }, 140 * f),
+        head(t, claim, { y: hy, h: hh }, 140 * f, { lineHeight: lh }),
         ...duel(t.left, w, cy, cs, S(46, 28), by, bh, 236 * t.s),
-        support(t, reading, { y: sy, w, h: Math.max(S(130, 60), t.contentBottom - sy) }, 48, { name: 'Lectura' }),
+        support(t, reading, { y: sy, w: t.landscape ? Math.min(w, 1000) : w, h: Math.max(S(130, 60), t.contentBottom - sy) }, 48, { name: 'Lectura' }),
       ],
     }
   },
@@ -350,6 +356,7 @@ export const formTrends: TemplateDef = {
     const n = match[lead].form.length
     const w = wins(lead)
     const claim = n ? `{${lead}.short}: [[${w} ${w === 1 ? 'victoria' : 'victorias'}]] en ${n}` : `{${lead}.short}: [[4 victorias]] en 5`
+    const lh = lhFor(match, lead)
     const nWord = NUM[n || 5] ?? String(n)
     const src = `Últimos ${nWord} partidos  ·  el más reciente, a la izquierda`
     const row = (side: Side, x: number, y: number, rowH: number, cs: number, fx: number, fw: number, fh: number, fg: number) => [
@@ -370,25 +377,26 @@ export const formTrends: TemplateDef = {
       const fw = Math.min(c.rx + c.rw - fx, fh * 5 + fg * 4)
       const tvs = 230 * vk(t)
       const est = heroHeight(tvs, true, 0)
-      const gapT = px(t, 90)
-      const y0 = t.contentTop + Math.max(0, (t.ch - rowH * 2 - rowGap - gapT - est) / 2)
+      const gapT = px(t, 80)
+      const end = sy - px(t, 30)
+      const y0 = t.contentTop + Math.max(0, (end - t.contentTop - rowH * 2 - rowGap - gapT - est) / 2)
       const r2 = y0 + rowH + rowGap
       return {
         background: ink(),
         elements: [
           ...cinematic(t),
           signature(t),
-          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 150),
+          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 150, { lineHeight: lh }),
           ...row(lead, c.rx, y0, rowH, cs, fx, fw, fh, fg),
           ...row(other(lead), c.rx, r2, rowH, cs, fx, fw, fh, fg),
-          trend(c.rx, r2 + rowH + gapT, c.rw, Math.max(10, t.contentBottom - (r2 + rowH + gapT)), tvs),
-          source(t, src, sy, c.lw),
+          trend(c.rx, r2 + rowH + gapT, c.rw, Math.max(10, end - (r2 + rowH + gapT)), tvs),
+          source(t, src, sy),
         ],
       }
     }
     const k = vk(t)
     const hy = t.contentTop
-    const hh = headH(t, 150 * k)
+    const hh = headH(t, 150 * k, 2, lh)
     const cs = px(t, 104, 52)
     const fh = px(t, 112, 56)
     const fg = px(t, 34, 16)
@@ -408,7 +416,7 @@ export const formTrends: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        head(t, claim, { y: hy, h: hh }, 150 * k),
+        head(t, claim, { y: hy, h: hh }, 150 * k, { lineHeight: lh }),
         ...row(lead, t.left, r1, rowH, cs, fx, fw, fh, fg),
         ...row(other(lead), t.left, r2, rowH, cs, fx, fw, fh, fg),
         ...(fitV >= 140 * t.s ? [trend(t.left, tz.y, t.cw, tz.h, tvs)] : []),
@@ -532,9 +540,10 @@ export const absences: TemplateDef = {
       }
     }
     // 4:5, 1:1 and 16:9: the two teams side by side under the headline.
+    // A wide gutter keeps each status attached to its own column.
     const hh = headH(t, 150 * k, t.landscape ? 1 : 2)
     const top = hy + hh + px(t, 70)
-    const gap = px(t, 64, 28)
+    const gap = px(t, 120, 44)
     const w = (t.cw - gap) / 2
     const h = t.contentBottom - top
     return {
@@ -544,8 +553,8 @@ export const absences: TemplateDef = {
         ...cinematic(t),
         signature(t),
         head(t, claim, { y: hy, h: hh }, 150 * k),
-        ...block('home', t.left, top, w, h, cs, px(t, 60, 34)),
-        ...block('away', t.left + w + gap, top, w, h, cs, px(t, 60, 34)),
+        ...block('home', t.left, top, w, h, cs, px(t, 64, 34)),
+        ...block('away', t.left + w + gap, top, w, h, cs, px(t, 64, 34)),
       ],
     }
   },
