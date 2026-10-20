@@ -38,7 +38,7 @@ const FORMAT_ORDER: FormatPreset[] = ['story', 'portrait', 'square', 'landscape'
 export function NewProjectDialog() {
   const close = () => useUI.getState().set({ modal: null })
   const teams = useLibrary((s) => s.teams)
-  const [mode, setMode] = useState<'carousel' | 'post' | 'empty'>('carousel')
+  const [mode, setMode] = useState<'carousel' | 'post' | 'empty'>(() => useUI.getState().newProjectMode)
   const [preset, setPreset] = useState<FormatPreset>('story')
   const [templateId, setTemplateId] = useState('matchday-elite')
   const [home, setHome] = useState('PSG')

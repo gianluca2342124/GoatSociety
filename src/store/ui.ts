@@ -38,6 +38,7 @@ interface UIState {
   snapGuides: boolean
   showSafeArea: boolean
   modal: Modal
+  newProjectMode: 'carousel' | 'post' | 'empty'
   editingTextId: string | null
   tacticsEditId: string | null
   tacticsTool: 'select' | AnnotationKind
@@ -67,6 +68,7 @@ export const useUI = create<UIState>((set) => ({
   snapGuides: true,
   showSafeArea: false,
   modal: null,
+  newProjectMode: 'carousel',
   editingTextId: null,
   tacticsEditId: null,
   tacticsTool: 'select',

@@ -79,10 +79,10 @@ export function Home() {
             </h1>
             <p className="mt-5 max-w-[520px] text-[16px] leading-relaxed text-ivory/75">Tu sistema privado de producción de gráficos de fútbol. Carruseles de partido, estadísticas, pizarras tácticas y pronósticos con acabado premium en minutos.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <button type="button" className="btn btn-gold px-5 py-3 text-[14px]" onClick={() => useUI.getState().set({ modal: 'newProject' })} data-testid="new-project">
+              <button type="button" className="btn btn-gold px-5 py-3 text-[14px]" onClick={() => useUI.getState().set({ modal: 'newProject', newProjectMode: 'carousel' })} data-testid="new-project">
                 <Sparkles size={17} /> Nuevo carrusel de partido
               </button>
-              <button type="button" className="btn px-5 py-3 text-[14px]" onClick={() => useUI.getState().set({ modal: 'newProject' })}>
+              <button type="button" className="btn px-5 py-3 text-[14px]" onClick={() => useUI.getState().set({ modal: 'newProject', newProjectMode: 'post' })}>
                 <LayoutTemplate size={16} /> Post único
               </button>
               <button type="button" className="btn px-5 py-3 text-[14px]" onClick={() => file.current?.click()}>
@@ -116,13 +116,13 @@ export function Home() {
             <GoatCanvas width={64} height={82} options={{ variant: 'icon', base: '#CBAA62' }} />
             <div className="mt-4 font-cond text-lg font-bold tracking-wide uppercase">Empieza tu primer carrusel</div>
             <p className="mt-1 max-w-[440px] text-[13px] text-muted">Elige dos equipos y GOAT SOCIETY STUDIO crea 7 diapositivas enlazadas: portada, cifras, táctica, jugadores, estadísticas, pronóstico bloqueado y comunidad.</p>
-            <button type="button" className="btn btn-gold mt-6 px-5 py-2.5" onClick={() => useUI.getState().set({ modal: 'newProject' })}>
+            <button type="button" className="btn btn-gold mt-6 px-5 py-2.5" onClick={() => useUI.getState().set({ modal: 'newProject', newProjectMode: 'carousel' })}>
               <Plus size={16} /> Crear proyecto
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
-            <button type="button" className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line-2 text-muted transition hover:border-gold/60 hover:text-gold" onClick={() => useUI.getState().set({ modal: 'newProject' })}>
+            <button type="button" className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line-2 text-muted transition hover:border-gold/60 hover:text-gold" onClick={() => useUI.getState().set({ modal: 'newProject', newProjectMode: 'carousel' })}>
               <Plus size={26} />
               <span className="text-[13px] font-semibold">Nuevo proyecto</span>
             </button>

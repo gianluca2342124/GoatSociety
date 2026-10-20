@@ -24,7 +24,7 @@ export function TopBar() {
         </div>
       </button>
       <div className="mx-1 h-6 w-px bg-line" />
-      <button type="button" className="icon-btn" title="Nuevo proyecto" aria-label="Nuevo proyecto" onClick={() => useUI.getState().set({ modal: 'newProject' })}>
+      <button type="button" className="icon-btn" title="Nuevo proyecto" aria-label="Nuevo proyecto" onClick={() => useUI.getState().set({ modal: 'newProject', newProjectMode: 'carousel' })}>
         <FilePlus2 size={17} />
       </button>
       <button type="button" className="icon-btn" title="Abrir proyecto (mis proyectos)" aria-label="Abrir proyecto" onClick={() => void goHome()}>

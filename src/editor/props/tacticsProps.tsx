@@ -50,7 +50,7 @@ function useTacticsSetter(el: TacticsElement | Stadium3DElement) {
 }
 
 /** Shared tactical data controls (formations, presets, teams, selection). */
-function TacticsCore({ el, inCanvasEditing }: { el: TacticsElement | Stadium3DElement; inCanvasEditing: boolean }) {
+function TacticsCore({ el }: { el: TacticsElement | Stadium3DElement }) {
   const t = el.tactics
   const setT = useTacticsSetter(el)
   const match = useEditor((s) => s.project!.match)
@@ -154,7 +154,6 @@ function TacticsCore({ el, inCanvasEditing }: { el: TacticsElement | Stadium3DEl
           </button>
         </Section>
       )}
-      {!inCanvasEditing && el.type === 'tactics' && null}
     </>
   )
 }
@@ -215,7 +214,7 @@ export function TacticsProps({ el }: { el: TacticsElement }) {
         <Toggle label="Etiquetas con nombre" checked={t.showLabels} onChange={(v) => setT((tt) => void (tt.showLabels = v))} />
         <Slider label="Brillo de flechas y destacados" value={t.glow} onChange={(v) => setT((tt) => void (tt.glow = v))} />
       </Section>
-      <TacticsCore el={el} inCanvasEditing={editing} />
+      <TacticsCore el={el} />
     </>
   )
 }
@@ -315,7 +314,7 @@ export function Stadium3DProps({ el }: { el: Stadium3DElement }) {
         <Toggle label="Gradas" checked={el.showStands} onChange={(v) => set({ showStands: v })} />
         <Toggle label="Dorsales" checked={el.tactics.showNumbers} onChange={(v) => set((d) => void (d.tactics.showNumbers = v))} />
       </Section>
-      <TacticsCore el={el} inCanvasEditing={false} />
+      <TacticsCore el={el} />
     </>
   )
 }
