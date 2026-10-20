@@ -45,17 +45,23 @@ export function paintGoat(ctx: CanvasRenderingContext2D, w: number, h: number, o
   const oy = (h - GOAT_VIEW.height * s) / 2
   const cinematic = o.variant === 'cinematic' || o.variant === 'background'
 
-  // Backlight halo behind the head.
+  // Backlight halo behind the head (an ellipse that fades out before the box edges).
   if (cinematic && o.backlightAmount > 0) {
     const cx = w / 2
-    const cy = oy + 250 * s
-    const r = Math.max(w, h) * 0.55
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+    const cy = Math.min(h / 2, oy + 250 * s)
+    const r = Math.min(w / 2, cy, h - cy) * 0.98
+    const stretch = Math.max(1, Math.min(1.7, h / Math.max(1, w)))
+    const ry = Math.min(r * stretch, cy, h - cy)
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.scale(1, ry / r)
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r)
     g.addColorStop(0, withAlpha(o.backlight, 0.55 * o.backlightAmount))
-    g.addColorStop(0.35, withAlpha(o.backlight, 0.22 * o.backlightAmount))
+    g.addColorStop(0.4, withAlpha(o.backlight, 0.2 * o.backlightAmount))
     g.addColorStop(1, withAlpha(o.backlight, 0))
     ctx.fillStyle = g
-    ctx.fillRect(0, 0, w, h)
+    ctx.fillRect(-r, -r, r * 2, r * 2)
+    ctx.restore()
   }
 
   ctx.save()
@@ -226,7 +232,9 @@ export function paintGoat(ctx: CanvasRenderingContext2D, w: number, h: number, o
     for (let i = 0; i < 26; i++) {
       const fx = rnd() * w
       const fy = h * (0.45 + rnd() * 0.6)
-      const fr = (0.18 + rnd() * 0.3) * w
+      // Keep every fog puff inside the box so no hard edge appears.
+      const fr = Math.min((0.18 + rnd() * 0.3) * w, fx, w - fx, h - fy + w * 0.05)
+      if (fr <= 4) continue
       const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr)
       const a = 0.09 * o.fog * (0.5 + rnd())
       g.addColorStop(0, `rgba(190,196,204,${a})`)

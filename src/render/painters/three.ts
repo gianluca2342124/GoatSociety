@@ -1,7 +1,7 @@
 import type { Model3DElement, Stadium3DElement } from '../../model/types'
 import { withAlpha } from '../../model/tokens'
 import type { RenderCtx } from '../context'
-import { roundRect, type Ctx } from '../paint/canvas'
+import { deviceScale, makeCanvas, roundRect, type Ctx } from '../paint/canvas'
 import { drawLabel } from '../text/draw'
 import { paintTacticsBoard } from './tactics'
 
@@ -9,6 +9,23 @@ export function paint3D(ctx: Ctx, el: Stadium3DElement | Model3DElement, rc: Ren
   const img = rc.render3d(el)
   const { width: w, height: h } = el
   if (img) {
+    if (el.type === 'stadium3d') {
+      // Feather the top and bottom so the scene melts into the slide.
+      const s = deviceScale(ctx)
+      const off = makeCanvas(w * s, h * s)
+      const o = off.getContext('2d')!
+      o.drawImage(img, 0, 0, off.width, off.height)
+      o.globalCompositeOperation = 'destination-in'
+      const g = o.createLinearGradient(0, 0, 0, off.height)
+      g.addColorStop(0, 'rgba(0,0,0,0)')
+      g.addColorStop(0.14, 'rgba(0,0,0,1)')
+      g.addColorStop(0.86, 'rgba(0,0,0,1)')
+      g.addColorStop(1, 'rgba(0,0,0,0)')
+      o.fillStyle = g
+      o.fillRect(0, 0, off.width, off.height)
+      ctx.drawImage(off, 0, 0, w, h)
+      return
+    }
     ctx.drawImage(img, 0, 0, w, h)
     return
   }

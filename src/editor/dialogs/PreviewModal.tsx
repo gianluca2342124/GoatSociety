@@ -37,7 +37,7 @@ export function PreviewModal() {
   const ratio = project.format.width / project.format.height
   const story = project.format.preset === 'story'
   return createPortal(
-    <div className="fixed inset-0 z-[75] flex flex-col bg-black/95" role="dialog" aria-modal="true" aria-label="Vista previa">
+    <div className="fixed inset-0 z-[75] flex flex-col bg-ink" role="dialog" aria-modal="true" aria-label="Vista previa">
       <div className="flex items-center justify-between px-5 py-3">
         <div className="font-cond text-sm font-bold tracking-[0.2em] text-muted uppercase">
           Vista previa · {String(i + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}
@@ -80,7 +80,7 @@ export function PreviewModal() {
                   <Music2 size={12} /> sonido original
                 </div>
               </div>
-              <div className="absolute top-1/2 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px]">{story ? 'Simulación TikTok' : 'Simulación'} · no se exporta</div>
+              <div className="absolute top-12 left-3 rounded bg-black/60 px-2 py-0.5 text-[10px]">{story ? 'Simulación TikTok' : 'Simulación'} · no se exporta</div>
             </div>
           )}
         </div>
