@@ -50,7 +50,8 @@ export async function renderSlideCanvas(project: Project, slide: Slide, brand: B
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(W * opts.scale)
   canvas.height = Math.round(H * opts.scale)
-  const ctx = canvas.getContext('2d')!
+  // CPU-backed canvas: encoding to PNG/JPEG never waits on a GPU readback.
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
   ctx.imageSmoothingQuality = 'high'
   ctx.scale(opts.scale, opts.scale)
   const transparent = opts.transparent && opts.format !== 'jpeg'
@@ -119,7 +120,7 @@ export async function renderThumbnail(project: Project, slide: Slide, brand: Bra
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(project.format.width * scale)
   canvas.height = Math.round(project.format.height * scale)
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
   ctx.scale(scale, scale)
   const rc = makeRenderCtx(project, slide, brand, 'editor')
   paintSlide(ctx, slide, rc, project.format.width, project.format.height)

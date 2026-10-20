@@ -36,7 +36,7 @@ function resolve(el: Stadium3DElement | Model3DElement, project: Project, slide:
     colors.negative = c('$negative')
     colors.text = c('$text')
     colors.bg = c('$bg')
-    for (const a of el.tactics.annotations) colors[`a:${a.id}`] = c(a.color)
+    el.tactics.annotations.forEach((a, i) => (colors[`a${i}`] = c(a.color)))
   } else {
     colors.rim = c(el.lighting.rimColor)
     colors.primary = c('$primary')
@@ -46,7 +46,10 @@ function resolve(el: Stadium3DElement | Model3DElement, project: Project, slide:
 
 function keyOf(r: Resolved3D): string {
   const { el } = r
-  const core = { ...el, x: 0, y: 0, rotation: 0, opacity: 1, name: '', locked: false, visible: true, fx: undefined }
+  // Content-only key: ids/positions must not matter, otherwise freshly built
+  // copies of the same element (thumbnails, duplicates) would re-render forever.
+  const core = { ...el, id: '', x: 0, y: 0, rotation: 0, opacity: 1, name: '', locked: false, visible: true, fx: undefined }
+  if (core.type === 'stadium3d') core.tactics = { ...core.tactics, players: core.tactics.players.map((p) => ({ ...p, id: '' })), annotations: core.tactics.annotations.map((a) => ({ ...a, id: '' })) }
   return hashKey(['3d', core, r.colors, Math.round(r.width), Math.round(r.height), r.scale])
 }
 

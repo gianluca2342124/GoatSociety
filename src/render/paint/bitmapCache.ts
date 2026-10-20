@@ -32,12 +32,24 @@ function quantize(s: number): number {
 /**
  * Paint expensive content once into an offscreen bitmap at the current device
  * scale and blit it. `pad` adds room around the box for glows/shadows.
- * When `direct` is true (exports), paint straight to the context for maximum fidelity.
+ * When `direct` is true (exports), paint at the exact output scale without caching.
  */
 export function cachedPaint(ctx: Ctx, key: string, w: number, h: number, paint: (c: Ctx) => void, opts: { pad?: number; direct?: boolean } = {}) {
   const pad = opts.pad ?? 0
-  if (opts.direct || w <= 0 || h <= 0) {
-    paint(ctx)
+  if (w <= 0 || h <= 0) return
+  if (opts.direct) {
+    // Exports: render at the exact output resolution, but still in an isolated
+    // layer so masking operations (destination-in, source-in…) only affect
+    // this element — exactly like the cached editor path.
+    const ds = deviceScale(ctx)
+    const cw = (w + pad * 2) * ds
+    const ch = (h + pad * 2) * ds
+    const layer = makeCanvas(cw, ch)
+    const lc = layer.getContext('2d')!
+    lc.scale(ds, ds)
+    lc.translate(pad, pad)
+    paint(lc)
+    ctx.drawImage(layer, -pad, -pad, w + pad * 2, h + pad * 2)
     return
   }
   const s = quantize(deviceScale(ctx))
@@ -46,10 +58,6 @@ export function cachedPaint(ctx: Ctx, key: string, w: number, h: number, paint: 
   if (!e) {
     const cw = (w + pad * 2) * s
     const ch = (h + pad * 2) * s
-    if (cw * ch > 40_000_000) {
-      paint(ctx)
-      return
-    }
     const canvas = makeCanvas(cw, ch)
     const c = canvas.getContext('2d')!
     c.scale(s, s)

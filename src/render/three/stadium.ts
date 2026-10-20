@@ -206,8 +206,8 @@ export async function renderStadium(r: Resolved3D): Promise<HTMLCanvasElement> {
   }
 
   // Annotations
-  for (const a of t.annotations) {
-    const color = colors[`a:${a.id}`] ?? colors.primary
+  for (const [ai, a] of t.annotations.entries()) {
+    const color = colors[`a${ai}`] ?? colors.primary
     if (a.kind === 'zone' && a.points.length >= 3) {
       const shape = new THREE.Shape(a.points.map((p) => new THREE.Vector2(p.x - L / 2, -(p.y - W / 2))))
       const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.22, depthWrite: false }))

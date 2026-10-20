@@ -556,28 +556,35 @@ export function paintEffect(ctx: Ctx, el: EffectElement, rc: RenderCtx) {
       return
     }
     case 'grid': {
-      ctx.save()
-      ctx.strokeStyle = withAlpha(c1, k)
-      ctx.lineWidth = 1
-      const step = 40 + el.spread * 120
-      ctx.beginPath()
-      for (let x = (w % step) / 2; x <= w; x += step) {
-        ctx.moveTo(x, 0)
-        ctx.lineTo(x, h)
-      }
-      for (let y = (h % step) / 2; y <= h; y += step) {
-        ctx.moveTo(0, y)
-        ctx.lineTo(w, y)
-      }
-      ctx.stroke()
-      // Fade toward edges.
-      ctx.globalCompositeOperation = 'destination-in'
-      const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.6)
-      g.addColorStop(0, 'rgba(0,0,0,1)')
-      g.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = g
-      ctx.fillRect(0, 0, w, h)
-      ctx.restore()
+      cachedPaint(
+        ctx,
+        key,
+        w,
+        h,
+        (c) => {
+          c.strokeStyle = withAlpha(c1, k)
+          c.lineWidth = 1
+          const step = 40 + el.spread * 120
+          c.beginPath()
+          for (let x = (w % step) / 2; x <= w; x += step) {
+            c.moveTo(x, 0)
+            c.lineTo(x, h)
+          }
+          for (let y = (h % step) / 2; y <= h; y += step) {
+            c.moveTo(0, y)
+            c.lineTo(w, y)
+          }
+          c.stroke()
+          // Fade toward edges (mask stays inside this isolated layer).
+          c.globalCompositeOperation = 'destination-in'
+          const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.6)
+          g.addColorStop(0, 'rgba(0,0,0,1)')
+          g.addColorStop(1, 'rgba(0,0,0,0)')
+          c.fillStyle = g
+          c.fillRect(0, 0, w, h)
+        },
+        { direct },
+      )
       return
     }
     case 'lightRays': {

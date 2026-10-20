@@ -134,7 +134,7 @@ export function TacticsOverlay({ el, zoom }: { el: TacticsElement; zoom: number 
       )}
       {/* Player handles */}
       {t.players
-        .filter((p) => (p.team === 'home' ? t.showHome : t.showAway))
+        .filter((p) => (p.team === 'home' ? t.showHome : t.showAway) && p.x >= proj.region.x0 - 1 && p.x <= proj.region.x1 + 1 && p.y >= proj.region.y0 - 1 && p.y <= proj.region.y1 + 1)
         .map((p) => {
           const s = proj.toScreen(p)
           const r = playerRadius(t, proj, p)
