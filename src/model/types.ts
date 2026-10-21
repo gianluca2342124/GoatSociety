@@ -477,7 +477,8 @@ export interface Stadium3DElement extends BaseElement {
   type: 'stadium3d'
   tactics: TacticsData
   camera: { azimuth: number; elevation: number; distance: number; fov: number; targetX: number; targetY: number }
-  lighting: { exposure: number; floodlights: number; fog: number; accent: ColorValue; rim: number }
+  /** shadows: floodlight shadows on players (default on). */
+  lighting: { exposure: number; floodlights: number; fog: number; accent: ColorValue; rim: number; shadows?: boolean }
   background: 'transparent' | 'night'
   showStands: boolean
 }

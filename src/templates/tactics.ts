@@ -250,11 +250,12 @@ export const formationBattle: TemplateDef = {
 }
 
 // ── 12 · Movimiento clave: la diagonal del extremo ─────────────────────────
-function cutInsideData(vertical: boolean, scale: number, homeFormation: string, awayFormation: string): TacticsData {
-  // Right winger (accent) receives wide, drives inside across the full-back and shoots far post.
+function cutInsideData(view: PitchView, scale: number, homeFormation: string, awayFormation: string): TacticsData {
+  // Right winger receives wide, drives inside across the full-back and shoots far post.
+  // Both teams stay neutral so the accent lives only on the winger's ring and his run.
   const home = team('home', [
     [1, 5, 34],
-    [3, 52, 8],
+    [3, 55, 8],
     [5, 40, 24],
     [4, 40, 44],
     [2, 60, 58],
@@ -279,15 +280,14 @@ function cutInsideData(vertical: boolean, scale: number, homeFormation: string, 
     [10, 62, 44],
   ])
   return board({
-    view: 'attackingThird',
-    vertical,
+    view,
+    vertical: true,
     homeFormation,
     awayFormation,
     homeColor: WHITE,
     awayColor: DARK,
     highlightColor: '$accent',
     playerSize: Math.max(14, Math.min(46, 2.7 * scale)),
-    // Low enough that the dimmed accent teammates read as context, not as a second focus.
     dimOthers: 0.3,
     players: [...home, ...away],
     annotations: [
@@ -326,12 +326,15 @@ export const keyMovement: TemplateDef = {
     const els: SlideElement[] = [...cinematic(t), signature(t)]
     if (t.landscape) {
       const colW = t.cw * 0.38
-      const f = sidePitch(t, 'attackingThird', colW)
+      // The whole half fills the height; the text block is centred on it.
+      const f = sidePitch(t, 'half', colW)
       const hh = px(t, 250)
+      const rowH = px(t, 96)
+      const ty = f.y + (f.h - hh - px(t, 40) - rowH * STEPS.length) / 2
       els.push(
-        hl(t, head, { y: f.y, w: colW, h: hh }, 125 * k),
-        ...stepRows(t, t.left, f.y + hh + px(t, 40), colW, px(t, 96), 76 * k, 46 * k),
-        E.tactics({ name: 'Movimiento', x: f.x, y: f.y, width: f.w, height: f.h, tactics: cutInsideData(true, f.scale, match.home.formation, match.away.formation) }),
+        hl(t, head, { y: ty, w: colW, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
+        ...stepRows(t, t.left, ty + hh + px(t, 40), colW, rowH, 76 * k, 46 * k),
+        E.tactics({ name: 'Movimiento', x: f.x, y: f.y, width: f.w, height: f.h, tactics: cutInsideData('half', f.scale, match.home.formation, match.away.formation) }),
       )
       return { background: ink(), accent: '$yellow', elements: els }
     }
@@ -343,7 +346,7 @@ export const keyMovement: TemplateDef = {
     const py = top + (bottom - top - fit.h) / 2
     els.push(
       hl(t, head, { y: t.contentTop, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
-      E.tactics({ name: 'Movimiento', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: cutInsideData(true, fit.scale, match.home.formation, match.away.formation) }),
+      E.tactics({ name: 'Movimiento', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: cutInsideData('attackingThird', fit.scale, match.home.formation, match.away.formation) }),
       ...stepRows(t, t.left, py + fit.h + px(t, 30), t.cw, stepsH / STEPS.length, 76 * k, 47 * k),
     )
     return { background: ink(), accent: '$yellow', elements: els }
@@ -387,10 +390,10 @@ function counterData(homeFormation: string, awayFormation: string): TacticsData 
     awayFormation,
     homeColor: '#FFFFFF',
     awayColor: '#5E5E5E',
-    playerSize: 18,
+    playerSize: 22,
     showLabels: false,
     // Number badges would be white on white for the light kit: the scene reads by kit colour.
-    showNumbers: false,
+    showNumbers: true,
     highlightColor: '$accent',
     players: [...home, ...away],
     annotations: [
@@ -401,7 +404,7 @@ function counterData(homeFormation: string, awayFormation: string): TacticsData 
   })
 }
 
-const LIGHT = { exposure: 0.62, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3 }
+const LIGHT = { exposure: 0.62, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3, shadows: false }
 
 export const stadium3D: TemplateDef = {
   id: 'stadium-3d',

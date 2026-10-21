@@ -312,17 +312,29 @@ function paintMatchRowsEditorial(ctx: Ctx, el: MatchListElement, rc: RenderCtx, 
   const muted = rc.color('$muted')
   const nameFont = rc.font(el.nameFont)
   const timeFont = rc.font(el.timeFont)
+  // Shared geometry: every row uses the same crest and name size.
+  const ts = rowH * 0.4
+  const tw = Math.max(w * 0.2, ts * 2.6)
+  const cs = rowH * 0.56
+  const leftX = tw + cs + 20
+  const rightX = w - cs - 20
+  const mid = (leftX + rightX) / 2
+  let ns = Math.min(rowH * 0.3, 64)
+  const vs = Math.max(22, ns * 0.5)
+  // Names never touch: a dim "vs" holds the middle and each name stops short of it.
+  const half = Math.max(10, mid - leftX - vs)
+  for (const m of items) {
+    for (const name of [m.home, m.away]) {
+      const nw = labelWidth(name, { family: nameFont, size: ns, weight: 700, uppercase: true })
+      if (nw > half) ns = Math.max(18, (ns * half) / nw)
+    }
+  }
   items.forEach((m, i) => {
     const y = i * rowH
     if (i > 0) hairlineAt(ctx, rc, y, w)
     const cy = y + rowH / 2
-    const ts = rowH * 0.4
-    const tw = Math.max(w * 0.2, ts * 2.6)
     drawLabel(ctx, m.time, 0, cy - (el.showCompetition && m.competition ? rowH * 0.1 : 0), { family: timeFont, size: ts, color: m.highlight ? accent : textC, maxWidth: tw - 24 })
     if (el.showCompetition && m.competition) drawLabel(ctx, m.competition, 0, cy + rowH * 0.24, { family: rc.font('$label'), size: Math.max(20, rowH * 0.13), weight: 600, color: muted, uppercase: true, maxWidth: tw - 24 })
-    const cs = rowH * 0.5
-    const area = w - tw
-    const ns = Math.min(rowH * 0.3, 64)
     const homeTeam = { name: m.home, abbr: m.home.slice(0, 3), primary: m.homeColor, secondary: '#F5F5F5', crestAssetId: m.homeCrestAssetId, crestStyle: { shape: 'shield' as const, pattern: 'solid' as const } }
     const awayTeam = { name: m.away, abbr: m.away.slice(0, 3), primary: m.awayColor, secondary: '#F5F5F5', crestAssetId: m.awayCrestAssetId, crestStyle: { shape: 'shield' as const, pattern: 'solid' as const } }
     ctx.save()
@@ -333,9 +345,9 @@ function paintMatchRowsEditorial(ctx: Ctx, el: MatchListElement, rc: RenderCtx, 
     ctx.translate(w - cs, cy - cs / 2)
     paintCrestBox(ctx, awayTeam, cs, cs, rc)
     ctx.restore()
-    const half = (area - cs * 2) / 2 - 28
-    drawLabel(ctx, m.home, tw + cs + 20, cy, { family: nameFont, size: ns, weight: 700, color: textC, uppercase: true, maxWidth: half })
-    drawLabel(ctx, m.away, w - cs - 20, cy, { family: nameFont, size: ns, weight: 700, color: textC, uppercase: true, align: 'right', maxWidth: half })
+    drawLabel(ctx, 'vs', mid, cy, { family: rc.font('$label'), size: vs, weight: 600, color: rc.color('$dim'), align: 'center' })
+    drawLabel(ctx, m.home, leftX, cy, { family: nameFont, size: ns, weight: 700, color: textC, uppercase: true, maxWidth: half })
+    drawLabel(ctx, m.away, rightX, cy, { family: nameFont, size: ns, weight: 700, color: textC, uppercase: true, align: 'right', maxWidth: half })
   })
 }
 

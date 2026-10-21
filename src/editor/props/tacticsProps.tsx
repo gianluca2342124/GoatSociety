@@ -311,6 +311,8 @@ export function Stadium3DProps({ el }: { el: Stadium3DElement }) {
         <Slider label="Exposición" min={0.3} max={2.5} value={lig.exposure} onChange={(v) => set({ lighting: { ...lig, exposure: v } })} />
         <Slider label="Focos del estadio" min={0} max={2} value={lig.floodlights} onChange={(v) => set({ lighting: { ...lig, floodlights: v } })} />
         <Slider label="Niebla" value={lig.fog} onChange={(v) => set({ lighting: { ...lig, fog: v } })} />
+        <Toggle label="Sombras de los focos" checked={lig.shadows !== false} onChange={(v) => set({ lighting: { ...lig, shadows: v } })} />
+        <Slider label="Tamaño de los jugadores" min={10} max={40} step={1} value={el.tactics.playerSize} onChange={(v) => set({ tactics: { ...el.tactics, playerSize: v } })} />
         <ColorField label="Luz de acento" value={lig.accent} onChange={(c) => set({ lighting: { ...lig, accent: c } })} />
         <Slider label="Intensidad de acento" min={0} max={2} value={lig.rim} onChange={(v) => set({ lighting: { ...lig, rim: v } })} />
         <Row label="Fondo">

@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { Stadium3DElement } from '../../model/types'
 import type { Resolved3D } from './render3dCache'
-import { disposeScene, getRenderer, glowSprite, snapshot, textSprite } from './renderer'
+import { badgeTextColor, disposeScene, getRenderer, glowSprite, snapshot, textSprite } from './renderer'
 import { pitchMarkings, quadCurve } from '../../tactics/pitch'
 import { PITCH_LENGTH as L, PITCH_WIDTH as W } from '../../tactics/formations'
 
@@ -144,7 +144,7 @@ export async function renderStadium(r: Resolved3D): Promise<HTMLCanvasElement> {
     const s = new THREE.SpotLight(0xfff4e0, 900 * el.lighting.floodlights, 220, Math.PI / 5, 0.55, 1.4)
     s.position.set(x, y, z)
     s.target.position.set(0, 0, 0)
-    s.castShadow = i < 2
+    s.castShadow = i < 2 && el.lighting.shadows !== false
     s.shadow.mapSize.set(1024, 1024)
     s.shadow.bias = -0.0004
     scene.add(s, s.target)
@@ -172,7 +172,9 @@ export async function renderStadium(r: Resolved3D): Promise<HTMLCanvasElement> {
     const color = p.team === 'home' ? colors.home : colors.away
     const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.15, emissive: color, emissiveIntensity: 0.12 })
     const g = new THREE.Group()
-    const token = new THREE.Mesh(tokenGeo, new THREE.MeshStandardMaterial({ color: 0x0c0d10, roughness: 0.5, metalness: 0.4 }))
+    // Base disc tinted toward the kit so neutral kits keep reading as a team.
+    const base = new THREE.Color(color).lerp(new THREE.Color(0x0c0d10), 0.55)
+    const token = new THREE.Mesh(tokenGeo, new THREE.MeshStandardMaterial({ color: base, roughness: 0.5, metalness: 0.2 }))
     token.position.y = 0.15
     const body = new THREE.Mesh(bodyGeo, mat)
     body.position.y = 1.2
@@ -186,7 +188,7 @@ export async function renderStadium(r: Resolved3D): Promise<HTMLCanvasElement> {
     ring.position.y = 0.32
     g.add(ring)
     if (t.showNumbers) {
-      const spr = textSprite(String(p.number), '#F7F5EF', color)
+      const spr = textSprite(String(p.number), badgeTextColor(color), color)
       spr.position.y = 3.3
       spr.scale.setScalar(1.6)
       g.add(spr)
@@ -203,6 +205,8 @@ export async function renderStadium(r: Resolved3D): Promise<HTMLCanvasElement> {
       beam.position.y = 9
       g.add(beam)
     }
+    // playerSize 18 is the reference token; bigger values enlarge every figure.
+    g.scale.setScalar(Math.max(0.6, Math.min(2.4, (t.playerSize || 18) / 18)))
     g.position.copy(toV(p))
     scene.add(g)
   }

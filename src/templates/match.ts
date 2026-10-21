@@ -13,6 +13,12 @@ const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
 /** Approximate Anton cap height / font size (used to stack labels under numbers). */
 const CAP = 0.74
 
+/**
+ * Headline leading for the big Anton claims: at the kit default (1.04) an
+ * accented capital (PARÍS, ÚLTIMOS) touches the letter above it.
+ */
+const LH = 1.12
+
 /** Team name centered under a crest (keeps the cover linked to the match data). */
 function crestName(t: TCtx, side: 'home' | 'away', x: number, y: number, w: number, size: number) {
   return label(t, side === 'home' ? '{home.short}' : '{away.short}', { x: x - w * 0.15, y, w: w * 1.3, h: size * t.s * 1.25 }, size, {
@@ -43,7 +49,7 @@ export const matchdayElite: TemplateDef = {
       const gapS = px(t, 28)
       const mid = t.contentTop + t.ch / 2
       // Room for a three-line headline + the date line, centered on the axis.
-      const block = hs * t.s * 1.04 * 3 + gapS + sh
+      const block = hs * t.s * LH * 3 + gapS + sh
       const sy = Math.min(t.contentBottom - sh, mid + block / 2 - sh)
       const hb = sy - gapS
       const gap = px(t, 40)
@@ -59,7 +65,7 @@ export const matchdayElite: TemplateDef = {
           crestOf('away', rx + cs + gap, cy, cs),
           crestName(t, 'home', rx, cy + cs + ng, cs, ns),
           crestName(t, 'away', rx + cs + gap, cy + cs + ng, cs, ns),
-          hl(t, '{headline}', { y: t.contentTop, w: colW, h: hb - t.contentTop }, hs, { verticalAlign: 'bottom' }),
+          hl(t, '{headline}', { y: t.contentTop, w: colW, h: hb - t.contentTop }, hs, { verticalAlign: 'bottom', lineHeight: LH }),
           support(t, '{competition}  ·  {weekday} {time}', { y: sy, w: colW, h: px(t, 90) }, 44, { name: 'Fecha y competición' }),
         ],
       }
@@ -80,7 +86,7 @@ export const matchdayElite: TemplateDef = {
         crestOf('away', t.right - cs, cy, cs),
         crestName(t, 'home', t.left, cy + cs + ng, cs, ns),
         crestName(t, 'away', t.right - cs, cy + cs + ng, cs, ns),
-        hl(t, '{headline}', { y: hy, h: hh }, 170 * k, { verticalAlign: 'bottom' }),
+        hl(t, '{headline}', { y: hy, h: hh }, 170 * k, { verticalAlign: 'bottom', lineHeight: LH }),
         support(t, '{competition}  ·  {weekday} {time}', { y: sy, h: px(t, 100) }, 46, { name: 'Fecha y competición' }),
       ],
     }
@@ -119,8 +125,7 @@ export const bigStatement: TemplateDef = {
         ...cinematic(t, 'spot'),
         signature(t),
         ...matchTag(t, tagY),
-        // Leading 1.1 so accented capitals (PARÍS, ÚLTIMO) clear the line above.
-        hl(t, '{headline}', { y: hy, h: hb - hy }, size, { name: 'Titular gigante', verticalAlign: 'bottom', lineHeight: 1.1 }),
+        hl(t, '{headline}', { y: hy, h: hb - hy }, size, { name: 'Titular gigante', verticalAlign: 'bottom', lineHeight: LH }),
         support(t, '{subheadline}', { y: subY, w: Math.min(t.cw, 860 * t.s), h: subH }, 56 * Math.max(0.85, k), { name: 'Subtítulo' }),
       ],
     }
@@ -179,8 +184,7 @@ export const headToHead: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        // Leading 1.12: the Ú of «ÚLTIMOS» must clear the line above.
-        hl(t, '{home.short} gana [[4]] de los últimos 9', { y: hy, w: hw, h: hh }, 150 * k, { name: 'Titular', verticalAlign: split ? 'middle' : 'top', lineHeight: 1.12 }),
+        hl(t, '{home.short} gana [[4]] de los últimos 9', { y: hy, w: hw, h: hh }, 150 * k, { name: 'Titular', verticalAlign: split ? 'middle' : 'top', lineHeight: LH }),
         ...els,
         label(t, 'Últimos 9 enfrentamientos oficiales', { x: nx, y: sy, w: nw, h: ss * 1.3 }, ss, { name: 'Fuente', align: 'center', fill: { kind: 'solid', color: '$dim' } }),
       ],
@@ -273,7 +277,7 @@ export const photoCover: TemplateDef = {
     // Where the photo is already fading, the crest below it must be black
     // (no ghosting through a faded or cut-out photo).
     const clearBy = fadeTop + (ih - fadeTop) * 0.25
-    const textTop = hb - fs * t.s * 1.04 * 2
+    const textTop = hb - fs * t.s * LH * 2
     // Fallback visual (also the backdrop of a cut-out PNG): the whole home
     // crest as the cover image, crisp, slightly darkened and dissolving into
     // black just above the headline, like the photo would. An opaque photo
@@ -358,7 +362,7 @@ export const photoCover: TemplateDef = {
         E.image({ name: 'Foto', x: ix, y: 0, width: t.W - ix, height: ih, fit: 'cover', focusX: 0.5, focusY: 0.3, fadeBottom: fade }),
         scrim,
         signature(t),
-        hl(t, '{headline}', { y: hy, w: hw, h: hb - hy }, fs, { verticalAlign: 'bottom' }),
+        hl(t, '{headline}', { y: hy, w: hw, h: hb - hy }, fs, { verticalAlign: 'bottom', lineHeight: LH }),
         support(t, '{subheadline}', { y: subY, w: hw, h: subH }, 50 * Math.max(0.85, k), { name: 'Apoyo' }),
       ],
     }

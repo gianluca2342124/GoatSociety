@@ -42,6 +42,22 @@ export function disposeScene(scene: THREE.Object3D) {
   })
 }
 
+function luminanceOf(c: string): number {
+  const m = /^#?([0-9a-f]{6})/i.exec(c.trim())
+  if (!m) return 0
+  const n = parseInt(m[1], 16)
+  const f = (v: number) => {
+    const x = v / 255
+    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)
+  }
+  return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255)
+}
+
+/** Readable number color for a given disc color. */
+export function badgeTextColor(bg: string): string {
+  return luminanceOf(bg) > 0.4 ? '#0B0C0F' : '#F7F5EF'
+}
+
 export function textSprite(text: string, color: string, bg: string, size = 128): THREE.Sprite {
   const c = document.createElement('canvas')
   c.width = size
@@ -52,7 +68,8 @@ export function textSprite(text: string, color: string, bg: string, size = 128):
   ctx.fillStyle = bg
   ctx.fill()
   ctx.lineWidth = size * 0.06
-  ctx.strokeStyle = 'rgba(243,240,232,0.9)'
+  // Light discs get a dark rim so the badge never melts into a white kit.
+  ctx.strokeStyle = luminanceOf(bg) > 0.4 ? 'rgba(11,12,15,0.85)' : 'rgba(243,240,232,0.9)'
   ctx.stroke()
   ctx.fillStyle = color
   ctx.font = `800 ${size * 0.46}px "Barlow Condensed"`
