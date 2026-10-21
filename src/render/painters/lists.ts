@@ -239,6 +239,12 @@ function hairlineAt(ctx: Ctx, rc: RenderCtx, y: number, w: number) {
   ctx.fillRect(0, Math.round(y) - 1, w, 2)
 }
 
+function ellipsize(text: string, family: string, size: number, max: number): string {
+  let t = text
+  while (t.length > 1 && labelWidth(`${t}…`, { family, size, weight: 500 }) > max) t = t.slice(0, -1)
+  return `${t.trimEnd()}…`
+}
+
 function paintPlayerRowsEditorial(ctx: Ctx, el: PlayerListElement, rc: RenderCtx, players: Player[], top: number) {
   const { width: w, height: h } = el
   const right = el.align === 'right'
@@ -254,12 +260,15 @@ function paintPlayerRowsEditorial(ctx: Ctx, el: PlayerListElement, rc: RenderCtx
     if (i > 0) hairlineAt(ctx, rc, y, w)
     const cy = y + rowH / 2
     const nameSize = Math.min(el.nameSize, rowH * 0.42)
-    const subSize = Math.max(26, nameSize * 0.62)
+    const subSize = Math.max(26, nameSize * 0.55)
     const hasStat = el.showStat && !!p.stat
     const hasStatus = el.showStatus && p.status !== 'available'
     const statusSize = Math.max(30, nameSize * 0.7)
     const statusW = hasStatus ? labelWidth(STATUS_LABEL[p.status], { family: rc.font('$label'), size: statusSize, weight: 700, uppercase: true }) + 6 : 0
-    const sideW = hasStat ? Math.min(w * 0.34, rowH * 1.6) : hasStatus ? Math.min(w * 0.5, statusW) : 0
+    const statSize = hasStat ? Math.min(rowH * 0.8, el.statSize ?? Math.min(rowH * 0.62, nameSize * 2)) : 0
+    // Stat column sized from what it actually draws (number + small label).
+    const statW = hasStat ? Math.max(labelWidth(p.stat, { family: rc.font('$numbers'), size: statSize }), p.statLabel ? labelWidth(p.statLabel, { family: rc.font('$label'), size: Math.max(24, statSize * 0.28), weight: 600, uppercase: true }) : 0) + 16 : 0
+    const sideW = hasStat ? Math.min(w * 0.4, statW) : hasStatus ? Math.min(w * 0.5, statusW) : 0
     let x = right ? w : 0
     if (el.showNumber) {
       const nw = drawLabel(ctx, String(p.number), x, cy, { family: rc.font('$numbers'), size: nameSize, color: rc.color('$dim'), align })
@@ -270,13 +279,21 @@ function paintPlayerRowsEditorial(ctx: Ctx, el: PlayerListElement, rc: RenderCtx
     const capN = capHeightOf(nameFont, nameSize, 700, false)
     const nameY = sub ? cy - (capN + subSize * 0.9) / 2 : cy - capN / 2
     drawLabel(ctx, p.name, x, nameY, { family: nameFont, size: nameSize, weight: 700, color: textC, uppercase: true, align, baseline: 'top', maxWidth: nameMax })
-    if (sub) drawLabel(ctx, sub, x, nameY + capN + subSize * 0.45, { family: rc.font('$body'), size: subSize, weight: 500, color: mutedC, align, baseline: 'top', maxWidth: nameMax })
+    if (sub) {
+      // Notes shrink only to a floor, then get an ellipsis (keeps rows consistent).
+      const body = rc.font('$body')
+      const floor = Math.max(30, nameSize * 0.36)
+      const full = labelWidth(sub, { family: body, size: subSize, weight: 500 })
+      const size = full <= nameMax ? subSize : Math.max(floor, (subSize * nameMax) / full)
+      const text = labelWidth(sub, { family: body, size, weight: 500 }) <= nameMax ? sub : ellipsize(sub, body, size, nameMax)
+      drawLabel(ctx, text, x, nameY + capN + subSize * 0.45, { family: body, size, weight: 500, color: mutedC, align, baseline: 'top', maxWidth: nameMax })
+    }
     const ex = right ? 0 : w
     const eAlign = right ? 'left' : 'right'
     if (hasStatus) {
       drawLabel(ctx, STATUS_LABEL[p.status], ex, cy, { family: rc.font('$label'), size: statusSize, weight: 700, color: statusColor(p.status, accent, textC, mutedC), align: eAlign, uppercase: true, maxWidth: sideW })
     } else if (hasStat) {
-      const ss = Math.min(rowH * 0.62, nameSize * 2)
+      const ss = statSize
       const capS = capHeightOf(rc.font('$numbers'), ss, 400, false)
       const lbl = p.statLabel ? Math.max(24, ss * 0.28) : 0
       const sy = cy - (capS + (lbl ? lbl * 1.5 : 0)) / 2

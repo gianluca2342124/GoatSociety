@@ -14,9 +14,9 @@ import { cinematic, hl, ink, px, signature, support } from './kit'
 /** Vertical type factor: 1 on story/portrait, ≈0.85 on square/landscape. */
 const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
 
-/** Neutral kits. Pure white is tinted ivory by the painter and very dark grays are lifted, so use these. */
-const WHITE = '#EBEBEB'
-const DARK = '#444444'
+/** Neutral kits: the painters keep neutral grays exact, so the light kit follows the brand text colour. */
+const WHITE = '$text'
+const DARK = '#3A3A3A'
 
 type Team = 'home' | 'away'
 type P = [number: number, x: number, y: number, extra?: Partial<TacticalPlayer>]
@@ -451,7 +451,7 @@ export const stadium3D: TemplateDef = {
       background: ink(),
       elements: [
         ...cinematic(t, 'stadium'),
-        t.story ? scene(0, top, t.W, t.H - top, 48, { x: 65.5, y: 20 }) : scene(0, top, t.W, t.H - top, 42, { x: 69.5, y: 20 }),
+        t.story ? scene(0, top, t.W, t.H - top, 48, { x: 65.5, y: 20 }) : scene(0, top, t.W, t.H - top, t.H > t.W * 1.1 ? 38 : 36, { x: 70, y: 20 }),
         signature(t),
         hl(t, head, { y: t.contentTop, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
         support(t, sub, { y: sy, h: sh }, 46, { name: 'Explicación' }),

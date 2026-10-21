@@ -119,7 +119,8 @@ export const bigStatement: TemplateDef = {
         ...cinematic(t, 'spot'),
         signature(t),
         ...matchTag(t, tagY),
-        hl(t, '{headline}', { y: hy, h: hb - hy }, size, { name: 'Titular gigante', verticalAlign: 'bottom', lineHeight: 1.0 }),
+        // Leading 1.1 so accented capitals (PARÍS, ÚLTIMO) clear the line above.
+        hl(t, '{headline}', { y: hy, h: hb - hy }, size, { name: 'Titular gigante', verticalAlign: 'bottom', lineHeight: 1.1 }),
         support(t, '{subheadline}', { y: subY, w: Math.min(t.cw, 860 * t.s), h: subH }, 56 * Math.max(0.85, k), { name: 'Subtítulo' }),
       ],
     }
@@ -137,7 +138,7 @@ export const headToHead: TemplateDef = {
     // Headline + numbers stacked; side by side in landscape.
     const split = t.landscape
     const hw = split ? t.cw * 0.4 : t.cw
-    const hh = split ? t.ch * 0.7 : px(t, 330)
+    const hh = split ? t.ch * 0.7 : px(t, 350)
     const hy = split ? t.contentTop + (t.ch - hh) / 2 : t.contentTop
     const nx = split ? t.left + t.cw * 0.46 : t.left
     const nw = split ? t.cw * 0.54 : t.cw
@@ -178,7 +179,8 @@ export const headToHead: TemplateDef = {
       elements: [
         ...cinematic(t),
         signature(t),
-        hl(t, '{home.short} gana [[4]] de los últimos 9', { y: hy, w: hw, h: hh }, 150 * k, { name: 'Titular', verticalAlign: split ? 'middle' : 'top' }),
+        // Leading 1.12: the Ú of «ÚLTIMOS» must clear the line above.
+        hl(t, '{home.short} gana [[4]] de los últimos 9', { y: hy, w: hw, h: hh }, 150 * k, { name: 'Titular', verticalAlign: split ? 'middle' : 'top', lineHeight: 1.12 }),
         ...els,
         label(t, 'Últimos 9 enfrentamientos oficiales', { x: nx, y: sy, w: nw, h: ss * 1.3 }, ss, { name: 'Fuente', align: 'center', fill: { kind: 'solid', color: '$dim' } }),
       ],

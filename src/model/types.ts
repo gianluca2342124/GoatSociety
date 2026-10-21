@@ -291,6 +291,8 @@ export interface PlayerListElement extends BaseElement {
   align: 'left' | 'right'
   /** 'editorial' = open rows with hairline separators, no cards. Undefined = cards. */
   variant?: 'card' | 'editorial'
+  /** Editorial stat size (px). Undefined = automatic (≈2× the name size). */
+  statSize?: number
 }
 
 export interface MatchListElement extends BaseElement {

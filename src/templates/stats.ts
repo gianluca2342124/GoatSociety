@@ -242,7 +242,7 @@ export const keyPlayers: TemplateDef = {
     /** One player row: crest + the team's key player (name, note, stat). */
     const player = (side: Side, x: number, y: number, right: number, rowH: number, cs: number, gapC: number, nameSize: number) => [
       crestOf(side, x, y + (rowH - cs) / 2, cs),
-      E.playerList({ name: side === 'home' ? 'Clave local' : 'Clave visitante', side, filter: 'key', variant: 'editorial', x: x + cs + gapC, y, width: right - x - cs - gapC, height: rowH, maxItems: 1, nameSize, showStatus: false, showStat: true, showNumber: false, align: 'left', accentColor: '$accent' }),
+      E.playerList({ name: side === 'home' ? 'Clave local' : 'Clave visitante', side, filter: 'key', variant: 'editorial', x: x + cs + gapC, y, width: right - x - cs - gapC, height: rowH, maxItems: 1, nameSize, showStatus: false, showStat: true, statSize: Math.min(rowH * 0.78, nameSize * 2.2), showNumber: false, align: 'left', accentColor: '$accent' }),
     ]
     /** A big Anton "VS" in the crest column: crest · VS · crest reads as the face-off. */
     const versus = (x: number, cy: number, w: number, size: number) =>

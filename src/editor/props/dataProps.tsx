@@ -307,8 +307,9 @@ export function PlayerListProps({ el }: { el: PlayerListElement }) {
       <Toggle label="Dorsal" checked={el.showNumber} onChange={(v) => set({ showNumber: v })} />
       <Toggle label="Dato estadístico" checked={el.showStat} onChange={(v) => set({ showStat: v })} />
       <Toggle label="Estado (lesión, duda…)" checked={el.showStatus} onChange={(v) => set({ showStatus: v })} />
-      <Slider label="Tamaño del nombre" min={14} max={80} step={1} value={el.nameSize} onChange={(v) => set({ nameSize: v })} />
-      <Slider label="Separación" min={0} max={60} step={1} value={el.rowGap} onChange={(v) => set({ rowGap: v })} />
+      <Slider label="Tamaño del nombre" min={14} max={140} step={1} value={el.nameSize} onChange={(v) => set({ nameSize: v })} />
+      {el.variant === 'editorial' && el.showStat && <Slider label="Tamaño del dato" min={40} max={320} step={1} value={el.statSize ?? Math.round(el.nameSize * 2)} onChange={(v) => set({ statSize: v })} />}
+      {el.variant !== 'editorial' && <Slider label="Separación" min={0} max={60} step={1} value={el.rowGap} onChange={(v) => set({ rowGap: v })} />}
       <ColorField label="Acento" value={el.accentColor} onChange={(v) => set({ accentColor: v })} />
     </Section>
   )
