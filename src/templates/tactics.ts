@@ -353,9 +353,7 @@ export const keyMovement: TemplateDef = {
 // ── 19 · Estadio 3D: el contragolpe ─────────────────────────────────────────
 // Ball won in midfield, a through ball and ONE bold run in behind the high line.
 // The action is compact (≈25 × 20 m) so the camera can sit close and the players read big.
-const CAM = { azimuth: 180, elevation: 50, fov: 34 }
-/** Look-at point: slightly short of the action centre so it sits in the upper, UI-free part of the frame. */
-const TARGET = { x: 71, y: 20 }
+const CAM = { azimuth: 180, elevation: 46, fov: 34 }
 
 function counterData(homeFormation: string, awayFormation: string): TacticsData {
   const home = team('home', [
@@ -388,7 +386,7 @@ function counterData(homeFormation: string, awayFormation: string): TacticsData 
     homeFormation,
     awayFormation,
     homeColor: '#FFFFFF',
-    awayColor: '#3A3A3A',
+    awayColor: '#5E5E5E',
     playerSize: 18,
     showLabels: false,
     // Number badges would be white on white for the light kit: the scene reads by kit colour.
@@ -415,7 +413,9 @@ export const stadium3D: TemplateDef = {
     const k = vk(t)
     const head = '{home.short} [[mata]]\na la contra'
     const sub = 'Robo en el centro y carrera a la espalda.'
-    const scene = (x: number, y: number, w: number, h: number, distance: number, target = TARGET) =>
+    // Camera framings solved per format so the whole action (runner, passer, both arrow heads) sits
+    // inside the safe area: the story looks at a point short of the action so it rises above the platform UI.
+    const scene = (x: number, y: number, w: number, h: number, distance: number, target: { x: number; y: number }) =>
       E.stadium3d({
         name: 'Estadio 3D',
         x,
@@ -436,7 +436,7 @@ export const stadium3D: TemplateDef = {
         background: ink(),
         elements: [
           ...cinematic(t, 'stadium'),
-          scene(sx, 0, t.W - sx, t.H, 52, { x: 73, y: 20 }),
+          scene(sx, 0, t.W - sx, t.H, 48, { x: 70, y: 20 }),
           signature(t),
           hl(t, head, { y: t.contentTop, w: colW, h: hh }, 125 * k),
           support(t, sub, { y: t.contentTop + hh + px(t, 30), w: colW, h: px(t, 140) }, 46, { name: 'Explicación' }),
@@ -447,14 +447,11 @@ export const stadium3D: TemplateDef = {
     const sy = t.contentTop + hh + px(t, 16)
     const sh = px(t, 70)
     const top = sy + sh + px(t, 30)
-    // The camera keeps the same horizontal framing (≈ 24 m across) whatever the frame's aspect.
-    const aspect = t.W / (t.H - top)
-    const dist = 44 * Math.min(1.25, 0.86 / aspect) ** 0.5
     return {
       background: ink(),
       elements: [
         ...cinematic(t, 'stadium'),
-        scene(0, top, t.W, t.H - top, dist),
+        t.story ? scene(0, top, t.W, t.H - top, 48, { x: 65.5, y: 20 }) : scene(0, top, t.W, t.H - top, 42, { x: 69.5, y: 20 }),
         signature(t),
         hl(t, head, { y: t.contentTop, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
         support(t, sub, { y: sy, h: sh }, 46, { name: 'Explicación' }),

@@ -360,6 +360,7 @@ function paintResultsEditorial(ctx: Ctx, el: ResultsListElement, rc: RenderCtx, 
     drawLabel(ctx, r.match, tx, cy - fs * 0.62, { family: rc.font(el.font), size: fs, weight: 700, color: textC, uppercase: true, maxWidth: w - tx - right - 20 })
     const sub = [r.pick, r.date ? formatDate(r.date, 'short', rc.brand.dateLocale) : ''].filter(Boolean).join('  ·  ')
     drawLabel(ctx, sub, tx, cy + fs * 0.62, { family: rc.font('$body'), size: Math.max(26, fs * 0.76), weight: 500, color: mutedC, maxWidth: w - tx - right - 20 })
-    if (right) drawLabel(ctx, r.odds, w, cy, { family: rc.font('$numbers'), size: Math.min(60, rowH * 0.42), color: r.outcome === 'won' ? win : textC, align: 'right', maxWidth: right })
+    // Odds stay neutral: the hit rate is the slide's only large accent figure.
+    if (right) drawLabel(ctx, r.odds, w, cy, { family: rc.font('$numbers'), size: Math.min(60, rowH * 0.42), color: textC, align: 'right', maxWidth: right })
   })
 }

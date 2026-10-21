@@ -250,7 +250,7 @@ export const photoCover: TemplateDef = {
   number: 20,
   name: 'Photo Cover',
   category: 'match',
-  description: 'Portada editorial con foto: sube la foto de un jugador o del estadio en el elemento «Foto» (también vale un PNG recortado). Sin foto, un escudo gigante recortado sostiene la composición.',
+  description: 'Portada editorial con foto: sube la foto de un jugador o del estadio en el elemento «Foto» (también vale un PNG recortado). Sin foto, el escudo local entero se funde en negro bajo el titular y la portada sigue funcionando.',
   build: (t) => {
     const k = vk(t)
     const fs = 160 * k
@@ -258,22 +258,47 @@ export const photoCover: TemplateDef = {
     const subH = px(t, 130)
     const subY = t.contentBottom - px(t, 40) - subH
     const hb = subY - px(t, 28)
-    const hw = t.landscape ? t.cw * 0.62 : t.cw
-    const hh = px(t, 420)
+    // Landscape: a narrow type column on the left (three lines), the visual
+    // owns the right half.
+    const hw = t.landscape ? t.cw * 0.5 : t.cw
+    const hy = t.landscape ? t.contentTop : hb - px(t, 420)
     // Photo: full bleed from the top, fading into black behind the type.
     // Landscape splits the frame: type on black at the left, photo on the right.
     const ih = t.landscape ? t.H : t.H * 0.76
     const ix = t.landscape ? t.W * 0.36 : 0
-    const fade = 0.35
+    const fade = t.landscape ? 0.2 : 0.35
     const fadeTop = ih * (1 - fade)
-    // Fallback visual (also the backdrop of a cut-out PNG): the home crest,
-    // zoomed past the frame and dimmed. An opaque photo covers it.
-    const cs = t.landscape ? t.H * 1.1 : t.W * 1.19
-    const cx = t.landscape ? t.W * 1.1 - cs : t.cx - cs / 2
-    const cy = t.landscape ? -cs * 0.3 : ih * 0.36 - cs / 2
+    // Where the photo is already fading, the crest below it must be black
+    // (no ghosting through a faded or cut-out photo).
+    const clearBy = fadeTop + (ih - fadeTop) * 0.25
+    const textTop = hb - fs * t.s * 1.04 * 2
+    // Fallback visual (also the backdrop of a cut-out PNG): the whole home
+    // crest as the cover image, crisp, slightly darkened and dissolving into
+    // black just above the headline, like the photo would. An opaque photo
+    // covers it completely.
+    let cs: number
+    let cx: number
+    let cy: number
+    let fadeFrom: number
+    let fadeTo: number
+    if (t.landscape) {
+      const ax = t.left + hw + px(t, 60)
+      const ar = t.right + px(t, 60)
+      cs = Math.min(t.ch * 0.86, ar - ax)
+      cx = (ax + ar - cs) / 2
+      cy = t.contentTop + (t.ch - cs) / 2
+      fadeTo = clearBy
+      fadeFrom = Math.min(fadeTo - px(t, 40), Math.max(cy + cs * 0.6, fadeTop - px(t, 40)))
+    } else {
+      cy = t.contentTop + px(t, 16)
+      // Fully black just before the headline.
+      fadeTo = Math.min(textTop - px(t, 24), clearBy)
+      cs = Math.min(t.cw * 0.9, (fadeTo - cy) / 0.9)
+      cx = t.cx - cs / 2
+      fadeFrom = cy + cs * 0.6
+    }
     // Reading scrim above photo and crest: clear at the top, ≈85 % black where
     // a two-line headline starts, solid below it, so white type always reads.
-    const textTop = hb - fs * t.s * 1.04 * 2
     const s0 = Math.max(t.H * 0.1, textTop - px(t, 400))
     const sh = t.H - s0
     const at = (y: number) => Math.min(1, Math.max(0, (y - s0) / sh))
@@ -287,7 +312,7 @@ export const photoCover: TemplateDef = {
           height: t.H,
           cornerRadius: 0,
           locked: true,
-          fill: { kind: 'linear', angle: 90, stops: [{ offset: 0, color: '$bg', opacity: 1 }, { offset: 0.38, color: '$bg', opacity: 1 }, { offset: 0.56, color: '$bg', opacity: 0.62 }, { offset: 0.74, color: '$bg', opacity: 0 }] },
+          fill: { kind: 'linear', angle: 90, stops: [{ offset: 0, color: '$bg', opacity: 1 }, { offset: 0.36, color: '$bg', opacity: 1 }, { offset: 0.47, color: '$bg', opacity: 0.7 }, { offset: 0.56, color: '$bg', opacity: 0 }] },
         })
       : E.shape({
           name: 'Sombra de lectura',
@@ -310,13 +335,13 @@ export const photoCover: TemplateDef = {
             ],
           },
         })
+    const dimTop = 0.18
     return {
       background: ink(),
       elements: [
         ...cinematic(t, 'grain'),
         crestOf('home', cx, cy, cs, { name: 'Escudo de fondo' }),
-        // Dims the crest and hides it where the photo starts to fade, so it
-        // never ghosts through an uploaded photo.
+        // Tones the crest down a touch and dissolves its lower part into black.
         E.shape({
           name: 'Atenuado escudo',
           shape: 'rect',
@@ -326,12 +351,12 @@ export const photoCover: TemplateDef = {
           height: t.H,
           cornerRadius: 0,
           locked: true,
-          fill: { kind: 'linear', angle: 180, stops: [{ offset: 0, color: '$bg', opacity: 0.5 }, { offset: (fadeTop * 0.6) / t.H, color: '$bg', opacity: 0.5 }, { offset: fadeTop / t.H, color: '$bg', opacity: 1 }, { offset: 1, color: '$bg', opacity: 1 }] },
+          fill: { kind: 'linear', angle: 180, stops: [{ offset: 0, color: '$bg', opacity: dimTop }, { offset: fadeFrom / t.H, color: '$bg', opacity: dimTop }, { offset: fadeTo / t.H, color: '$bg', opacity: 1 }, { offset: 1, color: '$bg', opacity: 1 }] },
         }),
         E.image({ name: 'Foto', x: ix, y: 0, width: t.W - ix, height: ih, fit: 'cover', focusX: 0.5, focusY: 0.3, fadeBottom: fade }),
         scrim,
         signature(t),
-        hl(t, '{headline}', { y: hb - hh, w: hw, h: hh }, fs, { verticalAlign: 'bottom' }),
+        hl(t, '{headline}', { y: hy, w: hw, h: hb - hy }, fs, { verticalAlign: 'bottom' }),
         support(t, '{subheadline}', { y: subY, w: hw, h: subH }, 50 * Math.max(0.85, k), { name: 'Apoyo' }),
       ],
     }

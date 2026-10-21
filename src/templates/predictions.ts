@@ -240,6 +240,7 @@ export const predictionReveal: TemplateDef = {
     }
   },
 }
+
 // ── 16 · Historial: % de acierto enorme + filas abiertas ───────────────────
 // The list draws the hero rate in the accent, so the headline stays white:
 // one accent focus (the percentage), one short line of context above it.
@@ -250,7 +251,8 @@ export const verifiedResults: TemplateDef = {
   category: 'predictions',
   description: 'Historial de pronósticos: porcentaje de acierto enorme y filas abiertas.',
   build: (t) => {
-    const note = 'Resultados introducidos manualmente. Los resultados pasados no garantizan resultados futuros.'
+    // Break after the first sentence so the warning never ends on an orphan word.
+    const note = 'Resultados introducidos manualmente.\nLos resultados pasados no garantizan resultados futuros.'
     if (t.landscape) {
       // Headline + legal line on the left, the whole record on the right.
       const colW = t.cw * 0.4
@@ -282,7 +284,8 @@ export const verifiedResults: TemplateDef = {
         ...cinematic(t),
         signature(t),
         hl(t, 'Resultados recientes', { y: t.contentTop, h: z(HH) }, fs(t, z(HS))),
-        E.resultsList({ name: 'Resultados', x: t.left, y: ly, width: t.cw, height: dy - z(G2) - ly, maxItems: 4, variant: 'editorial', showSummary: true, showOdds: true }),
+        // A square only has room for three legible rows under the hero rate.
+        E.resultsList({ name: 'Resultados', x: t.left, y: ly, width: t.cw, height: dy - z(G2) - ly, maxItems: t.ch < 1000 ? 3 : 4, variant: 'editorial', showSummary: true, showOdds: true }),
         legal(t, dy, note, 2, { align: 'left' }),
       ],
     }

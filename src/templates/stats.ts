@@ -3,7 +3,7 @@ import type { MatchData, StatRow, TextElement } from '../model/types'
 import { rowLeader } from '../model/stats'
 import type { TemplateDef } from './types'
 import type { TCtx } from './kit'
-import { cinematic, crestOf, hl, ink, label, px, rule, signature, support } from './kit'
+import { cinematic, crestOf, hl, ink, label, px, signature, support } from './kit'
 
 // ════════════════════════════════════════════════════════════════════════════
 // GOAT EDITORIAL · Estadísticas
@@ -163,7 +163,8 @@ export const theNumbers: TemplateDef = {
   category: 'stats',
   description: 'Una sola cifra dominante que demuestra el titular.',
   build: (t, match) => {
-    const claim = '{home.short} [[sufre]] en casa'
+    // "EN CASA" stays together: the claim breaks after the verb, never before a lone word.
+    const claim = '{home.short} [[sufre]] en\u00A0casa'
     const lh = lhFor(match, 'home')
     const src = '{competition}  ·  temporada actual'
     // The support line is dropped when keeping it would shrink the number (1:1).
@@ -187,7 +188,7 @@ export const theNumbers: TemplateDef = {
     if (t.landscape) {
       const c = cols(t, 0.4)
       const sy = t.contentBottom - px(t, 50)
-      const vs = 330
+      const vs = 400
       const z = place(t.contentTop, t.contentBottom, heroHeight(vs, true, 2), 0.5)
       return {
         background: ink(),
@@ -206,10 +207,11 @@ export const theNumbers: TemplateDef = {
     const hy = t.contentTop
     const hh = headH(t, 150 * k, 2, lh)
     const sy = t.contentBottom - px(t, 50)
-    const vs = 340 * t.s * k
+    // The proof number is the focal point: ~400px on stories, centred in the room left by the claim.
+    const vs = 400 * t.s * k
     const a = hy + hh + px(t, 60)
     const b = sy - px(t, 40)
-    const z = place(a, b, heroHeight(vs, true, heroFit(b - a, vs, true) >= vs * 0.85 ? 2 : 0), 0.42)
+    const z = place(a, b, heroHeight(vs, true, heroFit(b - a, vs, true) >= vs * 0.85 ? 2 : 0), 0.5)
     return {
       background: ink(),
       // Negative stat: the slide suggests red as its single accent.
@@ -233,9 +235,10 @@ export const keyPlayers: TemplateDef = {
   category: 'stats',
   description: 'El duelo de los dos jugadores clave: nombres grandes y su cifra.',
   build: (t) => {
-    // Forced break: "EL DUELO / QUE DECIDE" (never a lone "DECIDE"). 1:1 keeps one line.
+    // Forced break: "EL DUELO / QUE DECIDE" (never a lone "DECIDE"). 1:1 keeps one
+    // line; the narrow 16:9 headline column stacks three short lines.
     const square = !t.story && !t.landscape && t.v < 0.8
-    const claim = square ? 'El duelo [[que decide]]' : 'El duelo\n[[que decide]]'
+    const claim = square ? 'El duelo [[que decide]]' : t.landscape ? 'El duelo\n[[que]]\n[[decide]]' : 'El duelo\n[[que decide]]'
     /** One player row: crest + the team's key player (name, note, stat). */
     const player = (side: Side, x: number, y: number, right: number, rowH: number, cs: number, gapC: number, nameSize: number) => [
       crestOf(side, x, y + (rowH - cs) / 2, cs),
@@ -258,10 +261,10 @@ export const keyPlayers: TemplateDef = {
         elements: [
           ...cinematic(t),
           signature(t),
-          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: t.ch }, 130),
-          ...player('home', c.rx, r1, right, rowH, cs, gapC, px(t, 118)),
+          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: t.ch }, 124),
+          ...player('home', c.rx, r1, right, rowH, cs, gapC, px(t, 108)),
           versus(c.rx - px(t, 20), r1 + rowH + vsH / 2, cs + px(t, 40), px(t, 128)),
-          ...player('away', c.rx, r2, right, rowH, cs, gapC, px(t, 118)),
+          ...player('away', c.rx, r2, right, rowH, cs, gapC, px(t, 108)),
         ],
       }
     }
@@ -360,14 +363,11 @@ export const formTrends: TemplateDef = {
     const claim = `[[${n ? w : 4} ${n && w === 1 ? 'victoria' : 'victorias'}]] en\u00A0${n || 5} para {${lead}.short}`
     const nWord = NUM[n || 5] ?? String(n)
     const src = `Últimos ${nWord} partidos  ·  el más reciente, a la izquierda`
-    // Each row is as wide as its own results, so both rows share the same letter columns.
-    const row = (side: Side, x: number, y: number, rowH: number, cs: number, fx: number, room: number, fh: number, fg: number) => {
-      const slots = match[side].form.length || 5
-      return [
-        crestOf(side, x, y + (rowH - cs) / 2, cs),
-        E.formRow({ name: side === 'home' ? 'Racha local' : 'Racha visitante', source: side, shape: 'letter', x: fx, y: y + (rowH - fh) / 2, width: Math.min(room, slots * fh + (slots - 1) * fg), height: fh, gap: fg, winColor: '$accent', drawColor: '$muted', lossColor: '$muted', newestFirst: true }),
-      ]
-    }
+    // Letters left-aligned from the same x, so both rows share the same letter columns.
+    const row = (side: Side, x: number, y: number, rowH: number, cs: number, fx: number, room: number, fh: number, fg: number) => [
+      crestOf(side, x, y + (rowH - cs) / 2, cs),
+      E.formRow({ name: side === 'home' ? 'Racha local' : 'Racha visitante', source: side, shape: 'letter', align: 'left', x: fx, y: y + (rowH - fh) / 2, width: room, height: fh, gap: fg, winColor: '$accent', drawColor: '$muted', lossColor: '$muted', newestFirst: true }),
+    ]
     const trend = (x: number, y: number, w: number, h: number, vs: number) =>
       E.statNumber({ name: 'Tendencia', x, y, width: w, height: h, value: '13', label: `Goles en esos ${nWord} partidos`, description: '', valueSize: vs, layout: 'hero', align: 'left', valueColor: '$text', labelColor: '$muted', minIntensity: 'editorial' })
     if (t.landscape) {
@@ -406,14 +406,16 @@ export const formTrends: TemplateDef = {
     const fh = px(t, 112, 56)
     const fg = px(t, 34, 16)
     const rowH = Math.max(cs, fh)
-    const rowGap = px(t, 64, 28)
-    const r1 = hy + hh + px(t, 90)
+    // 4:5 and 1:1 tighten the gaps so the optional trend number still fits big.
+    const tight = !t.story
+    const rowGap = px(t, tight ? 48 : 64, 28)
+    const r1 = hy + hh + px(t, tight ? 70 : 90)
     const r2 = r1 + rowH + rowGap
     const fx = t.left + cs + px(t, 48, 22)
     const fw = dataRight(t) - fx
     const sy = t.contentBottom - px(t, 50)
     const tvs = 230 * t.s * k
-    const tz = place(r2 + rowH + px(t, 90, 24), sy - px(t, 40), heroHeight(tvs, true, 0), 0.5)
+    const tz = place(r2 + rowH + px(t, tight ? 60 : 90, 24), sy - px(t, 40), heroHeight(tvs, true, 0), 0.5)
     // The optional trend number only appears when it can stay big (≥140px).
     const fitV = (tz.h - Math.min(85, tvs * 0.3) * 1.45) / 0.86
     return {
@@ -481,11 +483,13 @@ export const rankingSlide: TemplateDef = {
   category: 'stats',
   description: 'Clasificación editable con barras gruesas y la fila destacada en el acento.',
   build: (t) => {
-    const claim = 'Los goleadores [[del partido]]'
-    // ~170px per row keeps names ≥50px: 5 rows on stories, fewer on short formats.
-    const rowsFor = (h: number) => Math.max(3, Math.min(5, Math.floor(h / 170)))
+    // Forced break: "LOS GOLEADORES / DEL PARTIDO" (1:1 would otherwise orphan "PARTIDO").
+    const claim = 'Los goleadores\n[[del partido]]'
+    // ≥215px per row keeps names ~65-70px and a thick bar (painter: name ≤ 30 % of the row):
+    // the top four on stories, three on short formats. The fifth row stays in the data.
+    const rowsFor = (h: number) => Math.max(3, Math.min(5, Math.floor(h / 215)))
     const list = (x: number, y: number, w: number, h: number) =>
-      E.ranking({ name: 'Ranking', x, y, width: w, height: h, maxRows: rowsFor(h), nameSize: 64 * t.s, valueSize: 124 * t.s, highlightIndex: 0 })
+      E.ranking({ name: 'Ranking', x, y, width: w, height: h, maxRows: rowsFor(h), nameSize: 80 * t.s, valueSize: 140 * t.s, highlightIndex: 0 })
     if (t.landscape) {
       const c = cols(t, 0.4)
       return {
@@ -512,7 +516,8 @@ export const absences: TemplateDef = {
   category: 'stats',
   description: 'Bajas y dudas de los dos equipos en filas abiertas, estado en color.',
   build: (t, match) => {
-    const claim = 'Las bajas [[que pesan]]'
+    // Forced break: "LAS BAJAS / QUE PESAN" (never a lone "PESAN"); 16:9 fits one line.
+    const claim = t.landscape ? 'Las bajas [[que pesan]]' : 'Las bajas\n[[que pesan]]'
     /** Crest + team name, then that team's absences as open rows. */
     const block = (side: Side, x: number, y: number, w: number, h: number, cs: number, nameSize: number) => {
       const ly = y + cs + px(t, 26, 12)
@@ -524,17 +529,20 @@ export const absences: TemplateDef = {
     }
     const k = vk(t)
     const hy = t.contentTop
-    const cs = px(t, 84, 44)
-    if (t.story) {
-      // Stories: the two teams stacked, full column width (clear of the right-hand buttons).
-      const hh = headH(t, 150)
-      const top = hy + hh + px(t, 80)
-      const gap = px(t, 70, 28)
+    if (t.story || (!t.landscape && t.v >= 0.8)) {
+      // Stories and 4:5: the two teams stacked at full column width, so each status
+      // sits far from the name (side-by-side columns squeezed both on 4:5).
+      const hs = t.story ? 150 : 130
+      const hh = headH(t, hs)
+      const top = hy + hh + px(t, t.story ? 80 : 56)
+      const gap = px(t, t.story ? 70 : 40, 28)
+      const cs = px(t, t.story ? 84 : 68, 44)
+      const ns = px(t, 64, 36)
       // Each team gets room for its own number of absences (1–3 rows), so a team
       // without absences does not leave half the slide empty.
       const count = (s: Side) => Math.max(1, Math.min(3, match[s].players.filter((p) => p.status !== 'available').length))
       const head0 = cs + px(t, 26, 12)
-      const unit = Math.min(px(t, 64, 36) * 3.6, (t.contentBottom - top - gap - head0 * 2) / (count('home') + count('away')))
+      const unit = Math.min(ns * 3.6, (t.contentBottom - top - gap - head0 * 2) / (count('home') + count('away')))
       const hHome = head0 + unit * count('home')
       const w = dataRight(t) - t.left
       return {
@@ -543,19 +551,23 @@ export const absences: TemplateDef = {
         elements: [
           ...cinematic(t),
           signature(t),
-          head(t, claim, { y: hy, h: hh }, 150),
-          ...block('home', t.left, top, w, hHome, cs, px(t, 64, 36)),
-          ...block('away', t.left, top + hHome + gap, w, head0 + unit * count('away'), cs, px(t, 64, 36)),
+          head(t, claim, { y: hy, h: hh }, hs),
+          ...block('home', t.left, top, w, hHome, cs, ns),
+          ...block('away', t.left, top + hHome + gap, w, head0 + unit * count('away'), cs, ns),
         ],
       }
     }
-    // 4:5, 1:1 and 16:9: the two teams side by side under the headline.
+    // 1:1 and 16:9: the two teams side by side under the headline.
     // A wide gutter keeps each status attached to its own column.
+    const cs = px(t, 84, 44)
     const hh = headH(t, 150 * k, t.landscape ? 1 : 2)
     const top = hy + hh + px(t, 70)
-    const gap = px(t, 120, 44)
+    // The gutter stays clearly wider than the name→status gap inside a column.
+    const gap = px(t, t.landscape ? 170 : 120, 44)
     const w = (t.cw - gap) / 2
     const h = t.contentBottom - top
+    // 16:9 columns are wide enough for bigger names (rows stop at 3.6× the name size).
+    const ns = px(t, t.landscape ? 76 : 64, 34)
     return {
       background: ink(),
       accent: '$red',
@@ -563,8 +575,8 @@ export const absences: TemplateDef = {
         ...cinematic(t),
         signature(t),
         head(t, claim, { y: hy, h: hh }, 150 * k),
-        ...block('home', t.left, top, w, h, cs, px(t, 64, 34)),
-        ...block('away', t.left + w + gap, top, w, h, cs, px(t, 64, 34)),
+        ...block('home', t.left, top, w, h, cs, ns),
+        ...block('away', t.left + w + gap, top, w, h, cs, ns),
       ],
     }
   },

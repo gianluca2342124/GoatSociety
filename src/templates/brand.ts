@@ -17,6 +17,9 @@ const LH = 1.04
 /** Height of `lines` headline lines at story size `size` (scaled by t.s). */
 const hlH = (t: TCtx, size: number, lines: number) => size * t.s * (LH * lines + 0.06)
 
+/** Anton's Á/Ú accents rise ≈0.1 em above the first line box: room kept above it (em). */
+const ACC = 0.12
+
 /** Mascot artwork aspect ratio (GOAT_VIEW 512×660). */
 const GOAT_RATIO = 512 / 660
 
@@ -47,8 +50,8 @@ export const community: TemplateDef = {
     const g1 = px(t, 44)
     const g2 = px(t, 80)
     const rest = g1 + sh + g2 + ch
-    // Largest headline (story px) whose `n` lines fit above the CTA block.
-    const byH = (n: number) => (t.ch - rest) / (LH * n + 0.06) / t.s
+    // Largest headline (story px) whose `n` lines (and the Ú accent) fit above the CTA block.
+    const byH = (n: number) => (t.ch - rest) / (LH * n + 0.06 + ACC) / t.s
     // Tall formats: poster stack ÚNETE A / GOAT / SOCIETY, each long line
     // filling the column. Short or wide formats: two lines, the brand
     // filling the width. The brand wraps by itself (no hard-coded break), so
@@ -59,7 +62,8 @@ export const community: TemplateDef = {
     const hs = three ? s3 : s2
     const hh = hlH(t, hs, three ? 3 : 2)
     // Any spare height goes above: the block sits low, the goat mark alone on top.
-    const y = t.contentTop + Math.max(0, t.ch - hh - rest) * 0.7
+    const acc = ACC * hs * t.s
+    const y = t.contentTop + acc + Math.max(0, t.ch - acc - hh - rest) * 0.7
     // Room above lets a longer brand name take one more line; the headline is
     // bottom-aligned so the stack below never moves.
     const extra = Math.min(hlH(t, hs, 1), y - t.contentTop)
@@ -85,7 +89,7 @@ export const communityMascot: TemplateDef = {
   description: 'La mascota como imagen principal, monocroma con un filo del color de acento, y llamada a la comunidad.',
   build: (t) => {
     const k = vk(t)
-    const hs = 136 * k
+    const hs = 144 * k
     const ss = 52 * k
     const cs = 54 * k
     const hh = hlH(t, hs, 2)
@@ -167,14 +171,20 @@ export const communityMascot: TemplateDef = {
  * Closing-slide copy variants (editor: "Variantes de cierre"). The editor
  * writes `headline` into "Mensaje final" and `sub` into "Submensaje" (the
  * handle line). Only neutral profile/bio calls to action. Explicit breaks
- * keep a clean rag at poster size (no "MI / PERFIL" split, no orphans).
+ * keep a clean three-line rag at poster size (no «MI / PERFIL» split, no
+ * orphans), no accented capital under a full line (Anton's Á/Ó accents
+ * would touch the line above at the tight 1.04 leading) and no comma at a
+ * line end (it drops onto the next line and reads like an accent).
  */
 export const FINAL_VARIANTS = [
-  { id: 'perfil', headline: 'El análisis\ncompleto\nestá en\n[[mi perfil]]', sub: '{handle}' },
+  { id: 'perfil', headline: 'El análisis\ncompleto\nen [[mi perfil]]', sub: '{handle}' },
   { id: 'pronostico', headline: 'Pronóstico\ncompleto\nen [[mi perfil]]', sub: '{handle}' },
   { id: 'unete', headline: 'Únete a\n[[{brand}]]', sub: '{handle}' },
   { id: 'bio', headline: 'Enlace en\n[[la bio]]', sub: '{handle}' },
 ]
+
+/** Widest variant line, «EN MI PERFIL» (Anton advance per 100 px). */
+const W_FINAL = 473.4
 
 export const finalSlide: TemplateDef = {
   id: 'final-slide',
@@ -183,21 +193,19 @@ export const finalSlide: TemplateDef = {
   category: 'brand',
   description: 'Cierre del carrusel: una frase a tamaño cartel que termina en el acento, anclada abajo con el usuario (4 variantes).',
   build: (t) => {
-    // Vertical formats: four short lines (widest «EL ANÁLISIS»). 16:9: three
-    // lines across the wide column (widest «COMPLETO ESTÁ»).
-    const wide = t.landscape
-    const copy = wide ? 'El análisis\ncompleto está\nen [[mi perfil]]' : FINAL_VARIANTS[0].headline
-    const lines = wide ? 3 : 4
+    const v = FINAL_VARIANTS[0]
+    const lines = 3
     const us = 68 * vk(t)
     const uh = us * t.s * 1.3
     const gap = px(t, 48)
-    // ≤190 on vertical formats so every variant keeps its rag («EN MI PERFIL»
-    // fits the column at 190).
-    const hs = Math.min(wide ? 210 : 190, fillW(t, wide ? 584.5 : 428.6), (t.ch - gap - uh) / (LH * lines + 0.06) / t.s)
+    // The widest line of any variant fills the column (≈190 on a story).
+    const hs = Math.min(fillW(t, W_FINAL), (t.ch - gap - uh) / (LH * lines + 0.06 + ACC) / t.s)
     const hb = hlH(t, hs, lines)
+    const acc = ACC * hs * t.s
     // Anchored low: the handle sits on a fixed line near the bottom of the
-    // safe zone, the statement grows upwards and the space above stays empty.
-    const y = t.contentTop + Math.max(0, t.ch - hb - gap - uh) * 0.8
+    // safe zone, the statement grows upwards and the space above stays empty
+    // (only the goat mark).
+    const y = t.contentTop + acc + Math.max(0, t.ch - acc - hb - gap - uh) * 0.85
     // One spare line of headroom for longer custom messages (autoFit beyond).
     const top = Math.max(t.contentTop, y - hlH(t, hs, 1))
     const uy = y + hb + gap
@@ -206,8 +214,8 @@ export const finalSlide: TemplateDef = {
       elements: [
         ...cinematic(t),
         goatMark(t, t.left, t.top, 60),
-        hl(t, copy, { y: top, h: y + hb - top }, hs, { name: 'Mensaje final', verticalAlign: 'bottom' }),
-        label(t, FINAL_VARIANTS[0].sub, { y: uy, h: uh }, us, { name: 'Submensaje', fontWeight: 600, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
+        hl(t, v.headline, { y: top, h: y + hb - top }, hs, { name: 'Mensaje final', verticalAlign: 'bottom' }),
+        label(t, v.sub, { y: uy, h: uh }, us, { name: 'Submensaje', fontWeight: 600, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
       ],
     }
   },
