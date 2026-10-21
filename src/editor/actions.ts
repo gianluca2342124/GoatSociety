@@ -159,6 +159,67 @@ export function hideSelection() {
   toast('Oculto · puedes mostrarlo desde Capas', true)
 }
 
+export type AlignMode = 'l' | 'c' | 'r' | 't' | 'm' | 'b' | 'distH' | 'distV' | 'pc' | 'pm'
+
+/** Align or distribute the selected elements (several) or centre them on the page. */
+export function alignSelection(mode: AlignMode) {
+  const s = useEditor.getState()
+  const p = s.project
+  const ids = s.selection
+  const slideId = activeSlideOf(s)?.id
+  if (!p || !ids.length) return
+  s.update((d) => {
+    const sl = d.slides.find((x) => x.id === slideId)
+    if (!sl) return
+    const list = sl.elements.filter((e) => ids.includes(e.id) && !e.locked)
+    if (!list.length) return
+    const minX = Math.min(...list.map((e) => e.x))
+    const maxX = Math.max(...list.map((e) => e.x + e.width))
+    const minY = Math.min(...list.map((e) => e.y))
+    const maxY = Math.max(...list.map((e) => e.y + e.height))
+    if (mode === 'distH' || mode === 'distV') {
+      const horiz = mode === 'distH'
+      const sorted = [...list].sort((a, b) => (horiz ? a.x - b.x : a.y - b.y))
+      const total = sorted.reduce((acc, e) => acc + (horiz ? e.width : e.height), 0)
+      const span = horiz ? maxX - minX : maxY - minY
+      const gap = sorted.length > 1 ? (span - total) / (sorted.length - 1) : 0
+      let cur = horiz ? minX : minY
+      for (const e of sorted) {
+        if (horiz) e.x = cur
+        else e.y = cur
+        cur += (horiz ? e.width : e.height) + gap
+      }
+      return
+    }
+    // Centre on the page as one block, keeping the elements' relative layout.
+    const dx = (p.format.width - (maxX - minX)) / 2 - minX
+    const dy = (p.format.height - (maxY - minY)) / 2 - minY
+    for (const e of list) {
+      if (mode === 'l') e.x = minX
+      if (mode === 'r') e.x = maxX - e.width
+      if (mode === 'c') e.x = (minX + maxX) / 2 - e.width / 2
+      if (mode === 't') e.y = minY
+      if (mode === 'b') e.y = maxY - e.height
+      if (mode === 'm') e.y = (minY + maxY) / 2 - e.height / 2
+      if (mode === 'pc') e.x += dx
+      if (mode === 'pm') e.y += dy
+    }
+  })
+}
+
+/** Select every visible, unlocked element on the current page. */
+export function selectAllOnPage() {
+  const s = useEditor.getState()
+  const slide = activeSlideOf(s)
+  if (!slide) return
+  s.select(slide.elements.filter((e) => e.visible && !e.locked).map((e) => e.id))
+}
+
+/** Phone multi-selection: taps add or remove elements until «Listo». */
+export function setMultiSelect(on: boolean) {
+  useUI.getState().set({ multiSelect: on, editingTextId: null })
+}
+
 // ── Canvas format ──────────────────────────────────────────────────────────
 
 /** Change the project format: template pages are rebuilt for the new size, free pages are rescaled. */

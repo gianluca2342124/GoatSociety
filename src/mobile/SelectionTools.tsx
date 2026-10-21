@@ -5,6 +5,15 @@
 import { useRef, type ReactNode } from 'react'
 import {
   AlignCenter,
+  AlignCenterHorizontal,
+  AlignCenterVertical,
+  AlignEndHorizontal,
+  AlignEndVertical,
+  AlignHorizontalDistributeCenter,
+  AlignStartHorizontal,
+  AlignStartVertical,
+  AlignVerticalDistributeCenter,
+  BoxSelect,
   AlignLeft,
   AlignRight,
   ArrowDownToLine,
@@ -45,19 +54,17 @@ import { useLibrary } from '../store/library'
 import { FONTS } from '../fonts/fonts'
 import { resolveColor, slideAccent } from '../model/tokens'
 import { MASCOT_PRESETS } from '../editor/props/basicProps'
-import { deleteSelection, duplicateSelection } from '../editor/actions'
+import { alignSelection, deleteSelection, duplicateSelection, setMultiSelect, toggleLockSelection, type AlignMode } from '../editor/actions'
 import { useMobile } from './store'
 import { ToolButton } from './ui'
 import { addAsset } from '../db/assets'
 
 type Tool = { id: string; label: string; icon: typeof Type; run?: () => void }
 
-function useSelected(): SlideElement | null {
-  return useEditor((s) => {
-    const slide = activeSlideOf(s)
-    if (!slide || s.selection.length !== 1) return null
-    return slide.elements.find((e) => e.id === s.selection[0]) ?? null
-  })
+function useSelectedList(): SlideElement[] {
+  const slide = useEditor((s) => activeSlideOf(s))
+  const selection = useEditor((s) => s.selection)
+  return slide?.elements.filter((e) => selection.includes(e.id)) ?? []
 }
 
 function patch(el: SlideElement, p: Partial<SlideElement> | ((d: SlideElement) => void), key?: string) {
@@ -69,15 +76,18 @@ const editable = (el: SlideElement) => el.type === 'text' || el.type === 'badge'
 // ── Floating pill ──────────────────────────────────────────────────────────
 
 export function SelectionPill({ containerH, containerW }: { containerH: number; containerW: number }) {
-  const el = useSelected()
+  const list = useSelectedList()
   const { zoom, pan, editingTextId, tacticsEditId } = useUI()
   const sheet = useMobile((s) => s.sheet)
-  if (!el || editingTextId || tacticsEditId || sheet) return null
-  const x = pan.x + el.x * zoom
-  const y = pan.y + el.y * zoom
-  const w = el.width * zoom
-  const h = el.height * zoom
-  const pillW = editable(el) ? 230 : 180
+  if (!list.length || editingTextId || tacticsEditId || sheet) return null
+  const el = list.length === 1 ? list[0] : null
+  const bx = Math.min(...list.map((e) => e.x))
+  const by = Math.min(...list.map((e) => e.y))
+  const x = pan.x + bx * zoom
+  const y = pan.y + by * zoom
+  const w = (Math.max(...list.map((e) => e.x + e.width)) - bx) * zoom
+  const h = (Math.max(...list.map((e) => e.y + e.height)) - by) * zoom
+  const pillW = el && editable(el) ? 230 : el ? 180 : 210
   const pillH = 44
   let top = y - pillH - 46
   if (top < 8) top = Math.min(containerH - pillH - 8, y + h + 46)
@@ -86,7 +96,12 @@ export function SelectionPill({ containerH, containerW }: { containerH: number; 
   const btn = 'flex h-11 flex-1 items-center justify-center gap-1.5 text-[12px] font-semibold active:bg-white/10'
   return (
     <div className="absolute z-20 flex overflow-hidden rounded-full border border-white/12 bg-[#1b1d22]/95 shadow-2xl backdrop-blur" style={{ left, top, width: pillW, height: pillH }} data-testid="selection-pill">
-      {editable(el) && (
+      {!el && (
+        <span className="flex h-11 items-center pr-1 pl-4 text-[12px] font-bold text-gold tabular-nums" data-testid="pill-count">
+          {list.length}
+        </span>
+      )}
+      {el && editable(el) && (
         <button type="button" className={btn} aria-label="Editar texto" onClick={() => useUI.getState().set({ editingTextId: el.id })} data-testid="pill-edit">
           <Pencil size={16} /> Editar
         </button>
@@ -561,12 +576,76 @@ function toolsFor(el: SlideElement, replaceModel: () => void): Tool[] {
   }
 }
 
-export function ContextBar() {
-  const el = useSelected()
+const ALIGN_BUTTONS: [AlignMode, typeof AlignCenter, string][] = [
+  ['l', AlignStartVertical, 'Izquierda'],
+  ['c', AlignCenterVertical, 'Centro'],
+  ['r', AlignEndVertical, 'Derecha'],
+  ['t', AlignStartHorizontal, 'Arriba'],
+  ['m', AlignCenterHorizontal, 'Medio'],
+  ['b', AlignEndHorizontal, 'Abajo'],
+  ['distH', AlignHorizontalDistributeCenter, 'Repartir ↔'],
+  ['distV', AlignVerticalDistributeCenter, 'Repartir ↕'],
+]
+
+/** Tools for several selected elements at once. Moving and resizing the group happen on the canvas. */
+function GroupBar({ list }: { list: SlideElement[] }) {
   const tool = useMobile((s) => s.tool)
+  const multi = useUI((s) => s.multiSelect)
+  const ids = list.map((e) => e.id)
+  const opacity = list.reduce((a, e) => a + e.opacity, 0) / list.length
+  const allLocked = list.every((e) => e.locked)
+  const tools: Tool[] = [
+    { id: 'g-align', label: 'Alinear', icon: AlignCenter },
+    { id: 'layer', label: 'Capa', icon: Layers },
+    { id: 'g-opacity', label: 'Opacidad', icon: SunDim },
+    { id: 'g-lock', label: allLocked ? 'Desbloquear' : 'Bloquear', icon: Lock, run: () => toggleLockSelection() },
+    ...(multi ? [] : [{ id: 'multi', label: 'Añadir más', icon: BoxSelect, run: () => setMultiSelect(true) }]),
+  ]
+  return (
+    <div className="shrink-0">
+      {tool === 'g-align' && (
+        <Panel title={`Alinear ${list.length} elementos`}>
+          <div className="grid grid-cols-4 gap-2">
+            {ALIGN_BUTTONS.map(([mode, Icon, label]) => (
+              <button key={mode} type="button" className="flex h-14 flex-col items-center justify-center gap-1 rounded-xl bg-white/7 text-[11px] font-semibold active:bg-white/12" onClick={() => alignSelection(mode)} data-testid={`align-${mode}`}>
+                <Icon size={18} /> {label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button type="button" className="h-11 rounded-xl bg-white/7 text-[12px] font-semibold active:bg-white/12" onClick={() => alignSelection('pc')}>
+              Centrar en la página ↔
+            </button>
+            <button type="button" className="h-11 rounded-xl bg-white/7 text-[12px] font-semibold active:bg-white/12" onClick={() => alignSelection('pm')}>
+              Centrar en la página ↕
+            </button>
+          </div>
+        </Panel>
+      )}
+      {tool === 'layer' && <ToolPanel el={list[0]} tool="layer" />}
+      {tool === 'g-opacity' && (
+        <Panel title="Opacidad del grupo">
+          <RangeRow label="Opacidad" min={0} max={1} step={0.01} value={opacity} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => useEditor.getState().updateElements(ids, (e) => void (e.opacity = v), { key: 'm-group-opacity' })} />
+        </Panel>
+      )}
+      <nav className="flex h-[70px] items-center gap-1 overflow-x-auto border-t border-line bg-panel px-2 pb-[env(safe-area-inset-bottom)]" aria-label="Herramientas del grupo" data-testid="context-bar">
+        {tools.map((t) => (
+          <ToolButton key={t.id} icon={t.icon} label={t.label} active={tool === t.id} testId={`tool-${t.id}`} onClick={() => (t.run ? t.run() : useMobile.getState().set({ tool: tool === t.id ? null : t.id }))} />
+        ))}
+      </nav>
+    </div>
+  )
+}
+
+export function ContextBar() {
+  const list = useSelectedList()
+  const el = list.length === 1 ? list[0] : null
+  const tool = useMobile((s) => s.tool)
+  const multi = useUI((s) => s.multiSelect)
   const modelRef = useRef<HTMLInputElement>(null)
+  if (list.length > 1) return <GroupBar list={list} />
   if (!el) return null
-  const tools = toolsFor(el, () => modelRef.current?.click())
+  const tools = [...toolsFor(el, () => modelRef.current?.click()), ...(multi ? [] : [{ id: 'multi', label: 'Varios', icon: BoxSelect, run: () => setMultiSelect(true) }])]
   const onModel = async (file: File | undefined) => {
     if (!file) return
     try {

@@ -24,6 +24,7 @@ function ElementNode({
   el,
   rc,
   onSelect,
+  onTap,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -34,6 +35,7 @@ function ElementNode({
   el: SlideElement
   rc: RenderCtx
   onSelect: (e: KonvaEventObject<MouseEvent | TouchEvent>, el: SlideElement) => void
+  onTap: (el: SlideElement) => void
   onDragStart: (e: KonvaEventObject<DragEvent>, el: SlideElement) => void
   onDragMove: (e: KonvaEventObject<DragEvent>, el: SlideElement) => void
   onDragEnd: (e: KonvaEventObject<DragEvent>, el: SlideElement) => void
@@ -68,6 +70,7 @@ function ElementNode({
       draggable={!el.locked}
       onMouseDown={(e) => onSelect(e, el)}
       onTouchStart={(e) => onSelect(e, el)}
+      onTap={() => onTap(el)}
       onDragStart={(e) => onDragStart(e, el)}
       onDragMove={(e) => onDragMove(e, el)}
       onDragEnd={(e) => onDragEnd(e, el)}
@@ -194,27 +197,49 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
 
   const others = useMemo(() => slide.elements.filter((e) => e.visible && rc.shown(e) && !selection.includes(e.id) && !(e.type === 'effect' && e.width >= W * 0.95)), [slide.elements, selection, W, rc])
 
+  // Phone multi-selection: a press adds an element at once (so it can be dragged
+  // with the group); a plain tap on an element that was already selected removes it.
+  const pressedSelected = useRef<string | null>(null)
   const onSelect = useCallback(
     (e: KonvaEventObject<MouseEvent | TouchEvent>, el: SlideElement) => {
       if (spaceDown) return
       e.cancelBubble = true
       const shift = 'shiftKey' in e.evt && (e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey)
+      const multi = useUI.getState().multiSelect
       if (tacticsEditId && tacticsEditId !== el.id) useUI.getState().set({ tacticsEditId: null, tacticsSel: null })
-      if (shift) toggleSelect(el.id)
-      else if (!useEditor.getState().selection.includes(el.id)) select([el.id])
+      const selected = useEditor.getState().selection.includes(el.id)
+      pressedSelected.current = multi && selected ? el.id : null
+      if (multi) {
+        if (!selected) toggleSelect(el.id)
+      } else if (shift) toggleSelect(el.id)
+      else if (!selected) select([el.id])
     },
     [select, toggleSelect, tacticsEditId, spaceDown],
   )
 
+  const onTap = useCallback(
+    (el: SlideElement) => {
+      if (useUI.getState().multiSelect && pressedSelected.current === el.id) toggleSelect(el.id)
+      pressedSelected.current = null
+    },
+    [toggleSelect],
+  )
+
+  // Konva's transformer drags every selected node together (it starts a drag on
+  // each of them), so the element under the pointer leads and the others follow.
+  const dragLead = useRef<string | null>(null)
   const onDragStart = useCallback(
     (e: KonvaEventObject<DragEvent>, el: SlideElement) => {
       if (spaceDown) {
         e.target.stopDrag()
         return
       }
+      // Followers of a group drag start while the leader is still dragging.
+      if (dragLead.current && stageRef.current?.findOne(`#${dragLead.current}`)?.isDragging()) return
       const sel = useEditor.getState().selection
       const ids = sel.includes(el.id) ? sel : [el.id]
       if (!sel.includes(el.id)) select([el.id])
+      dragLead.current = el.id
       dragStart.current = new Map()
       const stage = stageRef.current!
       for (const id of ids) {
@@ -228,12 +253,13 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
   const onDragMove = useCallback(
     (e: KonvaEventObject<DragEvent>, el: SlideElement) => {
       const node = e.target
-      if (node.id() !== el.id) return
+      if (node.id() !== el.id || dragLead.current !== el.id) return
       const start = dragStart.current.get(el.id)
       const content = contentRef.current
       if (!start || !content) return
       const lines: GuideLine[] = []
-      if (snapGuides || snapToGrid) {
+      // Snap single elements only: the followers of a group drag track the pointer, not the leader.
+      if ((snapGuides || snapToGrid) && dragStart.current.size === 1) {
         const box = node.getClientRect({ relativeTo: content as unknown as Konva.Container, skipShadow: true })
         const threshold = 7 / zoom
         const vx = [0, W / 2, W, ...others.flatMap((o) => [o.x, o.x + o.width / 2, o.x + o.width])]
@@ -256,19 +282,14 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
         } else if (snapToGrid) node.y(Math.round(node.y() / gridSize) * gridSize)
       }
       setGuides(lines)
-      // Move the rest of the selection by the same delta.
-      const dx = node.x() - start.x
-      const dy = node.y() - start.y
-      const stage = stageRef.current!
-      for (const [id, p] of dragStart.current) {
-        if (id === el.id) continue
-        stage.findOne(`#${id}`)?.position({ x: p.x + dx, y: p.y + dy })
-      }
     },
     [W, H, others, zoom, snapGuides, snapToGrid, gridSize],
   )
 
-  const onDragEnd = useCallback(() => {
+  const onDragEnd = useCallback((_e: KonvaEventObject<DragEvent>, el: SlideElement) => {
+    // Every node of a group drag ends; save once, when the leader does.
+    if (dragLead.current !== el.id) return
+    dragLead.current = null
     setGuides([])
     const stage = stageRef.current!
     const moved = [...dragStart.current.keys()]
@@ -498,7 +519,8 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
           onStageMouseDown(e)
         }} onWheel={onWheel} onTouchStart={(e) => {
           const t = e.target
-          if (t === stageRef.current || t.name() === 'background' || t.name() === 'pasteboard') {
+          // In multi-selection a stray tap on empty space must not drop the group being built.
+          if ((t === stageRef.current || t.name() === 'background' || t.name() === 'pasteboard') && !useUI.getState().multiSelect) {
             select([])
             if (tacticsEditId) useUI.getState().set({ tacticsEditId: null, tacticsSel: null })
           }
@@ -516,6 +538,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
                   rc={rc}
                   hidden={el.id === editingTextId}
                   onSelect={onSelect}
+                  onTap={onTap}
                   onDragStart={onDragStart}
                   onDragMove={onDragMove}
                   onDragEnd={onDragEnd}

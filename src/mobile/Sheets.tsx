@@ -1,6 +1,8 @@
 // Bottom sheets of the mobile editor. Each one does one job with big, labeled targets.
 import { useRef, useState } from 'react'
 import {
+  BoxSelect,
+  ListChecks,
   ArrowLeftRight,
   ChevronLeft,
   ChevronRight,
@@ -60,6 +62,8 @@ import {
   renamePage,
   replacePageTemplate,
   toggleLockSelection,
+  selectAllOnPage,
+  setMultiSelect,
 } from '../editor/actions'
 import { useMobile } from './store'
 import { ActionRow, Chips, SectionLabel, Sheet } from './ui'
@@ -411,9 +415,11 @@ export function MoreSheet() {
   const s = useEditor()
   const slide = activeSlideOf(s)
   const el = slide?.elements.find((e) => s.selection.includes(e.id))
+  const many = s.selection.length > 1
   const hasClip = !!s.clipboard?.length
+  const multi = useUI((u) => u.multiSelect)
   return (
-    <Sheet title={el ? ELEMENT_LABELS[el.type] : 'Opciones'} onClose={close} height="auto" testId="sheet-more">
+    <Sheet title={many ? `${s.selection.length} elementos` : el ? ELEMENT_LABELS[el.type] : 'Opciones'} onClose={close} height="auto" testId="sheet-more">
       <div className="-mx-1">
         <div className="grid grid-cols-3 gap-2 px-1 pb-2">
           <button type="button" className="btn h-14 flex-col gap-0.5 text-[12px]" onClick={() => (copySelection(), close(), useEditor.getState().select([]), useMobile.getState().set({ pasteChip: true }))} data-testid="more-copy">
@@ -434,6 +440,8 @@ export function MoreSheet() {
             Enviar atrás
           </button>
         </div>
+        {!multi && <ActionRow icon={BoxSelect} label="Seleccionar varios" hint="Toca otros elementos para moverlos o escalarlos juntos" onClick={() => (close(), setMultiSelect(true))} testId="more-multi" />}
+        <ActionRow icon={ListChecks} label="Seleccionar todo" hint="Todos los elementos de esta página" onClick={() => (close(), selectAllOnPage(), setMultiSelect(true))} testId="more-select-all" />
         <ActionRow icon={el?.locked ? Unlock : Lock} label={el?.locked ? 'Desbloquear' : 'Bloquear'} hint="Evita moverlo por accidente" onClick={() => toggleLockSelection()} />
         <ActionRow icon={EyeOff} label="Ocultar" hint="Lo recuperas desde Capas" onClick={() => (hideSelection(), close())} />
         <ActionRow icon={SlidersHorizontal} label="Todos los ajustes" onClick={() => useMobile.getState().open('props')} />
@@ -488,6 +496,8 @@ export function MenuSheet() {
         <ActionRow icon={ArrowLeftRight} label="Zonas seguras de TikTok" hint="Guía en pantalla, no se exporta" onClick={() => (useUI.getState().set({ showSafeArea: !useUI.getState().showSafeArea }), close())} />
         <ActionRow icon={Save} label="Guardar copia (.goat.json)" onClick={() => (void exportProjectFile(), close())} />
         <ActionRow icon={FolderOpen} label="Mis proyectos" onClick={() => (close(), void goHome())} />
+        <ActionRow icon={BoxSelect} label="Seleccionar varios elementos" hint="Para moverlos, escalarlos o alinearlos juntos" onClick={() => (close(), setMultiSelect(true))} testId="menu-multi" />
+        <ActionRow icon={ListChecks} label="Seleccionar todo" hint="Todos los elementos de esta página" onClick={() => (close(), selectAllOnPage(), setMultiSelect(true))} testId="menu-select-all" />
         <ActionRow icon={Square} label="Página en blanco" onClick={() => (addBlankPage(), close())} />
         {hasClip && <ActionRow icon={ClipboardPaste} label="Pegar en esta página" hint="Lo último que copiaste" onClick={() => (pasteClipboard(), close())} testId="menu-paste" />}
       </div>

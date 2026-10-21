@@ -17,7 +17,7 @@ import { goHome } from '../store/projectService'
 import { EditorCanvas } from '../editor/canvas/EditorCanvas'
 import { useSlideThumb } from '../editor/thumbs'
 import { TacticsToolbar } from '../editor/props/tacticsProps'
-import { pasteClipboard } from '../editor/actions'
+import { pasteClipboard, setMultiSelect } from '../editor/actions'
 import type { Project, Slide } from '../model/types'
 import { useMobile, type MobileSheet } from './store'
 import { ContextBar, SelectionPill } from './SelectionTools'
@@ -201,6 +201,8 @@ export function MobileEditor() {
   const sheet = useMobile((s) => s.sheet)
   const focus = useMobile((s) => s.focus)
   const editingTextId = useUI((s) => s.editingTextId)
+  const multi = useUI((s) => s.multiSelect)
+  const count = useEditor((s) => s.selection.length)
   const tacticsEditId = useUI((s) => s.tacticsEditId)
   const canvasBox = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
@@ -216,9 +218,15 @@ export function MobileEditor() {
 
   // Always keep the page fitted on phones; close the tool panel when the selection changes.
   useEffect(() => useUI.getState().set({ autoFit: true }), [sheet, selected, focus, editingTextId])
-  useEffect(() => useMobile.getState().set({ tool: null }), [selected])
+  useEffect(() => useMobile.getState().set({ tool: null }), [count])
   // Leaving the editor resets the mobile UI.
-  useEffect(() => () => useMobile.getState().set({ sheet: null, tool: null, focus: false }), [])
+  useEffect(
+    () => () => {
+      useMobile.getState().set({ sheet: null, tool: null, focus: false })
+      useUI.getState().set({ multiSelect: false })
+    },
+    [],
+  )
 
   const editingText = !!editingTextId
   let bottom: React.ReactNode
@@ -247,6 +255,17 @@ export function MobileEditor() {
             </button>
             <button type="button" className="flex h-full w-9 items-center justify-center border-l border-white/10 text-muted active:bg-white/10" aria-label="Descartar" onClick={() => useMobile.getState().set({ pasteChip: false })}>
               <X size={15} />
+            </button>
+          </div>
+        )}
+        {multi && !editingText && (
+          <div className="absolute inset-x-3 top-3 z-20 flex items-center gap-2 rounded-2xl border border-gold/40 bg-[#1b1d22]/95 py-2 pr-2 pl-4 shadow-xl backdrop-blur" role="status" data-testid="m-multi-banner">
+            <span className="min-w-0 flex-1 text-[13px] leading-tight">
+              <b className="text-gold tabular-nums">{count}</b> seleccionado{count === 1 ? '' : 's'}
+              <span className="block text-[11px] text-muted">Toca para añadir o quitar. Arrastra para mover todo.</span>
+            </span>
+            <button type="button" className="h-9 shrink-0 rounded-full bg-gold px-4 text-[13px] font-bold text-ink active:scale-95" onClick={() => setMultiSelect(false)} data-testid="m-multi-done">
+              Listo
             </button>
           </div>
         )}

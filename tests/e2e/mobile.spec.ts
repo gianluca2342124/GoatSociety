@@ -97,14 +97,16 @@ test('mobile editor: create, edit, pages, elements, photos, preview, export', as
   await expect(page.getByTestId('selection-pill')).toBeVisible()
   await expect(page.getByTestId('context-bar')).toBeVisible()
 
-  // Edit text: the sheet shows real words (not {tokens}) and edits the match headline.
+  // Edit text: the sheet shows real words (not {tokens}) and changes ONLY this text.
+  const headlineBefore = await state<string>(page, 'return ed.project.match.headline')
   await page.getByTestId('pill-edit').tap()
   const box = page.getByTestId('m-text-sheet').getByLabel('Texto')
   await expect(box).toBeVisible()
   await expect(box).not.toHaveValue(/\{/)
   await box.fill('El Barça no perdona en [[casa]]')
   await page.getByTestId('m-text-done').tap()
-  expect(await state<string>(page, 'return ed.project.match.headline')).toBe('El Barça no perdona en [[casa]]')
+  expect(await state<string>(page, `return slide.elements.find(${HEADLINE}).text`)).toBe('El Barça no perdona en [[casa]]')
+  expect(await state<string>(page, 'return ed.project.match.headline')).toBe(headlineBefore)
 
   // Style tools: metallic/gradient finish.
   await page.getByTestId('tool-effect').tap()
@@ -129,6 +131,30 @@ test('mobile editor: create, edit, pages, elements, photos, preview, export', as
   await page.getByTestId('m-paste').tap()
   expect(await elementCount(page)).toBe(p2 + 1)
   await expect(page.getByTestId('m-paste')).toHaveCount(0)
+  await tapEmpty(page)
+
+  // Multi-selection: three elements move together by the same amount, one tap removes one.
+  await page.getByTestId('m-page').first().tap()
+  await tapElement(page, HEADLINE)
+  await page.getByTestId('tool-multi').tap()
+  await expect(page.getByTestId('m-multi-banner')).toBeVisible()
+  await tapElement(page, `e => e.type === 'crest' && e.side === 'home'`)
+  await tapElement(page, `e => e.type === 'crest' && e.side === 'away'`)
+  expect(await state<number>(page, 'return ed.selection.length')).toBe(3)
+  const ys = () => state<number[]>(page, 'return slide.elements.filter(e => ed.selection.includes(e.id)).map(e => e.y)')
+  const y0 = await ys()
+  const from = await state<{ x: number; y: number }>(page, `const el = slide.elements.find(e => e.type === 'crest' && e.side === 'home'); const ws = document.querySelector('[data-testid=canvas-workspace]').getBoundingClientRect(); return { x: ws.left + ui.pan.x + (el.x + el.width / 2) * ui.zoom, y: ws.top + ui.pan.y + (el.y + el.height / 2) * ui.zoom }`)
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from.x, y: from.y }] })
+  for (let i = 1; i <= 10; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from.x, y: from.y + i * 5 }] })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await expect.poll(async () => (await ys())[0]).not.toBe(y0[0])
+  const dy = (await ys()).map((y, i) => Math.round(y - y0[i]))
+  expect(new Set(dy).size).toBe(1)
+  await tapElement(page, `e => e.type === 'crest' && e.side === 'away'`)
+  expect(await state<number>(page, 'return ed.selection.length')).toBe(2)
+  await page.getByTestId('m-multi-done').tap()
+  await expect(page.getByTestId('m-multi-banner')).toHaveCount(0)
   await tapEmpty(page)
 
   // Elements library: add an «Acertado» badge.

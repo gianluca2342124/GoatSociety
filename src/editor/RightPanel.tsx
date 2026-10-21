@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import type { SlideElement } from '../model/types'
 import { shownAtIntensity, slideIntensity } from '../model/tokens'
-import { activeSlideOf, useActiveSlide, useEditor } from '../store/editor'
+import { useActiveSlide, useEditor } from '../store/editor'
 import { useUI } from '../store/ui'
 import { ELEMENT_LABELS } from '../model/elements'
 import { AppearanceSection, AssetPicker, FillEditor, TransformSection } from './props/common'
@@ -36,6 +36,7 @@ import { Stadium3DProps, TacticsProps } from './props/tacticsProps'
 import { Section, Slider, TextField, Toggle } from '../ui/controls'
 import { buildTemplateSlide, templateById } from '../templates'
 import { SlideStyleSection } from './StylePanel'
+import { alignSelection, type AlignMode } from './actions'
 
 export function ElementSpecific({ el }: { el: SlideElement }) {
   switch (el.type) {
@@ -131,44 +132,9 @@ function ElementHeader({ el }: { el: SlideElement }) {
 }
 
 function MultiPanel({ els }: { els: SlideElement[] }) {
-  const update = useEditor((s) => s.update)
-  const project = useEditor((s) => s.project)!
-  const slideId = useEditor((s) => activeSlideOf(s)?.id)
   const ids = els.map((e) => e.id)
-  const align = (mode: string) =>
-    update((d) => {
-      const s = d.slides.find((x) => x.id === slideId)
-      if (!s) return
-      const list = s.elements.filter((e) => ids.includes(e.id))
-      const minX = Math.min(...list.map((e) => e.x))
-      const maxX = Math.max(...list.map((e) => e.x + e.width))
-      const minY = Math.min(...list.map((e) => e.y))
-      const maxY = Math.max(...list.map((e) => e.y + e.height))
-      if (mode === 'distH' || mode === 'distV') {
-        const horiz = mode === 'distH'
-        const sorted = [...list].sort((a, b) => (horiz ? a.x - b.x : a.y - b.y))
-        const total = sorted.reduce((acc, e) => acc + (horiz ? e.width : e.height), 0)
-        const span = horiz ? maxX - minX : maxY - minY
-        const gap = sorted.length > 1 ? (span - total) / (sorted.length - 1) : 0
-        let cur = horiz ? minX : minY
-        for (const e of sorted) {
-          if (horiz) e.x = cur
-          else e.y = cur
-          cur += (horiz ? e.width : e.height) + gap
-        }
-        return
-      }
-      for (const e of list) {
-        if (mode === 'l') e.x = minX
-        if (mode === 'r') e.x = maxX - e.width
-        if (mode === 'c') e.x = (minX + maxX) / 2 - e.width / 2
-        if (mode === 't') e.y = minY
-        if (mode === 'b') e.y = maxY - e.height
-        if (mode === 'm') e.y = (minY + maxY) / 2 - e.height / 2
-        if (mode === 'pc') e.x = project.format.width / 2 - e.width / 2
-      }
-    })
-  const buttons: [string, typeof AlignStartVertical, string][] = [
+  const align = (mode: AlignMode) => alignSelection(mode)
+  const buttons: [AlignMode, typeof AlignStartVertical, string][] = [
     ['l', AlignStartVertical, 'Alinear izquierdas'],
     ['c', AlignCenterVertical, 'Centrar en horizontal'],
     ['r', AlignEndVertical, 'Alinear derechas'],
@@ -191,9 +157,15 @@ function MultiPanel({ els }: { els: SlideElement[] }) {
             </button>
           ))}
         </div>
-        <button type="button" className="btn w-full" onClick={() => align('pc')}>
-          Centrar todos en el lienzo
-        </button>
+        <div className="grid grid-cols-2 gap-1.5">
+          <button type="button" className="btn text-[12px]" onClick={() => align('pc')}>
+            Centrar en horizontal
+          </button>
+          <button type="button" className="btn text-[12px]" onClick={() => align('pm')}>
+            Centrar en vertical
+          </button>
+        </div>
+        <p className="text-[11px] leading-snug text-dim">Centra el grupo en la página sin cambiar su composición.</p>
       </Section>
       <Section title="Acciones">
         <Slider

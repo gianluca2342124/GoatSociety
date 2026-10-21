@@ -85,11 +85,14 @@ export const useEditor = create<EditorState>((set, get) => ({
   update: (recipe, opts = {}) => {
     const { project, past, lastKey, lastTime } = get()
     if (!project) return
-    const next = produce(project, (d) => {
+    const changed = produce(project, (d) => {
       recipe(d)
+    })
+    // A recipe that changes nothing must not leave an empty undo step.
+    if (changed === project) return
+    const next = produce(changed, (d) => {
       d.updatedAt = Date.now()
     })
-    if (next === project) return
     const now = Date.now()
     const coalesce = opts.key != null && opts.key === lastKey && now - lastTime < COALESCE_MS
     const record = opts.history !== false && !coalesce

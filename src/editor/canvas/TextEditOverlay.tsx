@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react'
 import type { TextElement } from '../../model/types'
-import { useEditor } from '../../store/editor'
 import { useUI } from '../../store/ui'
+import { useEditableText } from '../textEditing'
 
-/** In-place text editor positioned over the element. Edits apply live. */
+/** In-place text editor positioned over the element. Edits apply live and only to this text. */
 export function TextEditOverlay({ el, zoom, pan }: { el: TextElement; zoom: number; pan: { x: number; y: number } }) {
   const ref = useRef<HTMLTextAreaElement>(null)
-  const updateElement = useEditor((s) => s.updateElement)
+  const edit = useEditableText(el)!
   useEffect(() => {
     const t = ref.current
     if (!t) return
@@ -32,8 +32,8 @@ export function TextEditOverlay({ el, zoom, pan }: { el: TextElement; zoom: numb
         aria-label="Editar texto"
         className="h-full w-full resize-none rounded-lg border-2 border-gold bg-ink/80 p-3 leading-tight text-ivory shadow-2xl outline-none backdrop-blur"
         style={{ fontSize: fontPx, minHeight: Math.max(60, el.height * zoom), textAlign: el.align, fontFamily: 'var(--font-cond)', fontWeight: 700 }}
-        value={el.text}
-        onChange={(e) => updateElement(el.id, { text: e.target.value }, { key: `text-${el.id}` })}
+        value={edit.value}
+        onChange={(e) => edit.onChange(e.target.value)}
         onBlur={close}
         onKeyDown={(e) => {
           e.stopPropagation()
@@ -41,7 +41,21 @@ export function TextEditOverlay({ el, zoom, pan }: { el: TextElement; zoom: numb
         }}
       />
       <div className="mt-1 rounded bg-ink/80 px-2 py-1 text-[11px] text-muted">
-        Usa <b className="text-gold">[[palabra]]</b> para resaltar · <b className="text-gold">{'{home}'}</b> para datos del partido · Esc para terminar
+        Solo cambia este texto · <b className="text-gold">[[palabra]]</b> para resaltar · Esc para terminar
+        {edit.fieldLabel && (
+          <>
+            {' · '}
+            <button
+              type="button"
+              className="font-semibold text-gold hover:underline"
+              // Keep the textarea focused until the click lands.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => useUI.getState().set({ editingTextId: null, leftTab: 'match', panelOpen: true })}
+            >
+              Cambiar {edit.fieldLabel} en todas las páginas
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
