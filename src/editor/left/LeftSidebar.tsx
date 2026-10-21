@@ -1,12 +1,14 @@
-import { BarChart3, Crown, Images, LayoutTemplate, Layers3, Palette, Shapes, Shield, Sparkles, Swords, Trophy, Type, Users, PanelLeftClose } from 'lucide-react'
+import { BarChart3, Blocks, Crown, Images, LayoutTemplate, Layers3, Palette, Shapes, Shield, Sparkles, Swords, Trophy, Type, Users, PanelLeftClose } from 'lucide-react'
 import { useUI, type LeftTab } from '../../store/ui'
 import { ChartsPanel, EffectsPanel, MascotPanel, ShapesPanel, SlidesPanel, TacticsPanel, TemplatesPanel, TextPanel } from './contentPanels'
 import { MatchPanel, StatsPanel, TeamsPanel } from './dataPanels'
 import { AssetsPanel, BrandPanel } from './libraryPanels'
+import { ElementsPanel } from './ElementsPanel'
 
 export const TABS: { id: LeftTab; label: string; icon: typeof Type }[] = [
   { id: 'templates', label: 'Plantillas', icon: LayoutTemplate },
   { id: 'slides', label: 'Páginas', icon: Layers3 },
+  { id: 'elements', label: 'Elementos', icon: Blocks },
   { id: 'match', label: 'Partido', icon: Trophy },
   { id: 'teams', label: 'Equipos', icon: Shield },
   { id: 'stats', label: 'Estadísticas', icon: Users },
@@ -26,6 +28,8 @@ function Panel({ tab }: { tab: LeftTab }) {
       return <TemplatesPanel />
     case 'slides':
       return <SlidesPanel />
+    case 'elements':
+      return <ElementsPanel />
     case 'match':
       return <MatchPanel />
     case 'teams':

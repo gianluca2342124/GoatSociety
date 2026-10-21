@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
-/** Phones and small tablets in portrait get the mobile-first editor. */
-export const MOBILE_QUERY = '(max-width: 820px)'
+/** Phones (either orientation) and small tablets in portrait get the mobile-first editor. */
+export const MOBILE_QUERY = '(max-width: 820px), (max-height: 520px) and (pointer: coarse)'
 
 export function useIsMobile(): boolean {
   const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches)

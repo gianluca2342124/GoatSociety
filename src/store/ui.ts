@@ -4,6 +4,7 @@ import type { AnnotationKind } from '../model/types'
 export type LeftTab =
   | 'templates'
   | 'slides'
+  | 'elements'
   | 'match'
   | 'teams'
   | 'stats'

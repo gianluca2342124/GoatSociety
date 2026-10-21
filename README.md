@@ -5,6 +5,7 @@ Estudio gráfico **local** para crear contenido de fútbol premium (carruseles y
 - Sin suscripciones, sin cuentas, sin APIs de pago, sin marcas de agua de terceros.
 - Todo se guarda en tu navegador (IndexedDB): proyectos, escudos, logos, fondos, modelos 3D y ajustes de marca.
 - Funciona sin conexión una vez instalado (PWA).
+- **Pensada para el móvil**: en un teléfono se abre un editor propio, tipo app de diseño, con el lienzo a pantalla casi completa y las herramientas abajo, al alcance del pulgar.
 - Lo que ves en el editor es exactamente lo que se exporta: el lienzo del editor y el exportador usan **el mismo motor de pintado** (Canvas 2D), elemento por elemento.
 
 ---
@@ -55,6 +56,10 @@ Todas las plantillas siguen el sistema descrito en [`docs/DESIGN-SYSTEM.md`](doc
 - **Sin aspecto de dashboard**: composiciones abiertas, sin tarjetas, píldoras, brillos ni texturas innecesarias. Las tarjetas solo donde se justifican.
 - **Componentes**: comparativa audaz (cifras enormes + barra proporcional gruesa), cifra dominante, cara a cara, racha en letras, ranking con barras, probabilidad 1X2 con barra segmentada, pronóstico sin tarjeta y bloqueado con desenfoque real y candado sólido, pizarras con campo realista y una sola acción destacada.
 
+### Reglas de familia
+
+Todas las plantillas comparten la misma rejilla: firma GOAT SOCIETY arriba a la izquierda y número de página «1/7» arriba a la derecha, **titular centrado a la misma altura y tamaño** con acabado metálico sutil, el visual en el centro y la fuente o llamada a la acción en una línea común abajo. El fondo es un degradado oscuro elegante (casi negro, nunca plano ni chillón). Los titulares pueden usar **Acabado**: liso, metálico o degradado.
+
 ### Acento e intensidad por diapositiva
 
 Sin nada seleccionado, el panel derecho muestra **Estilo GOAT EDITORIAL**:
@@ -77,18 +82,38 @@ Los proyectos guardados se abren sin cambios visuales salvo dos migraciones segu
 
 ### Flujo rápido (5 minutos)
 
-1. **Nuevo carrusel de partido** → elige los dos equipos (de la biblioteca o escribiendo), competición, fecha, hora y formato.
+1. **Nuevo carrusel de partido** → elige los dos equipos (de la biblioteca o escribiendo), competición, fecha, hora y formato (por defecto **Vertical 3:4**, 1080×1440).
 2. Se crean **7 diapositivas enlazadas**: portada, cifras clave, movimiento táctico, jugadores clave, estadísticas, pronóstico bloqueado y llamada a la comunidad.
 3. Rellena tus datos en **Partido**, **Equipos** y **Estadísticas**. Todas las diapositivas se actualizan solas.
 4. Ajusta lo que quieras en el lienzo (doble clic en un texto para editarlo; doble clic en una pizarra táctica para mover jugadores y dibujar flechas).
 5. **Vista previa** → **Exportar** → ZIP con `goat-society-local-visitante-01.png`, `-02.png`…
+
+### En el móvil
+
+En un teléfono (o una tableta pequeña en vertical) el editor cambia solo a un diseño móvil:
+
+| Zona | Qué hace |
+| --- | --- |
+| Barra superior | Volver a Mis proyectos, deshacer/rehacer, página actual (3 / 7), vista previa, ⋯ (más opciones) y **Descargar**. |
+| Lienzo | Ocupa casi toda la pantalla y se ajusta solo. Toca un elemento para seleccionarlo, arrástralo para moverlo y usa las esquinas para escalar o el tirador superior para girar. Toca fuera para deseleccionar. |
+| Píldora flotante | Junto a lo seleccionado: **Editar** (textos y etiquetas), **Duplicar**, **Eliminar** y **⋯** (copiar, pegar, traer adelante, enviar atrás, bloquear, ocultar, todos los ajustes). |
+| Herramientas del elemento | Sustituyen a la navegación mientras hay algo seleccionado. Texto: fuente, color, tamaño, alineación, acabado, opacidad, capa. Foto: reemplazar, ajuste (rellenar/encajar), encuadre, fundido. Escudo: equipo y cambiar escudo. Etiqueta, marcador, pronóstico, pizarra y 3D tienen las suyas. |
+| Tira de páginas | Miniaturas: toca para cambiar de página; toca la página actual para sus opciones (duplicar, mover, cambiar plantilla, renombrar, descargar esta página, eliminar). **+** añade una página en blanco, desde plantilla o duplicada. |
+| Navegación inferior | **Plantillas**, **Elementos**, **Fotos**, **Datos** (partido, equipos, estadísticas) y **Estilo** (acento, intensidad, fondo, formato y marca). |
+
+- **Editar texto** abre un cuadro fijo sobre el teclado: la página sigue visible y se actualiza mientras escribes. Los textos vinculados muestran las palabras reales (nunca `{tokens}`): si el texto es el titular del partido, al editarlo cambias el titular de todo el carrusel.
+- **Borrar es seguro**: borrar un elemento o una página, cambiar de plantilla o de formato se hace al instante y aparece **Deshacer** durante unos segundos, sin ventanas de confirmación.
+- **Copiar y pegar entre páginas**: ⋯ → Copiar, cambia de página y toca **Pegar aquí**.
+- **Fotos**: subir desde el móvil rellena el hueco «Foto» de las plantillas con foto; si no hay hueco, la añade a la página.
+- **Modo enfoque** (⋯) oculta todo menos el diseño; **Vista previa** muestra las páginas a pantalla completa con deslizamiento lateral (desliza hacia abajo para cerrar).
+- **Página en blanco**: incluye ya la firma GOAT SOCIETY y el número de página.
 
 ### Distribución de la interfaz
 
 | Zona | Contenido |
 | --- | --- |
 | Barra superior | Nuevo, abrir, guardar, exportar/importar proyecto (.goat.json), deshacer/rehacer, nombre, estado de guardado, tamaño de lienzo, kit de marca, atajos, vista previa y exportar. |
-| Barra izquierda | Plantillas, Páginas, Partido, Equipos, Estadísticas, Texto, Formas, Gráficos, Táctica, Mascota, Imágenes, Efectos y Marca. |
+| Barra izquierda | Plantillas, Páginas, **Elementos** (biblioteca de piezas listas), Partido, Equipos, Estadísticas, Texto, Formas, Gráficos, Táctica, Mascota, Imágenes, Efectos y Marca. |
 | Centro | Lienzo con zoom (Ctrl + rueda), desplazamiento (espacio + arrastrar o rueda), guías inteligentes, cuadrícula, ajuste a cuadrícula y zona segura de TikTok/Instagram. |
 | Barra derecha | Propiedades contextuales del elemento seleccionado (o de la diapositiva) y panel de **Capas** con reordenar por arrastre, ocultar y bloquear. |
 | Abajo | Tira de diapositivas con miniaturas; arrastra para reordenar, duplica o elimina. |
@@ -119,8 +144,10 @@ Los proyectos guardados se abren sin cambios visuales salvo dos migraciones segu
 ### Pronósticos bloqueados
 
 - Elemento **Pronóstico** con modos Normal, **Bloqueado** y **Revelado** (misma composición).
-- En modo bloqueado: desenfoque real ajustable, velo, estilo de candado, texto teaser, qué ocultar (pronóstico, pronóstico + cuota o todo) y colores.
-- El texto oculto se sustituye por caracteres aleatorios **antes** de difuminarse, así que la imagen exportada nunca permite leer el pronóstico real.
+- En modo bloqueado: desenfoque fuerte ajustable, **velo esmerilado**, **resplandor** detrás del candado, estilo de candado, texto teaser, qué ocultar (pronóstico, pronóstico + cuota o todo) y colores.
+- El texto oculto se sustituye por un señuelo de **forma fija** (no conserva ni las letras ni la longitud del pronóstico real) **antes** de difuminarse, así que la imagen exportada nunca permite leerlo ni adivinarlo.
+- **TE LO DIJE** (plantilla 35): para presumir de un pronóstico que **ya ha salido**. Se rellena a mano después del partido (resultado en Partido → Resultado y el pronóstico acertado en el selector «Pronóstico vinculado»). No promete nada sobre pronósticos futuros.
+- Etiquetas iluminadas listas en **Elementos → Etiquetas**: «Acertado», «Solo en mi comunidad», «Resultado final», «Ganado», «Última hora», «Oficial»…
 - Es un recurso visual promocional; no hay pagos ni autenticación. Ningún pronóstico se presenta como garantizado y el aviso legal de la marca está incluido en las plantillas.
 
 ### Mascota GOAT
@@ -170,16 +197,17 @@ Recomendación: usa `.glb` (lleva las texturas dentro). Un `.gltf` con texturas 
 
 ## 11. Exportar carruseles
 
-**Exportar** (Ctrl+E):
+**Exportar** (Ctrl+E) o **Descargar** en el móvil:
 
-- Carrusel completo en **ZIP** o solo la diapositiva actual.
+- **Esta página**, **todas** o **elegir** páginas concretas.
+- En un **ZIP** o como **imágenes sueltas**. En el móvil, **Guardar en el móvil** abre el menú de compartir del sistema (fotos, archivos…) cuando el navegador lo permite.
 - **PNG** (máxima calidad), **JPEG** o **WebP** con control de calidad.
 - Resolución **1×** (p. ej. 1080×1920) o **2×** (2160×3840).
 - Fondo transparente opcional (PNG/WebP).
 - Nombres secuenciales: `goat-society-psg-barcelona-01.png`, `-02.png`…
 - Se exporta **solo el diseño**: sin guías, sin selección, sin zonas seguras ni interfaz de TikTok/Instagram. La vista a tamaño real, las zonas seguras y la simulación de interfaz existen solo en el editor y en la vista previa.
 
-Formatos de lienzo: Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuadrado 1080×1080 y horizontal 1920×1080. **Tamaño del lienzo** permite cambiar el formato de un proyecto recomponiendo las plantillas o escalando proporcionalmente.
+Formatos de lienzo: **Vertical 3:4 1080×1440 (por defecto)**, Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuadrado 1080×1080 y horizontal 1920×1080. **Tamaño del lienzo** permite cambiar el formato de un proyecto recomponiendo las plantillas o escalando proporcionalmente.
 
 ## 12. Atajos de teclado
 
@@ -229,8 +257,22 @@ Formatos de lienzo: Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuad
 | 23 | Win Probability | Pronósticos | Probabilidad 1X2 con barra segmentada (opinión, no garantía) |
 | 24 | Bajas y dudas | Estadísticas | Bajas de ambos equipos en filas abiertas |
 | 25 | Community · Mascota | Comunidad | La mascota como protagonista |
+| 26 | Última hora | Noticias | Foto a sangre, sombra inferior, etiqueta roja y titular enorme |
+| 27 | Resultado | Noticias | Foto, marcador grande con escudos y titular corto |
+| 28 | Cita | Noticias | Comillas en acento, cita grande, nombre y cargo |
+| 29 | Fichaje | Noticias | Nombre enorme y escudo de origen → destino |
+| 30 | Parte médico | Noticias | Baja, tiempo estimado y lesión |
+| 31 | Dato viral | Noticias | Una cifra gigante metálica sobre la foto |
+| 32 | Resumen | Noticias | Marcador, goleadores con minuto y datos del partido |
+| 33 | Titular | Noticias | Foto enmarcada arriba y titular de noticia debajo |
+| 34 | Jugador | Noticias | Nombre enorme y tres cifras del jugador |
+| 35 | Te lo dije | Pronósticos | Pronóstico ya acertado: «ACERTADO», resultado y pick revelado |
 
-Todas son composiciones paramétricas de elementos editables (no imágenes planas) y se adaptan a los cuatro formatos de lienzo.
+Todas son composiciones paramétricas de elementos editables (no imágenes planas) y se adaptan a los cinco formatos de lienzo. Las de **Noticias** funcionan sin foto (escudos atenuados de respaldo) y quedan mejor con tu imagen en el elemento «Foto»: los textos de ejemplo son ficticios, edítalos antes de publicar.
+
+### Biblioteca de elementos
+
+**Elementos** (móvil y escritorio) añade piezas sueltas a la página actual: titulares, subtítulos, citas, llamadas a la acción, etiquetas iluminadas, comparativas, barras de proporción, cifras gigantes, porcentajes, rankings, probabilidad 1X2, rachas, marcadores (fila, apilado o píldora, enlazados al resultado del partido), agenda, jugadores, bajas, escudos, marcos de foto, sombras, formas, módulos de pronóstico (normal, bloqueado, revelado, historial), pizarras, estadio 3D, firma, logo, número de página y mascota.
 
 ## 14. Arquitectura (resumen técnico)
 
@@ -247,9 +289,14 @@ Todas son composiciones paramétricas de elementos editables (no imágenes plana
 ```bash
 npm test           # pruebas unitarias (Vitest): estadísticas, tokens, proyección táctica,
                    # formaciones, plantillas, guardado/carga en IndexedDB, .goat.json, SVG, historial
-npm run test:e2e   # flujo completo en navegador (Playwright): crear carrusel, equipos,
-                   # subir escudos, fecha, titular, estadísticas, pizarra táctica, pronóstico
-                   # bloqueado, comunidad, guardar, recargar, exportar ZIP y verificar las imágenes
+npm run test:e2e   # flujos completos en navegador (Playwright):
+                   # · escritorio: crear carrusel, equipos, subir escudos, fecha, titular,
+                   #   estadísticas, pizarra táctica, pronóstico bloqueado, comunidad, guardar,
+                   #   recargar, exportar ZIP y verificar las imágenes
+                   # · móvil (pantalla de iPhone, táctil): seleccionar y editar textos, acabado,
+                   #   duplicar/borrar/deshacer, copiar y pegar entre páginas, elementos,
+                   #   plantilla de noticias + foto, cambiar escudo, acciones de página,
+                   #   formato, modo enfoque, vista previa y descarga ZIP en 3:4
 ```
 
 Para la prueba e2e se necesita Chromium de Playwright (`npx playwright install chromium` si no lo tienes).
@@ -263,3 +310,6 @@ Para la prueba e2e se necesita Chromium de Playwright (`npx playwright install c
 - Los `.gltf` con texturas en archivos separados no se resuelven (usa `.glb`).
 - En Safari el desenfoque de lienzo usa un método alternativo (más lento en exportaciones a 2×).
 - La aplicación no obtiene datos deportivos automáticamente (decisión de diseño: coste cero y sin dependencias externas).
+- En el móvil, la edición fina de estadísticas, plantillas de datos y kit de marca reutiliza los paneles de escritorio dentro de hojas inferiores: funcionan, pero son más densos que el resto del editor móvil. La selección múltiple (Shift) y las guías de alineación avanzadas son solo de escritorio.
+- Las pruebas móviles se hacen con Chromium emulando un iPhone; Safari/iOS real no se ha probado automáticamente (el menú de compartir y el teclado pueden variar según el navegador).
+- Las plantillas de noticias tienen composiciones fijas: si tu titular necesita muchas más líneas que el ejemplo, el texto se reduce para caber o deja más aire.
