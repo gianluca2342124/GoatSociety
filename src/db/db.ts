@@ -48,6 +48,30 @@ function open() {
   })
 }
 
+/**
+ * Swap in fake-indexeddb's classes as the IndexedDB globals (idb checks
+ * instanceof against them). Uses the side-effect-free entry on purpose: the
+ * `/auto` entry patches globals on load, and bundlers may evaluate it eagerly.
+ */
+async function installMemoryIndexedDB() {
+  const fake = await import('fake-indexeddb')
+  const globals: Record<string, unknown> = {
+    indexedDB: fake.indexedDB,
+    IDBCursor: fake.IDBCursor,
+    IDBCursorWithValue: fake.IDBCursorWithValue,
+    IDBDatabase: fake.IDBDatabase,
+    IDBFactory: fake.IDBFactory,
+    IDBIndex: fake.IDBIndex,
+    IDBKeyRange: fake.IDBKeyRange,
+    IDBObjectStore: fake.IDBObjectStore,
+    IDBOpenDBRequest: fake.IDBOpenDBRequest,
+    IDBRequest: fake.IDBRequest,
+    IDBTransaction: fake.IDBTransaction,
+    IDBVersionChangeEvent: fake.IDBVersionChangeEvent,
+  }
+  for (const [name, value] of Object.entries(globals)) Object.defineProperty(globalThis, name, { value, configurable: true, writable: true })
+}
+
 export function db(): Promise<IDBPDatabase<GoatDB>> {
   if (!dbPromise) {
     dbPromise = (async () => {
@@ -57,7 +81,7 @@ export function db(): Promise<IDBPDatabase<GoatDB>> {
       } catch {
         // Private windows, blocked site data or embedded previews: keep the
         // studio usable with an in-memory database for this session.
-        await import('fake-indexeddb/auto')
+        await installMemoryIndexedDB()
         memoryOnly = true
         return open()
       }

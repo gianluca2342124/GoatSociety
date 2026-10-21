@@ -40,6 +40,20 @@ Abre `http://localhost:4173` y usa **Instalar aplicación** en la barra de direc
 
 La carpeta `dist/` es estática: puedes copiarla a cualquier hosting estático gratuito (GitHub Pages, Netlify, Cloudflare Pages…) si quieres abrirla desde otro equipo, pero **no lo necesitas**: la app no depende de ningún servidor. Recuerda que los datos se guardan en el navegador de cada equipo (usa la exportación `.goat.json` para moverlos).
 
+### Versión artifact (claude.ai)
+
+```bash
+npm run build:artifact   # genera dist-artifact/goat-society-studio.html
+```
+
+Un único archivo HTML autocontenido (código, estilos y fuentes dentro) preparado para publicarse como **artifact** en claude.ai y abrirse desde el navegador o la app de Claude, en el ordenador o en el móvil. Diferencias con la versión normal:
+
+- **Descargas**: el visor de claude.ai no deja que la página descargue archivos por su cuenta, así que cada descarga (ZIP, imágenes, `.goat.json`) pasa por el visor, que pide confirmación. Si eliges «Imágenes sueltas», confirma una vez por imagen; el ZIP es una sola confirmación.
+- **Tus datos**: los proyectos y las imágenes se guardan en el navegador de quien abre el artifact, igual que en la versión normal. Otra persona que abra el mismo enlace empieza con su propio estudio vacío. Si el navegador no deja guardar (ventana privada estricta), la app avisa y trabaja en memoria: exporta un `.goat.json` antes de cerrar.
+- **Sin instalación ni modo sin conexión**: el visor no admite service workers.
+- **Fuentes**: se incluyen los juegos latinos (español, portugués, inglés…). Nombres en alfabetos cirílico o griego se dibujan con la fuente del sistema.
+- **Confirmaciones**: borrar un proyecto o una imagen de la biblioteca se confirma dentro de la app; lo que se puede deshacer se hace al instante con «Deshacer».
+
 ---
 
 ## 5. Dirección de arte GOAT EDITORIAL

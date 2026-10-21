@@ -86,6 +86,8 @@ export default defineConfig(({ mode }) => {
                 if (id.includes('konva')) return 'konva'
                 if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) return 'react'
                 if (id.includes('@fontsource')) return undefined
+                // Loaded only when the browser refuses IndexedDB: keep it out of the eager vendor chunk.
+                if (id.includes('fake-indexeddb')) return undefined
                 return 'vendor'
               },
             },
