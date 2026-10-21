@@ -30,12 +30,20 @@ describe('downloads inside the artifact viewer', () => {
   it('treats a declined prompt as a cancel, not an error', async () => {
     const { downloadBlob, downloadFiles } = await loadWithViewer(async () => Promise.reject({ code: 'declined' }))
     await expect(downloadBlob(new Blob(['x']), 'a.zip')).resolves.toBe(false)
-    await expect(downloadFiles([new File(['x'], 'a.png'), new File(['y'], 'b.png')])).resolves.toBe(0)
+    await expect(downloadFiles([new File(['x'], 'a.png'), new File(['y'], 'b.png')])).resolves.toEqual({ saved: 0 })
   })
 
   it('explains other failures in Spanish', async () => {
     const { downloadBlob } = await loadWithViewer(async () => Promise.reject({ code: 'rate_limited' }))
     await expect(downloadBlob(new Blob(['x']), 'a.zip')).rejects.toThrow(/confirmación/)
+  })
+
+  it('keeps the count of files saved before a failure', async () => {
+    let n = 0
+    const { downloadFiles } = await loadWithViewer(async () => (n++ === 0 ? { status: 'saved' } : Promise.reject({ code: 'too_large' })))
+    const r = await downloadFiles([new File(['x'], 'a.png'), new File(['y'], 'b.png'), new File(['z'], 'c.png')])
+    expect(r.saved).toBe(1)
+    expect(r.error).toMatch(/imagen es demasiado grande/)
   })
 
   it('says saving is unavailable when the viewer offers no downloads', async () => {

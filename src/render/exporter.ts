@@ -144,15 +144,22 @@ export async function shareFiles(files: File[], title: string): Promise<boolean>
   }
 }
 
-/** Download files one by one (browsers handle a short pause between them better). Returns how many were saved. */
-export async function downloadFiles(files: File[]): Promise<number> {
+/**
+ * Download files one by one (browsers handle a short pause between them better).
+ * Stops at the first decline or failure and reports how many were saved before it.
+ */
+export async function downloadFiles(files: File[]): Promise<{ saved: number; error?: string }> {
   let saved = 0
   for (const f of files) {
-    if (!(await downloadBlob(f, f.name))) break
+    try {
+      if (!(await downloadBlob(f, f.name))) break
+    } catch (e) {
+      return { saved, error: e instanceof Error ? e.message : String(e) }
+    }
     saved++
     await new Promise((r) => setTimeout(r, 350))
   }
-  return saved
+  return { saved }
 }
 
 /** Save a file. Resolves false when the person declines the viewer's save prompt. */
@@ -163,7 +170,7 @@ export async function downloadBlob(blob: Blob, name: string): Promise<boolean> {
       await viewer.save({ filename: name, data: blob })
       return true
     } catch (e) {
-      const msg = saveErrorMessage((e as { code?: string })?.code)
+      const msg = saveErrorMessage((e as { code?: string })?.code, name)
       if (msg === null) return false
       throw new Error(msg)
     }

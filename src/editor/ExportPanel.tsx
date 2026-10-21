@@ -4,6 +4,7 @@ import { useEditor } from '../store/editor'
 import { useLibrary } from '../store/library'
 import { useUI } from '../store/ui'
 import { Segmented, Slider, Spinner, Toggle } from '../ui/controls'
+import { inArtifact } from '../host'
 import { canShareFiles, downloadBlob, downloadFiles, exportCarouselZip, exportSlideFiles, exportWarnings, shareFiles, type ExportFormat } from '../render/exporter'
 import { useSlideThumb } from './thumbs'
 import type { Project, Slide } from '../model/types'
@@ -45,6 +46,8 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
   const [transparent, setTransparent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
+  /** Rendering is done and the file is being handed over (inside claude.ai: waiting for the person to confirm). */
+  const [saving, setSaving] = useState(false)
   const share = canShareFiles()
   const indices = scope === 'current' ? [current] : scope === 'all' ? project.slides.map((_, i) => i) : [...picked].sort((a, b) => a - b)
   const many = indices.length > 1
@@ -64,12 +67,18 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
     try {
       if (many && packaging === 'zip') {
         const { blob, name } = await exportCarouselZip(project, brand, opts, onProgress, indices)
+        setSaving(true)
         if (!(await downloadBlob(blob, name))) return toast('Descarga cancelada', 'info')
         toast(`${indices.length} imágenes descargadas en ${name}`, 'success')
       } else {
         const files = await exportSlideFiles(project, brand, opts, indices, onProgress)
-        const saved = await downloadFiles(files)
-        if (!saved) return toast('Descarga cancelada', 'info')
+        setSaving(true)
+        const { saved, error } = await downloadFiles(files)
+        if (saved < files.length) {
+          // Keep the panel open with the same choices so the rest can be retried.
+          const done = saved ? `Se guardaron ${saved} de ${files.length} imágenes. ` : ''
+          return toast(error ? `${done}${error}` : saved ? `${done}El resto se canceló.` : 'Descarga cancelada', error ? 'error' : 'info')
+        }
         toast(saved === 1 ? `Descargada ${files[0].name}` : `${saved} imágenes descargadas`, 'success')
       }
       finish()
@@ -78,6 +87,7 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
       toast(`No se pudo exportar: ${e instanceof Error ? e.message : 'error desconocido'}`, 'error')
     } finally {
       setBusy(false)
+      setSaving(false)
     }
   }
 
@@ -180,7 +190,7 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
         )}
         <button type="button" className={`btn h-12 w-full text-[14px] ${share ? '' : 'btn-gold'}`} disabled={busy || !indices.length} onClick={() => void download()} data-testid="do-export">
           {busy && !share ? <Spinner size={15} /> : many && packaging === 'zip' ? <FileArchive size={16} /> : <Download size={16} />}
-          {busy && !share ? `Renderizando ${Math.round(progress * 100)}%` : label}
+          {busy && !share ? (saving ? (inArtifact ? 'Confirma la descarga en el aviso…' : 'Guardando…') : `Renderizando ${Math.round(progress * 100)}%`) : label}
         </button>
       </div>
     </div>

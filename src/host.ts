@@ -28,14 +28,16 @@ export function hostDownloads(): Promise<DownloadsCapability | null> {
 }
 
 /** Spanish message for a failed viewer save; null when the viewer simply declined. */
-export function saveErrorMessage(code: string | undefined): string | null {
+export function saveErrorMessage(code: string | undefined, filename = ''): string | null {
   switch (code) {
     case 'declined':
       return null
     case 'rate_limited':
       return 'Ya hay una descarga esperando tu confirmación. Acéptala o cancélala y vuelve a intentarlo.'
     case 'too_large':
-      return 'El archivo es demasiado grande para este visor. Prueba con menos páginas o calidad normal.'
+      if (filename.endsWith('.zip')) return 'El ZIP es demasiado grande para este visor. Prueba con menos páginas, en JPG o con «Imágenes sueltas».'
+      if (filename.endsWith('.json')) return 'El proyecto pesa demasiado para guardarlo desde este visor por las fotos que incluye. Descarga las imágenes en su lugar.'
+      return 'La imagen es demasiado grande para este visor. Prueba en JPG o con calidad Normal.'
     case 'rejected_extension':
     case 'extension_not_enabled':
       return 'Este visor no permite descargar este tipo de archivo.'
