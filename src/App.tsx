@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
 import { useUI } from './store/ui'
+import { useIsMobile } from './ui/useMedia'
 import { useLibrary } from './store/library'
 import { useEditor } from './store/editor'
 import { preloadAllFonts } from './fonts/fonts'
@@ -12,14 +13,22 @@ import { Editor } from './editor/Editor'
 import { GoatCanvas } from './ui/GoatGlyph'
 
 function Toasts() {
-  const toasts = useUI((s) => s.toasts)
+  const all = useUI((s) => s.toasts)
   const dismiss = useUI((s) => s.dismiss)
+  const mobile = useIsMobile()
+  // Phones: one toast at a time, under the top bar, never over the tools.
+  const toasts = mobile ? all.slice(-1) : all
   return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-[90] flex flex-col gap-2" aria-live="polite">
+    <div className={`toast-stack pointer-events-none fixed z-[90] flex flex-col gap-2 ${mobile ? 'inset-x-3 top-[calc(58px+env(safe-area-inset-top))] items-center' : 'right-4 bottom-4'}`} aria-live="polite">
       {toasts.map((t) => (
-        <div key={t.id} className="animate-in pointer-events-auto flex max-w-[380px] items-start gap-2 rounded-xl border border-line-2 bg-panel-2/95 px-3.5 py-2.5 text-[13px] shadow-2xl backdrop-blur" role={t.kind === 'error' ? 'alert' : 'status'}>
+        <div key={t.id} className="animate-in pointer-events-auto flex max-w-[380px] items-start gap-2 rounded-xl border border-line-2 bg-panel-2/95 px-3.5 py-2.5 text-[13px] shadow-2xl backdrop-blur" role={t.kind === 'error' ? 'alert' : 'status'} data-testid="toast">
           {t.kind === 'success' ? <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-win" /> : t.kind === 'error' ? <AlertCircle size={16} className="mt-0.5 shrink-0 text-loss" /> : <Info size={16} className="mt-0.5 shrink-0 text-gold" />}
           <span className="flex-1 leading-snug">{t.text}</span>
+          {t.action && (
+            <button type="button" className="-my-1 shrink-0 rounded-md px-2 py-1 font-semibold text-gold hover:bg-white/5" data-testid="toast-action" onClick={() => (t.action!.run(), dismiss(t.id))}>
+              {t.action.label}
+            </button>
+          )}
           <button type="button" className="text-muted hover:text-ivory" aria-label="Cerrar aviso" onClick={() => dismiss(t.id)}>
             <X size={14} />
           </button>

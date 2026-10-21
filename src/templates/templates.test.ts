@@ -9,10 +9,10 @@ import { scramble } from '../render/painters/prediction'
 import { tokenize, stripMarkup } from '../render/text/layout'
 
 describe('template library', () => {
-  it('ships at least 18 numbered templates in all five categories', () => {
+  it('ships at least 18 numbered templates in all six categories', () => {
     expect(TEMPLATES.length).toBeGreaterThanOrEqual(18)
     expect(new Set(TEMPLATES.map((t) => t.id)).size).toBe(TEMPLATES.length)
-    expect(new Set(TEMPLATES.map((t) => t.category))).toEqual(new Set(['match', 'stats', 'tactics', 'predictions', 'brand']))
+    expect(new Set(TEMPLATES.map((t) => t.category))).toEqual(new Set(['match', 'media', 'stats', 'tactics', 'predictions', 'brand']))
   })
 
   for (const preset of Object.keys(FORMATS) as FormatPreset[])

@@ -22,6 +22,8 @@ export interface Toast {
   id: number
   kind: 'info' | 'success' | 'error'
   text: string
+  /** Optional one-tap action (e.g. «Deshacer»). */
+  action?: { label: string; run: () => void }
 }
 
 interface UIState {
@@ -47,7 +49,7 @@ interface UIState {
   saveState: 'idle' | 'saving' | 'saved' | 'error'
   toasts: Toast[]
   set: (p: Partial<Omit<UIState, 'set' | 'toast' | 'dismiss'>>) => void
-  toast: (text: string, kind?: Toast['kind']) => void
+  toast: (text: string, kind?: Toast['kind'], action?: Toast['action']) => void
   dismiss: (id: number) => void
 }
 
@@ -76,10 +78,11 @@ export const useUI = create<UIState>((set) => ({
   saveState: 'idle',
   toasts: [],
   set: (p) => set(p),
-  toast: (text, kind = 'info') => {
+  toast: (text, kind = 'info', action) => {
     const id = ++toastId
-    set((s) => ({ toasts: [...s.toasts, { id, kind, text }] }))
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), kind === 'error' ? 6000 : 3200)
+    // One undo-style toast at a time keeps the screen calm.
+    set((s) => ({ toasts: [...s.toasts.filter((t) => !(action && t.action)), { id, kind, text, action }].slice(-3) }))
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), action ? 5200 : kind === 'error' ? 6000 : 3200)
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }))

@@ -31,13 +31,13 @@ import { useUI } from '../store/ui'
 import { ELEMENT_LABELS } from '../model/elements'
 import { AppearanceSection, AssetPicker, FillEditor, TransformSection } from './props/common'
 import { BrandMarkProps, CrestProps, EffectProps, GlassProps, IconProps, ImageProps, MascotProps, Model3DProps, ShapeProps, TextProps } from './props/basicProps'
-import { FormRowProps, MatchListProps, PlayerListProps, PredictionProps, ProbabilityProps, ProgressRingProps, RankingProps, ResultsListProps, StatBarsProps, StatNumberProps, TableProps } from './props/dataProps'
+import { BadgeProps, FormRowProps, MatchListProps, PlayerListProps, PredictionProps, ProbabilityProps, ProgressRingProps, RankingProps, ResultsListProps, ScoreboardProps, StatBarsProps, StatNumberProps, TableProps } from './props/dataProps'
 import { Stadium3DProps, TacticsProps } from './props/tacticsProps'
 import { Section, Slider, TextField, Toggle } from '../ui/controls'
 import { buildTemplateSlide, templateById } from '../templates'
 import { SlideStyleSection } from './StylePanel'
 
-function ElementSpecific({ el }: { el: SlideElement }) {
+export function ElementSpecific({ el }: { el: SlideElement }) {
   switch (el.type) {
     case 'text':
       return <TextProps el={el} />
@@ -85,6 +85,10 @@ function ElementSpecific({ el }: { el: SlideElement }) {
       return <TacticsProps el={el} />
     case 'stadium3d':
       return <Stadium3DProps el={el} />
+    case 'badge':
+      return <BadgeProps el={el} />
+    case 'scoreboard':
+      return <ScoreboardProps el={el} />
   }
 }
 

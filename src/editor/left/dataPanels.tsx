@@ -7,6 +7,7 @@ import { useUI } from '../../store/ui'
 import { Row, Section, Segmented, Select, TextField } from '../../ui/controls'
 import { AgendaEditor, FormEditor, PlayersEditor, PredictionsEditor, ResultsEditor, StatRowsEditor } from '../data/editors'
 import { AssetPicker } from '../props/common'
+import { ScoreFields } from '../props/dataProps'
 import { PanelTitle } from './contentPanels'
 import { FORMATIONS } from '../../tactics/formations'
 import { resolveColor, visibleOnDark } from '../../model/tokens'
@@ -114,6 +115,10 @@ export function MatchPanel() {
           {field('time', 'Hora', () => m.time, (v) => setM((d) => void (d.time = v), 'm-time'), { type: 'time' })}
         </div>
         {field('venue', 'Estadio', () => m.venue, (v) => setM((d) => void (d.venue = v), 'm-venue'))}
+      </Section>
+      <Section title="Resultado">
+        <ScoreFields />
+        <p className="-mt-1 text-[11px] text-dim">Rellénalo cuando termine el partido: lo usan los marcadores y las plantillas de resultado.</p>
       </Section>
       <Section title="Titulares">
         {field('headline', 'Titular principal', () => m.headline, (v) => setM((d) => void (d.headline = v), 'm-headline'), { multiline: true })}

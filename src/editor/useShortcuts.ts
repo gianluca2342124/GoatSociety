@@ -1,3 +1,4 @@
+import { deleteSelection } from './actions'
 import { useEffect } from 'react'
 import { activeSlideOf, useEditor } from '../store/editor'
 import { useUI } from '../store/ui'
@@ -97,7 +98,7 @@ export function useShortcuts() {
           return
         }
         e.preventDefault()
-        ed.deleteSelection()
+        deleteSelection()
         return
       }
       if (e.key === 'Escape') {

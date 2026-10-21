@@ -1,7 +1,7 @@
 import type { ColorValue, Intensity, MatchData, SlideBackground, SlideElement } from '../model/types'
 import type { TCtx } from './kit'
 
-export type TemplateCategory = 'match' | 'stats' | 'tactics' | 'predictions' | 'brand'
+export type TemplateCategory = 'match' | 'media' | 'stats' | 'tactics' | 'predictions' | 'brand'
 
 export interface TemplateOutput {
   background: SlideBackground
@@ -23,6 +23,7 @@ export interface TemplateDef {
 
 export const CATEGORY_LABELS: Record<TemplateCategory, string> = {
   match: 'Previas',
+  media: 'Noticias',
   stats: 'Estadísticas',
   tactics: 'Táctica',
   predictions: 'Pronósticos',

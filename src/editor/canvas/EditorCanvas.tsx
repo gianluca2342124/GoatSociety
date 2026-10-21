@@ -1,3 +1,4 @@
+import { deleteSelection } from '../actions'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Stage, Layer, Group, Shape, Rect, Transformer, Line } from 'react-konva'
 import type Konva from 'konva'
@@ -101,7 +102,7 @@ function ContextMenu({ x, y, onClose }: { x: number; y: number; onClose: () => v
     { label: 'Traer al frente', kbd: 'Ctrl+⇧+]', run: () => ed.reorderSelection('top'), disabled: !els.length },
     { label: 'Enviar al fondo', kbd: 'Ctrl+⇧+[', run: () => ed.reorderSelection('bottom'), disabled: !els.length },
     { label: allLocked ? 'Desbloquear' : 'Bloquear', run: () => ed.updateElements(sel, (e) => void (e.locked = !allLocked)), disabled: !els.length },
-    { label: 'Eliminar', kbd: 'Supr', run: ed.deleteSelection, disabled: !els.length, danger: true },
+    { label: 'Eliminar', kbd: 'Supr', run: deleteSelection, disabled: !els.length, danger: true },
   ]
   return (
     <div className="animate-in absolute z-30 w-52 rounded-lg border border-line-2 bg-panel-2 p-1 shadow-2xl" style={{ left: x, top: y }} role="menu" onMouseLeave={onClose}>
@@ -125,7 +126,7 @@ function ContextMenu({ x, y, onClose }: { x: number; y: number; onClose: () => v
   )
 }
 
-export function EditorCanvas() {
+export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<Konva.Stage>(null)
   const contentRef = useRef<Konva.Group>(null)
@@ -165,9 +166,11 @@ export function EditorCanvas() {
   // Fit to screen
   useEffect(() => {
     if (!autoFit || size.w < 50) return
-    const z = Math.max(0.05, Math.min((size.w - 96) / W, (size.h - 96) / H))
+    // Phones give the page almost all the space.
+    const pad = mobile ? 24 : 96
+    const z = Math.max(0.05, Math.min((size.w - pad) / W, (size.h - pad) / H))
     useUI.getState().set({ zoom: z, pan: { x: (size.w - W * z) / 2, y: (size.h - H * z) / 2 } })
-  }, [autoFit, size.w, size.h, W, H])
+  }, [autoFit, size.w, size.h, W, H, mobile])
 
   const rc = useMemo(() => {
     void assetVersion
@@ -477,7 +480,7 @@ export function EditorCanvas() {
   const tacticsEl = slide.elements.find((e) => e.id === tacticsEditId)
 
   return (
-    <div ref={containerRef} className="relative h-full w-full overflow-hidden" style={{ cursor: spaceDown ? (panning.current ? 'grabbing' : 'grab') : 'default', background: 'radial-gradient(ellipse at 50% 40%, #15181d 0%, #0b0c0f 70%)' }} data-testid="canvas-workspace">
+    <div ref={containerRef} className="relative h-full w-full overflow-hidden" style={{ cursor: spaceDown ? (panning.current ? 'grabbing' : 'grab') : 'default', background: mobile ? '#0d0d0f' : 'radial-gradient(ellipse at 50% 40%, #15181d 0%, #0b0c0f 70%)', touchAction: 'none' }} data-testid="canvas-workspace">
       <Stage
         ref={stageRef}
         width={size.w}
@@ -493,7 +496,13 @@ export function EditorCanvas() {
         onMouseDown={(e) => {
           setMenu(null)
           onStageMouseDown(e)
-        }} onWheel={onWheel} onTouchStart={(e) => e.target === stageRef.current && select([])}>
+        }} onWheel={onWheel} onTouchStart={(e) => {
+          const t = e.target
+          if (t === stageRef.current || t.name() === 'background' || t.name() === 'pasteboard') {
+            select([])
+            if (tacticsEditId) useUI.getState().set({ tacticsEditId: null, tacticsSel: null })
+          }
+        }}>
         <Layer>
           <Group x={pan.x} y={pan.y} scaleX={zoom} scaleY={zoom}>
             <Rect name="pasteboard" x={-20000} y={-20000} width={40000} height={40000} fill="rgba(0,0,0,0)" />
@@ -545,13 +554,14 @@ export function EditorCanvas() {
             rotateEnabled
             rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
             rotationSnapTolerance={4}
-            anchorSize={9}
-            anchorCornerRadius={2}
+            anchorSize={mobile ? 18 : 9}
+            anchorCornerRadius={mobile ? 9 : 2}
+            enabledAnchors={mobile ? ['top-left', 'top-right', 'bottom-left', 'bottom-right'] : undefined}
             anchorStroke="#CBAA62"
             anchorFill="#0B0C0F"
             borderStroke="#CBAA62"
             borderStrokeWidth={1.2}
-            rotateAnchorOffset={26}
+            rotateAnchorOffset={mobile ? 36 : 26}
             padding={0}
             ignoreStroke
             flipEnabled={false}
@@ -559,8 +569,8 @@ export function EditorCanvas() {
           />
         </Layer>
       </Stage>
-      {editingEl && editingEl.type === 'text' && <TextEditOverlay el={editingEl} zoom={zoom} pan={pan} />}
-      {menu && <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
+      {!mobile && editingEl && editingEl.type === 'text' && <TextEditOverlay el={editingEl} zoom={zoom} pan={pan} />}
+      {!mobile && menu && <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
     </div>
   )
 }

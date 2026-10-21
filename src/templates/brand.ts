@@ -2,14 +2,14 @@ import * as E from '../model/elements'
 import type { TemplateDef } from './types'
 import type { TCtx } from './kit'
 import { cinematic, cta, goatMark, hl, ink, label, px, signature, support } from './kit'
+import { gapV, headZone, mainHead, vk } from './match'
 
 // GOAT EDITORIAL · Comunidad
 // Black background, big white type, one accent ($accent), one message.
-// Brand slides replace the top-left signature with the small goat mark
-// (the brand name is already the message).
-
-/** Vertical type factor: 1 on story/portrait, ≈0.85 on square/landscape. */
-const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
+// Brand pages follow the family (centered type, same top row, CTA on the
+// foot) but drop the page number. When the brand name is already the message
+// the top-left signature becomes the small goat mark, at the same place and
+// height as the signature of every other page.
 
 /** Anton headline leading used by kit.hl(). */
 const LH = 1.04
@@ -24,6 +24,9 @@ const ACC = 0.12
 const GOAT_RATIO = 512 / 660
 
 const accentFill = { kind: 'solid' as const, color: '$accent' }
+
+/** Goat mark in the signature slot (same x, y and height as kit.signature()). */
+const markTop = (t: TCtx) => goatMark(t, t.left, t.top, 44)
 
 // ── 17 · Únete a GOAT SOCIETY (tipografía) ───────────────────────────────────
 
@@ -40,7 +43,7 @@ export const community: TemplateDef = {
   number: 17,
   name: 'GOAT SOCIETY Community',
   category: 'brand',
-  description: 'Cierre de comunidad tipográfico: «Únete a GOAT SOCIETY» a tamaño cartel y llamada al enlace de la bio.',
+  description: 'Cierre de comunidad tipográfico: «Únete a GOAT SOCIETY» centrado a tamaño cartel y llamada al enlace de la bio.',
   build: (t) => {
     const k = vk(t)
     const ss = 64 * k
@@ -61,9 +64,9 @@ export const community: TemplateDef = {
     const three = s3 > s2 * 1.15 && s3 * t.s * (W_BRAND / 100) > t.cw * 1.02
     const hs = three ? s3 : s2
     const hh = hlH(t, hs, three ? 3 : 2)
-    // Any spare height goes above: the block sits low, the goat mark alone on top.
+    // The poster block is centered in the content zone (tall formats fill it).
     const acc = ACC * hs * t.s
-    const y = t.contentTop + acc + Math.max(0, t.ch - acc - hh - rest) * 0.7
+    const y = t.contentTop + acc + Math.max(0, t.ch - acc - hh - rest) * 0.5
     // Room above lets a longer brand name take one more line; the headline is
     // bottom-aligned so the stack below never moves.
     const extra = Math.min(hlH(t, hs, 1), y - t.contentTop)
@@ -71,10 +74,10 @@ export const community: TemplateDef = {
       background: ink(),
       elements: [
         ...cinematic(t),
-        goatMark(t, t.left, t.top, 60),
+        markTop(t),
         hl(t, 'Únete a\n[[{brand}]]', { y: y - extra, h: hh + extra }, hs, { verticalAlign: 'bottom' }),
-        label(t, 'Análisis y pronósticos', { y: y + hh + g1, h: sh }, ss, { name: 'Descripción', fontWeight: 600 }),
-        cta(t, 'Link en la bio  ↗', { y: y + hh + g1 + sh + g2, h: ch }, cs, { fill: accentFill }),
+        label(t, 'Análisis y pronósticos', { y: y + hh + g1, h: sh }, ss, { name: 'Descripción', align: 'center', fontWeight: 600 }),
+        cta(t, 'Link en la bio  ↗', { y: y + hh + g1 + sh + g2, h: ch }, cs, { align: 'center', fill: accentFill }),
       ],
     }
   },
@@ -86,18 +89,15 @@ export const communityMascot: TemplateDef = {
   number: 25,
   name: 'Community · Mascota',
   category: 'brand',
-  description: 'La mascota como imagen principal, monocroma con un filo del color de acento, y llamada a la comunidad.',
+  description: 'Titular arriba, la mascota como imagen principal (monocroma con un filo del color de acento) y la llamada a la comunidad al pie.',
   build: (t) => {
     const k = vk(t)
-    const hs = 144 * k
     const ss = 52 * k
     const cs = 54 * k
-    const hh = hlH(t, hs, 2)
     const sh = ss * t.s * 1.25
     const ch = cs * t.s * 1.3
-    const g1 = px(t, 22)
-    const g2 = px(t, 40)
-    const textH = hh + g1 + sh + g2 + ch
+    const g1 = px(t, 16)
+    const g2 = px(t, 32)
     const mascot = (x: number, y: number, w: number, h: number) =>
       E.mascot({
         name: 'Mascota',
@@ -121,45 +121,53 @@ export const communityMascot: TemplateDef = {
       })
 
     if (t.H / t.W < 1.05) {
-      // Square and landscape: mascot on the left, text column on the right.
+      // Square and landscape: mascot on the left, a centered text column on the right.
+      const hs = 144 * k
+      const hh = hlH(t, hs, 2)
       const mw = Math.min(t.ch * GOAT_RATIO, t.cw * 0.48)
       const mh = mw / GOAT_RATIO
       const tx = t.left + mw + px(t, 60)
       const tw = t.right - tx
       // A narrow column wraps the support line (≈12.7 em at Inter Tight 500).
       const sh2 = ss * t.s * 1.22 * (tw >= ss * t.s * 12.9 ? 1 : 2)
-      const ty = t.contentTop + (t.ch - (hh + g1 + sh2 + g2 + ch)) / 2
+      const g1b = px(t, 22)
+      const g2b = px(t, 40)
+      const ty = t.contentTop + (t.ch - (hh + g1b + sh2 + g2b + ch)) / 2
       return {
         background: ink(),
         elements: [
           ...cinematic(t),
           signature(t),
           mascot(t.left, t.contentTop + (t.ch - mh) / 2, mw, mh),
+          // Narrow column: the claim wraps by itself («ÚNETE A LA / COMUNIDAD»).
           hl(t, 'Únete a la comunidad', { x: tx, y: ty, w: tw, h: hh }, hs, { verticalAlign: 'bottom' }),
-          support(t, 'Análisis, datos y pronósticos.', { x: tx, y: ty + hh + g1, w: tw, h: sh2 }, ss, { name: 'Descripción' }),
-          cta(t, 'Accede desde mi perfil  ↗', { x: tx, y: ty + hh + g1 + sh2 + g2, w: tw, h: ch }, cs, { fill: accentFill }),
+          support(t, 'Análisis, datos y pronósticos.', { x: tx, y: ty + hh + g1b, w: tw, h: sh2 }, ss, { name: 'Descripción', align: 'center' }),
+          cta(t, 'Accede desde mi perfil  ↗', { x: tx, y: ty + hh + g1b + sh2 + g2b, w: tw, h: ch }, cs, { align: 'center', fill: accentFill }),
         ],
       }
     }
 
-    // The beard fades out (fadeBottom), so a small real gap reads as air.
-    const gap = px(t, 22)
-    // The horn tips may rise a little above the safe zone, never into the signature.
-    const mTop = Math.max(t.top + px(t, 44, 28) + px(t, 56), t.contentTop - px(t, 20))
-    const room = t.contentBottom - textH - gap - mTop
+    // Tall formats follow the family rhythm: the headline in the shared zone,
+    // the mascot as the main visual in the centre, support + CTA on the foot.
+    const z = headZone(t)
+    const cy = t.contentBottom - ch
+    const sy = cy - g2 - sh
+    // The horn tips may rise into the gap under the headline; the beard fades
+    // out (fadeBottom), so a small real gap above the support reads as air.
+    const mTop = z.end + gapV(t) * 0.6
+    const room = sy - g1 - px(t, 24) - mTop
     const mh = Math.min(room, (t.W * 0.64) / GOAT_RATIO)
     const mw = mh * GOAT_RATIO
     const y0 = mTop + Math.max(0, (room - mh) * 0.5)
-    const ty = y0 + mh + gap
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
         signature(t),
+        mainHead(t, 'Únete a\nla comunidad'),
         mascot(t.cx - mw / 2, y0, mw, mh),
-        hl(t, 'Únete a la comunidad', { y: ty, h: hh }, hs, { align: 'center' }),
-        support(t, 'Análisis, datos y pronósticos.', { y: ty + hh + g1, h: sh }, ss, { name: 'Descripción', align: 'center' }),
-        cta(t, 'Accede desde mi perfil  ↗', { y: ty + hh + g1 + sh + g2, h: ch }, cs, { align: 'center', fill: accentFill }),
+        support(t, 'Análisis, datos y pronósticos.', { y: sy, h: sh }, ss, { name: 'Descripción', align: 'center' }),
+        cta(t, 'Accede desde mi perfil  ↗', { y: cy, h: ch }, cs, { align: 'center', fill: accentFill }),
       ],
     }
   },
@@ -171,10 +179,10 @@ export const communityMascot: TemplateDef = {
  * Closing-slide copy variants (editor: "Variantes de cierre"). The editor
  * writes `headline` into "Mensaje final" and `sub` into "Submensaje" (the
  * handle line). Only neutral profile/bio calls to action. Explicit breaks
- * keep a clean three-line rag at poster size (no «MI / PERFIL» split, no
- * orphans), no accented capital under a full line (Anton's Á/Ó accents
- * would touch the line above at the tight 1.04 leading) and no comma at a
- * line end (it drops onto the next line and reads like an accent).
+ * keep a clean centered three-line stack at poster size (no «MI / PERFIL»
+ * split, no orphans), no accented capital under a full line (Anton's Á/Ó
+ * accents would touch the line above at the tight 1.04 leading) and no comma
+ * at a line end (it drops onto the next line and reads like an accent).
  */
 export const FINAL_VARIANTS = [
   { id: 'perfil', headline: 'El análisis\ncompleto\nen [[mi perfil]]', sub: '{handle}' },
@@ -191,7 +199,7 @@ export const finalSlide: TemplateDef = {
   number: 18,
   name: 'Final Carousel Slide',
   category: 'brand',
-  description: 'Cierre del carrusel: una frase a tamaño cartel que termina en el acento, anclada abajo con el usuario (4 variantes).',
+  description: 'Cierre del carrusel: una frase centrada a tamaño cartel que termina en el acento, con el usuario debajo (4 variantes).',
   build: (t) => {
     const v = FINAL_VARIANTS[0]
     const lines = 3
@@ -202,20 +210,20 @@ export const finalSlide: TemplateDef = {
     const hs = Math.min(fillW(t, W_FINAL), (t.ch - gap - uh) / (LH * lines + 0.06 + ACC) / t.s)
     const hb = hlH(t, hs, lines)
     const acc = ACC * hs * t.s
-    // Anchored low: the handle sits on a fixed line near the bottom of the
-    // safe zone, the statement grows upwards and the space above stays empty
-    // (only the goat mark).
-    const y = t.contentTop + acc + Math.max(0, t.ch - acc - hb - gap - uh) * 0.85
-    // One spare line of headroom for longer custom messages (autoFit beyond).
+    // Statement + handle form one centered block, a touch above the middle
+    // (optical centre); only the goat mark sits above it.
+    const y = t.contentTop + acc + Math.max(0, t.ch - acc - hb - gap - uh) * 0.45
+    // One spare line of headroom for longer custom messages (autoFit beyond);
+    // bottom-aligned so a two-line variant still hugs the handle.
     const top = Math.max(t.contentTop, y - hlH(t, hs, 1))
     const uy = y + hb + gap
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        goatMark(t, t.left, t.top, 60),
+        markTop(t),
         hl(t, v.headline, { y: top, h: y + hb - top }, hs, { name: 'Mensaje final', verticalAlign: 'bottom' }),
-        label(t, v.sub, { y: uy, h: uh }, us, { name: 'Submensaje', fontWeight: 600, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
+        label(t, v.sub, { y: uy, h: uh }, us, { name: 'Submensaje', align: 'center', fontWeight: 600, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
       ],
     }
   },

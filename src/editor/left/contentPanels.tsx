@@ -1,3 +1,4 @@
+import { deletePage } from '../actions'
 import { useState } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -135,7 +136,7 @@ function SlideRow({ slide, index, project, active }: { slide: Slide; index: numb
   const brand = useLibrary((s) => s.brand)
   const url = useSlideThumb(project, slide, brand, 120)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: slide.id })
-  const { duplicateSlide, deleteSlide, setActiveSlide } = useEditor.getState()
+  const { duplicateSlide, setActiveSlide } = useEditor.getState()
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }} className={`group flex items-center gap-2 rounded-lg border p-1.5 ${active ? 'border-gold/70 bg-gold/8' : 'border-line hover:border-line-2'}`} onClick={() => setActiveSlide(slide.id)}>
       <span className="cursor-grab text-dim" {...attributes} {...listeners} aria-label="Arrastrar para reordenar">
@@ -151,7 +152,7 @@ function SlideRow({ slide, index, project, active }: { slide: Slide; index: numb
       <button type="button" className="icon-btn h-6 w-6 opacity-0 group-hover:opacity-100" aria-label="Duplicar diapositiva" onClick={(e) => (e.stopPropagation(), duplicateSlide(slide.id))}>
         <Copy size={12} />
       </button>
-      <button type="button" className="icon-btn h-6 w-6 opacity-0 group-hover:opacity-100 hover:!text-loss" aria-label="Eliminar diapositiva" disabled={project.slides.length <= 1} onClick={(e) => (e.stopPropagation(), confirm('¿Eliminar esta diapositiva?') && deleteSlide(slide.id))}>
+      <button type="button" className="icon-btn h-6 w-6 opacity-0 group-hover:opacity-100 hover:!text-loss" aria-label="Eliminar diapositiva" disabled={project.slides.length <= 1} onClick={(e) => (e.stopPropagation(), deletePage(slide.id))}>
         <Trash2 size={12} />
       </button>
     </div>

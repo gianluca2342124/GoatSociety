@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, Heart, MessageCircle, Monitor, Music2, ScanLine, Share2, Smartphone, X } from 'lucide-react'
 import { platformZones } from '../../model/formats'
@@ -7,8 +7,112 @@ import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
 import { renderSlideCanvas } from '../../render/exporter'
 import { Spinner } from '../../ui/controls'
+import { useIsMobile } from '../../ui/useMedia'
 
 export function PreviewModal() {
+  return useIsMobile() ? <MobilePreview /> : <DesktopPreview />
+}
+
+/** Phone preview: the page full-screen, swipe between pages, tap to hide the chrome. */
+function MobilePreview() {
+  const project = useEditor((s) => s.project)!
+  const activeId = useEditor((s) => s.activeSlideId)
+  const brand = useLibrary((s) => s.brand)
+  const n = project.slides.length
+  const [i, setI] = useState(Math.max(0, project.slides.findIndex((s) => s.id === activeId)))
+  const [urls, setUrls] = useState<Record<string, string>>({})
+  const [chrome, setChrome] = useState(true)
+  const [dx, setDx] = useState(0)
+  const start = useRef<{ x: number; y: number; t: number } | null>(null)
+  const close = () => useUI.getState().set({ modal: null })
+  const slide = project.slides[i]
+
+  // Render the current page first, then its neighbours so swiping feels instant.
+  useEffect(() => {
+    let alive = true
+    const scale = Math.min(1, (window.innerWidth * Math.min(2, window.devicePixelRatio || 1)) / project.format.width)
+    const order = [i, i + 1, i - 1].filter((k) => k >= 0 && k < n)
+    void (async () => {
+      for (const k of order) {
+        const s = project.slides[k]
+        const c = await renderSlideCanvas(project, s, brand, { scale, transparent: false, format: 'png' })
+        if (!alive) return
+        const url = c.toDataURL('image/jpeg', 0.9)
+        setUrls((u) => ({ ...u, [s.id]: url }))
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [i, project, brand, n])
+
+  const go = (d: number) => setI((v) => Math.min(n - 1, Math.max(0, v + d)))
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    start.current = { x: t.clientX, y: t.clientY, t: Date.now() }
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!start.current) return
+    const d = e.touches[0].clientX - start.current.x
+    setDx((i === 0 && d > 0) || (i === n - 1 && d < 0) ? d / 3 : d)
+  }
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s0 = start.current
+    start.current = null
+    setDx(0)
+    if (!s0) return
+    const t = e.changedTouches[0]
+    const ddx = t.clientX - s0.x
+    const ddy = t.clientY - s0.y
+    if (Math.abs(ddx) > 50 && Math.abs(ddx) > Math.abs(ddy)) go(ddx < 0 ? 1 : -1)
+    else if (ddy > 110 && Math.abs(ddy) > Math.abs(ddx)) close()
+    else if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8 && Date.now() - s0.t < 300) setChrome((c) => !c)
+  }
+  const url = urls[slide.id]
+  return createPortal(
+    <div className="fixed inset-0 z-[75] flex flex-col bg-black select-none" role="dialog" aria-modal="true" aria-label="Vista previa" data-testid="m-preview-screen">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <div className="flex h-full w-full items-center justify-center" style={{ transform: `translateX(${dx}px)`, transition: dx ? 'none' : 'transform 0.2s ease-out' }}>
+          {url ? (
+            <img src={url} alt={`Página ${i + 1}`} className="max-h-full max-w-full object-contain" draggable={false} data-testid="preview-frame" />
+          ) : (
+            <Spinner size={28} />
+          )}
+        </div>
+        {chrome && i > 0 && (
+          <button type="button" aria-label="Anterior" className="absolute top-1/2 left-2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white" onClick={() => go(-1)}>
+            <ChevronLeft size={22} />
+          </button>
+        )}
+        {chrome && i < n - 1 && (
+          <button type="button" aria-label="Siguiente" className="absolute top-1/2 right-2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white" onClick={() => go(1)}>
+            <ChevronRight size={22} />
+          </button>
+        )}
+      </div>
+      {chrome && (
+        <>
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[calc(10px+env(safe-area-inset-top))]">
+            <span className="rounded-full bg-black/55 px-3 py-1.5 text-[13px] font-semibold text-white tabular-nums">
+              {i + 1} / {n}
+            </span>
+            <button type="button" className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white" aria-label="Cerrar vista previa" onClick={close} data-testid="m-preview-close">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex justify-center gap-1.5 pt-3 pb-[calc(14px+env(safe-area-inset-bottom))]">
+            {project.slides.map((s, k) => (
+              <button key={s.id} type="button" aria-label={`Ir a la página ${k + 1}`} onClick={() => setI(k)} className={`h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-white' : 'w-1.5 bg-white/35'}`} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>,
+    document.body,
+  )
+}
+
+function DesktopPreview() {
   const project = useEditor((s) => s.project)!
   const activeId = useEditor((s) => s.activeSlideId)
   const brand = useLibrary((s) => s.brand)

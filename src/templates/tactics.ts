@@ -5,14 +5,17 @@ import { annotation, defaultTactics } from '../tactics/presets'
 import { regionFor } from '../tactics/projection'
 import type { TemplateDef } from './types'
 import type { TCtx } from './kit'
-import { cinematic, hl, ink, px, signature, support } from './kit'
+import { bottomFade, chrome, cinematic, hl, ink, px, support } from './kit'
+import { LH, footSupport, footTop, gapV, headZone, mainHead, vk } from './match'
 
 // GOAT EDITORIAL · Táctica
 // Black background, a large realistic pitch seen from above, flat players,
 // ONE action drawn as ONE thick arrow in the slide accent, everything else dimmed.
-
-/** Vertical type factor: 1 on story/portrait, ≈0.85 on square/landscape. */
-const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
+//
+// Family rhythm (v2, shared with match.ts): chrome → centered headline at
+// t.contentTop → the pitch in the centre → one support line on the foot
+// (t.contentBottom). 16:9 keeps the order inside a text column on the left,
+// with the pitch filling the right side.
 
 /** Neutral kits: the painters keep neutral grays exact, so the light kit follows the brand text colour. */
 const WHITE = '$text'
@@ -39,6 +42,15 @@ function fitPitch(view: PitchView, vertical: boolean, maxW: number, maxH: number
   const sh = vertical ? rw : rh
   const scale = Math.min(maxW / sw, maxH / sh)
   return { w: sw * scale, h: sh * scale, scale }
+}
+
+/**
+ * Vertical pitch for the centre zone: full bleed when it fills the width,
+ * otherwise aligned with the content column (never a few px short of the edge).
+ */
+function centrePitch(t: TCtx, view: PitchView, room: number) {
+  const full = fitPitch(view, true, t.W, room)
+  return full.w >= t.W - 1 ? full : fitPitch(view, true, Math.min(full.w, t.cw), room)
 }
 
 /** Landscape: text column on the left, the pitch fills the right side of the canvas. */
@@ -119,53 +131,60 @@ function buildUpData(view: PitchView, scale: number, homeFormation: string, away
   })
 }
 
+/** 16:9 text column: the headline on t.contentTop, centered in the column. */
+function colHead(t: TCtx, content: string, colW: number, lines = 2): SlideElement {
+  const z = headZone(t, lines)
+  return hl(t, content, { y: z.y, w: colW, h: z.h }, z.size, { lineHeight: LH })
+}
+
+/** 16:9 support block on the foot of the text column. */
+function colFoot(t: TCtx, content: string, colW: number, lines = 2, size = 46): SlideElement {
+  const h = size * t.s * 1.22 * lines + px(t, 6)
+  return support(t, content, { y: t.contentBottom - h, w: colW, h }, size, { name: 'Explicación', align: 'center', verticalAlign: 'bottom' })
+}
+
+/** Headline lines on vertical formats: two, except the square, where the pitch needs the room. */
+const tacticLines = (t: TCtx) => (t.preset === 'square' ? 1 : 2)
+
 export const tacticalBoard: TemplateDef = {
   id: 'tactical-board',
   number: 10,
   name: 'Tactical Board',
   category: 'tactics',
-  description: 'Pizarra táctica: el campo a todo el ancho y una sola acción en acento.',
+  description: 'Pizarra táctica: titular arriba, el campo a todo el ancho y una sola acción en acento.',
   build: (t, match) => {
-    const k = vk(t)
-    const head = '{home.short} sale\n[[con tres]]'
-    const sub = 'El pivote baja entre los centrales y forma la línea de tres.'
+    const sub = 'El pivote baja entre los centrales.'
     const data = (view: PitchView, scale: number) => buildUpData(view, scale, match.home.formation, match.away.formation)
     if (t.landscape) {
-      const colW = t.cw * 0.36
+      const colW = t.cw * 0.4
       const f = sidePitch(t, 'half', colW)
-      const hh = px(t, 260)
-      const sh = px(t, 200)
-      // Text block centred on the pitch.
-      const ty = f.y + (f.h - hh - px(t, 30) - sh) / 2
       return {
         background: ink(),
         elements: [
           ...cinematic(t),
-          signature(t),
-          hl(t, head, { y: ty, w: colW, h: hh }, 130 * k, { verticalAlign: 'bottom' }),
-          support(t, sub, { y: ty + hh + px(t, 30), w: colW, h: sh }, 46, { name: 'Explicación' }),
+          ...chrome(t),
+          colHead(t, '{home.short} sale\n[[con tres]]', colW),
+          colFoot(t, 'El pivote baja entre los centrales y forma la línea de tres.', colW, 3),
           E.tactics({ name: 'Pizarra', x: f.x, y: f.y, width: f.w, height: f.h, tactics: data('half', f.scale) }),
         ],
       }
     }
-    // Story: the whole half, full width. Shorter frames: the last 40 m, so the pitch stays full width.
-    const view: PitchView = t.story ? 'half' : 'attackingThird'
-    const hh = px(t, t.story ? 280 : 250)
-    const sh = px(t, t.story ? 120 : 130)
-    const gap = px(t, t.story ? 40 : 50)
-    const fit = fitPitch(view, true, t.W, t.ch - hh - sh - gap * 2)
-    // Headline, pitch and caption stacked and centred in the safe area.
-    const y0 = t.contentTop + Math.max(0, (t.ch - (hh + gap * 1.9 + fit.h + sh)) / 2)
-    const py = y0 + hh + gap
-    const sy = py + fit.h + gap * 0.9
+    const lines = tacticLines(t)
+    const head = lines === 2 ? '{home.short} sale\n[[con tres]]' : '{home.short} sale [[con tres]]'
+    const a = headZone(t, lines).end + gapV(t)
+    const b = footTop(t) - gapV(t)
+    // The whole half when it still fills the column (story); the last 40 m otherwise.
+    const view: PitchView = fitPitch('half', true, t.W, b - a).w >= t.cw ? 'half' : 'attackingThird'
+    const fit = centrePitch(t, view, b - a)
+    const py = a + (b - a - fit.h) / 2
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        signature(t),
-        hl(t, head, { y: y0, h: hh }, 140 * k, { verticalAlign: 'bottom' }),
+        ...chrome(t),
+        mainHead(t, head, {}, lines),
         E.tactics({ name: 'Pizarra', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: data(view, fit.scale) }),
-        support(t, sub, { y: sy, h: sh }, 48, { name: 'Explicación' }),
+        footSupport(t, sub, 1, 46, { name: 'Explicación' }),
       ],
     }
   },
@@ -192,58 +211,39 @@ export const formationBattle: TemplateDef = {
   category: 'tactics',
   description: 'Las dos alineaciones sobre un campo cenital: un equipo en acento, el otro en blanco.',
   build: (t, match) => {
-    const k = vk(t)
-    const fs = 120 * k
     const homeHead = '{home.short} [[{home.formation}]]'
     const awayHead = '{away.short} {away.formation}'
-    const els: SlideElement[] = [...cinematic(t), signature(t)]
-    const vertical = t.story
-    if (vertical) {
-      // Away defends the top goal, home the bottom one: each name sits next to its half.
-      const th = px(t, 135)
-      const gap = px(t, 30)
-      const top = t.contentTop + th + gap
-      const bottom = t.contentBottom - th - gap
-      const fit = fitPitch('full', true, t.W, bottom - top)
-      const pxx = (t.W - fit.w) / 2
-      const py = top + (bottom - top - fit.h) / 2
-      els.push(
-        hl(t, awayHead, { y: py - gap - th, h: th }, fs, { name: 'Sistema visitante', verticalAlign: 'bottom', align: 'center' }),
-        E.tactics({ name: 'Duelo de sistemas', x: pxx, y: py, width: fit.w, height: fit.h, tactics: systemsData(true, fit.scale, match.home.formation, match.away.formation) }),
-        hl(t, homeHead, { y: py + fit.h + gap, h: th }, fs, { name: 'Sistema local', align: 'center' }),
-      )
-      return { background: ink(), elements: els }
-    }
-    // Shorter formats: horizontal pitch, home attacks left → right.
-    const homeTxt = `${match.home.shortName} ${match.home.formation}`
-    const awayTxt = `${match.away.shortName} ${match.away.formation}`
+    const homeTxt = `${match.home.shortName || match.home.name} ${match.home.formation}`
+    const awayTxt = `${match.away.shortName || match.away.name} ${match.away.formation}`
+    const els: SlideElement[] = [...cinematic(t), ...chrome(t)]
+    const z = headZone(t, 1)
+    const data = (scale: number) => systemsData(false, scale, match.home.formation, match.away.formation)
     if (!t.landscape && t.H > t.W * 1.1) {
-      // Room for one name above (home, left) and one below (away, right) the pitch.
-      const th = px(t, 130)
-      const gap = px(t, 26)
-      const fit = fitPitch('full', false, t.W, t.ch - (th + gap) * 2)
-      const py = t.contentTop + th + gap + (t.ch - (th + gap) * 2 - fit.h) / 2
-      const size = sharedSize(t, [homeTxt, awayTxt], t.cw, fs)
+      // Tall formats: the home system on top (headline zone), the away one on the foot,
+      // the pitch full width between them (home plays left → right).
+      const size = sharedSize(t, [homeTxt, awayTxt], t.cw, z.size)
+      const room = t.ch - z.h * 2
+      const full = fitPitch('full', false, t.W, room)
+      const gap = Math.max(px(t, 36), Math.min(gapV(t), (room - full.h) / 2))
+      const fit = fitPitch('full', false, t.W, room - gap * 2)
+      const py = t.contentTop + z.h + (room - fit.h) / 2
       els.push(
-        hl(t, homeHead, { y: py - gap - th, h: th }, size, { name: 'Sistema local', verticalAlign: 'bottom' }),
-        E.tactics({ name: 'Duelo de sistemas', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: systemsData(false, fit.scale, match.home.formation, match.away.formation) }),
-        hl(t, awayHead, { y: py + fit.h + gap, h: th }, size, { name: 'Sistema visitante', align: 'right' }),
+        hl(t, homeHead, { y: z.y, h: z.h }, size, { name: 'Sistema local', lineHeight: LH }),
+        E.tactics({ name: 'Duelo de sistemas', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: data(fit.scale) }),
+        hl(t, awayHead, { y: t.contentBottom - z.h, h: z.h }, size, { name: 'Sistema visitante', lineHeight: LH, verticalAlign: 'bottom' }),
       )
       return { background: ink(), elements: els }
     }
-    const th = px(t, 130)
-    const gap = px(t, 20)
-    const fit = fitPitch('full', false, t.landscape ? t.cw : t.W, t.ch - th - gap)
+    // Square / 16:9: each system centered over its own half, the pitch under them.
+    const fit = fitPitch('full', false, t.cw, t.ch - z.h - gapV(t))
     const pxx = (t.W - fit.w) / 2
-    const py = t.contentTop + th + gap + (t.ch - th - gap - fit.h) / 2
-    const lx = Math.max(t.left, pxx)
-    const rx = Math.min(t.right, pxx + fit.w)
-    const colW = (rx - lx) / 2 - px(t, 20)
-    const size = sharedSize(t, [homeTxt, awayTxt], colW, fs)
+    const py = t.contentTop + z.h + gapV(t) + (t.ch - z.h - gapV(t) - fit.h) / 2
+    const colW = fit.w / 2 - px(t, 24)
+    const size = sharedSize(t, [homeTxt, awayTxt], colW, z.size)
     els.push(
-      hl(t, homeHead, { x: lx, y: py - gap - th, w: colW, h: th }, size, { name: 'Sistema local', verticalAlign: 'bottom' }),
-      hl(t, awayHead, { x: rx - colW, y: py - gap - th, w: colW, h: th }, size, { name: 'Sistema visitante', verticalAlign: 'bottom', align: 'right' }),
-      E.tactics({ name: 'Duelo de sistemas', x: pxx, y: py, width: fit.w, height: fit.h, tactics: systemsData(false, fit.scale, match.home.formation, match.away.formation) }),
+      hl(t, homeHead, { x: pxx, y: z.y, w: colW, h: z.h }, size, { name: 'Sistema local', lineHeight: LH, verticalAlign: 'bottom' }),
+      hl(t, awayHead, { x: pxx + fit.w - colW, y: z.y, w: colW, h: z.h }, size, { name: 'Sistema visitante', lineHeight: LH, verticalAlign: 'bottom' }),
+      E.tactics({ name: 'Duelo de sistemas', x: pxx, y: py, width: fit.w, height: fit.h, tactics: data(fit.scale) }),
     )
     return { background: ink(), elements: els }
   },
@@ -298,11 +298,12 @@ function cutInsideData(view: PitchView, scale: number, homeFormation: string, aw
 }
 
 const STEPS = [
-  { n: '1', txt: 'Recibe pegado a la banda' },
-  { n: '2', txt: 'Conduce hacia dentro' },
-  { n: '3', txt: 'Remata al palo largo' },
+  { n: '1', txt: 'Recibe pegado a la banda', short: 'Recibe pegado\na la banda' },
+  { n: '2', txt: 'Conduce hacia dentro', short: 'Conduce\nhacia dentro' },
+  { n: '3', txt: 'Remata al palo largo', short: 'Remata al\npalo largo' },
 ]
 
+/** 16:9 column: one step per row (accent numeral + white line). */
 function stepRows(t: TCtx, x: number, y: number, w: number, rowH: number, nSize: number, tSize: number): SlideElement[] {
   const nw = px(t, 70, 40)
   return STEPS.flatMap((s, i) => {
@@ -314,6 +315,22 @@ function stepRows(t: TCtx, x: number, y: number, w: number, rowH: number, nSize:
   })
 }
 
+/** Vertical formats: three centered columns on the foot (accent numeral over two short lines). */
+function stepCols(t: TCtx, y: number, nPx: number, tPx: number): SlideElement[] {
+  const colW = t.cw / 3
+  const nh = nPx * 1.04
+  const ty = y + nh + px(t, 12)
+  return STEPS.flatMap((s, i) => {
+    const x = t.left + i * colW
+    return [
+      hl(t, s.n, { x, y, w: colW, h: nh }, nPx / t.s, { name: `Paso ${s.n}`, fill: { kind: 'solid', color: '$accent' }, autoFit: false }),
+      support(t, s.short, { x: x + px(t, 8), y: ty, w: colW - px(t, 16), h: tPx * 1.22 * 2 + 4 }, tPx / t.s, { name: `Texto paso ${s.n}`, align: 'center', fontWeight: 600, fill: { kind: 'solid', color: '$text' } }),
+    ]
+  })
+}
+
+const stepColsH = (t: TCtx, nPx: number, tPx: number) => nPx * 1.04 + px(t, 12) + tPx * 1.22 * 2 + 4
+
 export const keyMovement: TemplateDef = {
   id: 'key-movement',
   number: 12,
@@ -322,32 +339,32 @@ export const keyMovement: TemplateDef = {
   description: 'Un movimiento concreto en el último tercio: una flecha gruesa y tres pasos.',
   build: (t, match) => {
     const k = vk(t)
-    const head = '{home.short} [[rompe]]\npor dentro'
-    const els: SlideElement[] = [...cinematic(t), signature(t)]
+    const els: SlideElement[] = [...cinematic(t), ...chrome(t)]
     if (t.landscape) {
-      const colW = t.cw * 0.38
-      // The whole half fills the height; the text block is centred on it.
+      const colW = t.cw * 0.4
+      // The whole half fills the height; headline on top of the column, the steps on its foot.
       const f = sidePitch(t, 'half', colW)
-      const hh = px(t, 250)
       const rowH = px(t, 96)
-      const ty = f.y + (f.h - hh - px(t, 40) - rowH * STEPS.length) / 2
       els.push(
-        hl(t, head, { y: ty, w: colW, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
-        ...stepRows(t, t.left, ty + hh + px(t, 40), colW, rowH, 76 * k, 46 * k),
+        colHead(t, '{home.short} [[rompe]]\npor dentro', colW),
+        ...stepRows(t, t.left, t.contentBottom - rowH * STEPS.length, colW, rowH, 76 * k, 46 * k),
         E.tactics({ name: 'Movimiento', x: f.x, y: f.y, width: f.w, height: f.h, tactics: cutInsideData('half', f.scale, match.home.formation, match.away.formation) }),
       )
       return { background: ink(), accent: '$yellow', elements: els }
     }
-    const hh = px(t, t.story ? 270 : 230)
-    const stepsH = px(t, t.story ? 330 : 250)
-    const top = t.contentTop + hh + px(t, 40)
-    const bottom = t.contentBottom - stepsH - px(t, 30)
-    const fit = fitPitch('attackingThird', true, t.W, bottom - top)
-    const py = top + (bottom - top - fit.h) / 2
+    const lines = tacticLines(t)
+    const head = lines === 2 ? '{home.short} [[rompe]]\npor dentro' : '{home.short} [[rompe]] por dentro'
+    const nPx = px(t, 72)
+    const tPx = px(t, 42)
+    const sy = t.contentBottom - stepColsH(t, nPx, tPx)
+    const a = headZone(t, lines).end + gapV(t)
+    const b = sy - px(t, 48)
+    const fit = centrePitch(t, 'attackingThird', b - a)
+    const py = a + (b - a - fit.h) / 2
     els.push(
-      hl(t, head, { y: t.contentTop, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
+      mainHead(t, head, {}, lines),
       E.tactics({ name: 'Movimiento', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: cutInsideData('attackingThird', fit.scale, match.home.formation, match.away.formation) }),
-      ...stepRows(t, t.left, py + fit.h + px(t, 30), t.cw, stepsH / STEPS.length, 76 * k, 47 * k),
+      ...stepCols(t, sy, nPx, tPx),
     )
     return { background: ink(), accent: '$yellow', elements: els }
   },
@@ -413,7 +430,6 @@ export const stadium3D: TemplateDef = {
   category: 'tactics',
   description: 'Escena 3D (Three.js) a ras de césped: una sola acción en acento.',
   build: (t, match) => {
-    const k = vk(t)
     const head = '{home.short} [[mata]]\na la contra'
     const sub = 'Robo en el centro y carrera a la espalda.'
     // Camera framings solved per format so the whole action (runner, passer, both arrow heads) sits
@@ -433,31 +449,34 @@ export const stadium3D: TemplateDef = {
       })
     if (t.landscape) {
       const colW = t.cw * 0.4
-      const hh = px(t, 300)
       const sx = t.left + colW + px(t, 90)
       return {
         background: ink(),
         elements: [
           ...cinematic(t, 'stadium'),
           scene(sx, 0, t.W - sx, t.H, 48, { x: 70, y: 20 }),
-          signature(t),
-          hl(t, head, { y: t.contentTop, w: colW, h: hh }, 125 * k),
-          support(t, sub, { y: t.contentTop + hh + px(t, 30), w: colW, h: px(t, 140) }, 46, { name: 'Explicación' }),
+          ...chrome(t),
+          colHead(t, head, colW),
+          colFoot(t, sub, colW, 2),
         ],
       }
     }
-    const hh = px(t, t.story ? 280 : 240)
-    const sy = t.contentTop + hh + px(t, 16)
-    const sh = px(t, 70)
-    const top = sy + sh + px(t, 30)
+    const lines = tacticLines(t)
+    const z = headZone(t, lines)
+    const top = z.end + px(t, 24)
+    // The scene bleeds to the bottom edge; a soft fade under the foot keeps the support line legible.
+    const fy = footTop(t)
+    const fadeTop = fy - px(t, 200)
     return {
       background: ink(),
       elements: [
         ...cinematic(t, 'stadium'),
-        t.story ? scene(0, top, t.W, t.H - top, 48, { x: 65.5, y: 20 }) : scene(0, top, t.W, t.H - top, t.H > t.W * 1.1 ? 38 : 36, { x: 70, y: 20 }),
-        signature(t),
-        hl(t, head, { y: t.contentTop, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
-        support(t, sub, { y: sy, h: sh }, 46, { name: 'Explicación' }),
+        t.story ? scene(0, top, t.W, t.H - top, 52, { x: 64, y: 20 }) : scene(0, top, t.W, t.H - top, t.H > t.W * 1.1 ? 44 : 40, { x: 67.5, y: 20 }),
+        { ...bottomFade(t, 0.5), name: 'Fundido inferior', y: fadeTop, height: fy + px(t, 12) - fadeTop },
+        E.shape({ name: 'Base', shape: 'rect', x: 0, y: fy + px(t, 12), width: t.W, height: t.H - fy - px(t, 12), cornerRadius: 0, fill: { kind: 'solid', color: '$bg' }, locked: true }),
+        ...chrome(t),
+        mainHead(t, lines === 2 ? head : head.replace('\n', ' '), {}, lines),
+        footSupport(t, sub, 1, 46, { name: 'Explicación', fill: { kind: 'solid', color: '$text' } }),
       ],
     }
   },

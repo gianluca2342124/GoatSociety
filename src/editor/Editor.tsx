@@ -12,6 +12,8 @@ import { NewProjectDialog } from './dialogs/NewProjectDialog'
 import { CanvasSizeDialog, ReplaceTemplateDialog, ShortcutsDialog } from './dialogs/MiscDialogs'
 import { useEditor } from '../store/editor'
 import { TacticsToolbar } from './props/tacticsProps'
+import { useIsMobile } from '../ui/useMedia'
+import { MobileEditor } from '../mobile/MobileEditor'
 
 function TacticsHint() {
   const id = useUI((s) => s.tacticsEditId)
@@ -29,9 +31,34 @@ function TacticsHint() {
   )
 }
 
+function Modals() {
+  const modal = useUI((s) => s.modal)
+  return (
+    <>
+      {modal === 'export' && <ExportDialog />}
+      {modal === 'preview' && <PreviewModal />}
+      {modal === 'newProject' && <NewProjectDialog />}
+      {modal === 'canvasSize' && <CanvasSizeDialog />}
+      {modal === 'shortcuts' && <ShortcutsDialog />}
+      {modal === 'replaceTemplate' && <ReplaceTemplateDialog />}
+    </>
+  )
+}
+
 export function Editor() {
   useShortcuts()
-  const modal = useUI((s) => s.modal)
+  const mobile = useIsMobile()
+  if (mobile)
+    return (
+      <>
+        <MobileEditor />
+        <Modals />
+      </>
+    )
+  return <DesktopEditor />
+}
+
+function DesktopEditor() {
   const hasSlide = useEditor((s) => (s.project?.slides.length ?? 0) > 0)
   return (
     <div className="flex h-full flex-col">
@@ -48,12 +75,7 @@ export function Editor() {
         </main>
         <RightPanel />
       </div>
-      {modal === 'export' && <ExportDialog />}
-      {modal === 'preview' && <PreviewModal />}
-      {modal === 'newProject' && <NewProjectDialog />}
-      {modal === 'canvasSize' && <CanvasSizeDialog />}
-      {modal === 'shortcuts' && <ShortcutsDialog />}
-      {modal === 'replaceTemplate' && <ReplaceTemplateDialog />}
+      <Modals />
     </div>
   )
 }

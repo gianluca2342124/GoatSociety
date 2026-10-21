@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import type {
+  BadgeElement,
   FormRowElement,
   MatchListElement,
   PlayerListElement,
@@ -8,6 +9,7 @@ import type {
   ProgressRingElement,
   RankingElement,
   ResultsListElement,
+  ScoreboardElement,
   StatBarsElement,
   StatNumberElement,
   TableElement,
@@ -500,6 +502,88 @@ export function ProbabilityProps({ el }: { el: ProbabilityElement }) {
         <Slider label="Tamaño de cifras" min={40} max={260} step={1} value={el.valueSize} onChange={(v) => set({ valueSize: v })} />
         <Slider label="Tamaño de etiquetas" min={16} max={80} step={1} value={el.labelSize} onChange={(v) => set({ labelSize: v })} />
         <Slider label="Grosor de barra" min={4} max={80} step={1} value={el.barHeight} onChange={(v) => set({ barHeight: v })} />
+      </Section>
+    </>
+  )
+}
+
+/** Final score of the match (shared by every scoreboard and the {score} tokens). */
+export function ScoreFields() {
+  const match = useEditor((s) => s.project!.match)
+  const score = match.score ?? { home: '', away: '', note: '' }
+  const set = (p: Partial<typeof score>) => useEditor.getState().update((d) => void (d.match.score = { ...score, ...p }), { key: `score-${Object.keys(p).join()}` })
+  return (
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-1.5">
+        <TextField label={match.home.shortName || match.home.name || 'Local'} value={score.home} onChange={(v) => set({ home: v })} />
+        <span className="pb-2 text-muted">–</span>
+        <TextField label={match.away.shortName || match.away.name || 'Visitante'} value={score.away} onChange={(v) => set({ away: v })} />
+      </div>
+      <TextField label="Estado" value={score.note} placeholder="Final, Descanso, 78'…" onChange={(v) => set({ note: v })} />
+    </div>
+  )
+}
+
+export function ScoreboardProps({ el }: { el: ScoreboardElement }) {
+  const set = useElementSetter(el)
+  return (
+    <>
+      <Section title="Resultado">
+        <ScoreFields />
+        <p className="text-[11px] leading-snug text-dim">Es el resultado del partido: todos los marcadores y los textos con {'{score}'} se actualizan a la vez.</p>
+      </Section>
+      <Section title="Diseño">
+        <Row label="Disposición">
+          <Segmented value={el.layout} onChange={(v) => set({ layout: v })} options={[{ value: 'row', label: 'Fila' }, { value: 'stacked', label: 'Apilado' }, { value: 'compact', label: 'Píldora' }]} />
+        </Row>
+        <Toggle label="Escudos" checked={el.showCrests} onChange={(v) => set({ showCrests: v })} />
+        <Toggle label="Nombres" checked={el.showNames} onChange={(v) => set({ showNames: v })} />
+        <Toggle label="Estado (Final, Descanso…)" checked={el.showNote} onChange={(v) => set({ showNote: v })} />
+        <Toggle label="Ganador en color de acento" checked={el.highlightWinner} onChange={(v) => set({ highlightWinner: v })} />
+        <Slider label="Tamaño del resultado" min={60} max={420} step={1} value={el.scoreSize} onChange={(v) => set({ scoreSize: v })} />
+        <FontSelect label="Fuente del resultado" value={el.scoreFont} onChange={(v) => set({ scoreFont: v })} />
+        <FontSelect label="Fuente de los nombres" value={el.nameFont} onChange={(v) => set({ nameFont: v })} />
+        <ColorField label="Texto" value={el.textColor} onChange={(v) => set({ textColor: v })} />
+        <ColorField label="Secundario" value={el.mutedColor} onChange={(v) => set({ mutedColor: v })} />
+        <ColorField label="Acento" value={el.accentColor} onChange={(v) => set({ accentColor: v })} />
+      </Section>
+    </>
+  )
+}
+
+export function BadgeProps({ el }: { el: BadgeElement }) {
+  const set = useElementSetter(el)
+  return (
+    <>
+      <Section title="Etiqueta">
+        <TextField label="Texto" value={el.text} onChange={(v) => set({ text: v }, `badge-text-${el.id}`)} />
+        <Row label="Estilo">
+          <Segmented value={el.style} onChange={(v) => set({ style: v })} options={[{ value: 'solid', label: 'Sólida' }, { value: 'glow', label: 'Luz' }, { value: 'outline', label: 'Borde' }, { value: 'text', label: 'Texto' }]} />
+        </Row>
+        <Select
+          label="Icono"
+          value={el.icon}
+          onChange={(v) => set({ icon: v as BadgeElement['icon'] })}
+          options={[
+            { value: 'none', label: 'Sin icono' },
+            { value: 'check', label: 'Check' },
+            { value: 'lock', label: 'Candado' },
+            { value: 'star', label: 'Estrella' },
+            { value: 'bolt', label: 'Rayo' },
+            { value: 'trophy', label: 'Trofeo' },
+            { value: 'arrow', label: 'Flecha' },
+          ]}
+        />
+        <Row label="Alineación">
+          <Segmented value={el.align} onChange={(v) => set({ align: v })} options={[{ value: 'left', label: 'Izq.' }, { value: 'center', label: 'Centro' }, { value: 'right', label: 'Der.' }]} />
+        </Row>
+      </Section>
+      <Section title="Estilo">
+        <ColorField label="Color" value={el.color} onChange={(v) => set({ color: v })} />
+        <ColorField label="Texto" value={el.textColor} onChange={(v) => set({ textColor: v })} />
+        <FontSelect label="Fuente" value={el.font} onChange={(v) => set({ font: v })} />
+        <Slider label="Tamaño" min={16} max={120} step={1} value={el.fontSize} onChange={(v) => set({ fontSize: v })} />
+        <Slider label="Redondeo" min={0} max={80} step={1} value={el.radius} onChange={(v) => set({ radius: v })} />
       </Section>
     </>
   )

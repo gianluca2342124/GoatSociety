@@ -94,18 +94,59 @@ export async function exportSlideBlob(project: Project, index: number, brand: Br
   return { blob, name: slideFileName(project, index, opts.format) }
 }
 
-export async function exportCarouselZip(project: Project, brand: BrandKit, opts: ExportOptions, onProgress?: (done: number, total: number) => void): Promise<{ blob: Blob; name: string }> {
+export async function exportCarouselZip(project: Project, brand: BrandKit, opts: ExportOptions, onProgress?: (done: number, total: number) => void, indices?: number[]): Promise<{ blob: Blob; name: string }> {
   const zip = new JSZip()
-  const total = project.slides.length
-  for (let i = 0; i < total; i++) {
-    const { blob, name } = await exportSlideBlob(project, i, brand, opts)
+  const list = indices ?? project.slides.map((_, i) => i)
+  for (let k = 0; k < list.length; k++) {
+    const { blob, name } = await exportSlideBlob(project, list[k], brand, opts)
     zip.file(name, blob)
-    onProgress?.(i + 1, total)
+    onProgress?.(k + 1, list.length)
     // Yield so the UI can update between heavy renders.
     await new Promise((r) => setTimeout(r, 0))
   }
   const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' })
   return { blob, name: `${exportBaseName(project)}.zip` }
+}
+
+/** Render several pages as individual files (for separate downloads or the share sheet). */
+export async function exportSlideFiles(project: Project, brand: BrandKit, opts: ExportOptions, indices: number[], onProgress?: (done: number, total: number) => void): Promise<File[]> {
+  const files: File[] = []
+  for (let k = 0; k < indices.length; k++) {
+    const { blob, name } = await exportSlideBlob(project, indices[k], brand, opts)
+    files.push(new File([blob], name, { type: blob.type }))
+    onProgress?.(k + 1, indices.length)
+    await new Promise((r) => setTimeout(r, 0))
+  }
+  return files
+}
+
+/** True when the device can hand image files to the system share sheet (save to Photos on phones). */
+export function canShareFiles(): boolean {
+  try {
+    const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean }
+    return typeof nav.share === 'function' && !!nav.canShare?.({ files: [new File([new Blob(['x'], { type: 'image/png' })], 'x.png', { type: 'image/png' })] })
+  } catch {
+    return false
+  }
+}
+
+export async function shareFiles(files: File[], title: string): Promise<boolean> {
+  try {
+    await (navigator as Navigator & { share: (d: { files: File[]; title?: string }) => Promise<void> }).share({ files, title })
+    return true
+  } catch (e) {
+    // The user closing the share sheet is not an error.
+    if (e instanceof DOMException && e.name === 'AbortError') return true
+    return false
+  }
+}
+
+/** Download files one by one (browsers handle a short pause between them better). */
+export async function downloadFiles(files: File[]) {
+  for (const f of files) {
+    downloadBlob(f, f.name)
+    await new Promise((r) => setTimeout(r, 350))
+  }
 }
 
 export function downloadBlob(blob: Blob, name: string) {

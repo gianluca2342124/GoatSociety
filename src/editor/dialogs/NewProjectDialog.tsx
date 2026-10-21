@@ -33,13 +33,13 @@ function TeamInput({ label, value, onChange, onPick }: { label: string; value: s
   )
 }
 
-const FORMAT_ORDER: FormatPreset[] = ['story', 'portrait', 'square', 'landscape']
+const FORMAT_ORDER: FormatPreset[] = ['vertical', 'story', 'portrait', 'square', 'landscape']
 
 export function NewProjectDialog() {
   const close = () => useUI.getState().set({ modal: null })
   const teams = useLibrary((s) => s.teams)
   const [mode, setMode] = useState<'carousel' | 'post' | 'empty'>(() => useUI.getState().newProjectMode)
-  const [preset, setPreset] = useState<FormatPreset>('story')
+  const [preset, setPreset] = useState<FormatPreset>('vertical')
   const [templateId, setTemplateId] = useState('matchday-elite')
   const [home, setHome] = useState('PSG')
   const [away, setAway] = useState('Barcelona')
@@ -125,7 +125,7 @@ export function NewProjectDialog() {
         </div>
         {mode === 'post' && <Select label="Plantilla" value={templateId} onChange={setTemplateId} options={TEMPLATES.map((t) => ({ value: t.id, label: `${String(t.number).padStart(2, '0')} · ${t.name}` }))} />}
         <Row label="Formato">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {FORMAT_ORDER.map((p) => {
               const f = FORMATS[p]
               const r = f.width / f.height

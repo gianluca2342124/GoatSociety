@@ -381,6 +381,8 @@ export function probability(p: Partial<ProbabilityElement> = {}): ProbabilityEle
   }
 }
 
+export type BadgeIcon = BadgeElement['icon']
+
 export function badge(p: Partial<BadgeElement> = {}): BadgeElement {
   return {
     ...base('Etiqueta', 340, 900, 400, 84),

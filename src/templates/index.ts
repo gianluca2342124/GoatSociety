@@ -2,13 +2,14 @@ import { uid } from '../model/ids'
 import type { CanvasFormat, MatchData, Project, Slide } from '../model/types'
 import { chrome, cinematic, ink, makeCtx } from './kit'
 import { MATCH_TEMPLATES } from './match'
+import { MEDIA_TEMPLATES } from './media'
 import { STATS_TEMPLATES } from './stats'
 import { TACTICS_TEMPLATES } from './tactics'
 import { PREDICTION_TEMPLATES } from './predictions'
 import { BRAND_TEMPLATES } from './brand'
 import type { TemplateDef } from './types'
 
-export const TEMPLATES: TemplateDef[] = [...MATCH_TEMPLATES, ...STATS_TEMPLATES, ...TACTICS_TEMPLATES, ...PREDICTION_TEMPLATES, ...BRAND_TEMPLATES].sort((a, b) => a.number - b.number)
+export const TEMPLATES: TemplateDef[] = [...MATCH_TEMPLATES, ...MEDIA_TEMPLATES, ...STATS_TEMPLATES, ...TACTICS_TEMPLATES, ...PREDICTION_TEMPLATES, ...BRAND_TEMPLATES].sort((a, b) => a.number - b.number)
 
 export function templateById(id: string | null | undefined): TemplateDef | undefined {
   return TEMPLATES.find((t) => t.id === id)

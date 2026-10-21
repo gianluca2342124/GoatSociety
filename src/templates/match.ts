@@ -1,23 +1,71 @@
 import * as E from '../model/elements'
-import type { SlideElement } from '../model/types'
+import type { SlideElement, TextElement } from '../model/types'
 import type { TemplateDef } from './types'
 import type { TCtx } from './kit'
-import { cinematic, crestOf, hl, ink, label, px, signature, support } from './kit'
+import { chrome, cinematic, crestOf, hl, ink, inkFlat, label, px, signature, support } from './kit'
 
 // GOAT EDITORIAL · Previas
 // Black background, big white type, one accent ($accent), one message.
 
-/** Vertical type factor: 1 on story/portrait, ≈0.85 on square/landscape. */
-const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
+// ════════════════════════════════════════════════════════════════════════════
+// FAMILY RHYTHM (v2) — shared by match.ts, stats.ts and brand.ts
+// chrome (signature + page) → headline zone (top, centered) → main visual
+// (centre) → support / source / CTA (foot line on t.contentBottom).
+// Every standard page puts its headline at the same y with the same size, so
+// swiping a carousel reads as one brand. 16:9 keeps the same order with a
+// one-line headline.
+// ════════════════════════════════════════════════════════════════════════════
 
-/** Approximate Anton cap height / font size (used to stack labels under numbers). */
-const CAP = 0.74
+/** Vertical type factor: 1 on vertical/story/portrait, ≈0.85 on square/landscape. */
+export const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
+
+/** Main headline size (story px), the same on every standard page. */
+export const HEAD = 150
 
 /**
  * Headline leading for the big Anton claims: at the kit default (1.04) an
  * accented capital (PARÍS, ÚLTIMOS) touches the letter above it.
  */
-const LH = 1.12
+export const LH = 1.12
+
+/** Approximate Anton cap height / font size (used to stack labels under numbers). */
+const CAP = 0.74
+
+/** Lines the main headline gets: two on vertical formats, one on 16:9. */
+export const headLines = (t: TCtx) => (t.landscape ? 1 : 2)
+
+/** The shared headline zone: always at t.contentTop, full column, centered. */
+export function headZone(t: TCtx, lines = headLines(t), size = HEAD * vk(t), lh = LH) {
+  const h = size * t.s * lh * lines + px(t, 8)
+  return { y: t.contentTop, h, size, lh, end: t.contentTop + h }
+}
+
+/** Main headline in the shared zone. */
+export function mainHead(t: TCtx, content: string, p: Partial<TextElement> = {}, lines = headLines(t), size = HEAD * vk(t), lh = LH): TextElement {
+  const z = headZone(t, lines, size, lh)
+  return hl(t, content, { y: z.y, h: z.h }, z.size, { lineHeight: lh, ...p })
+}
+
+/** Space between the headline zone and the main visual (and visual → foot). */
+export const gapV = (t: TCtx) => px(t, 72)
+
+/** Height of the foot line (one dim source label). */
+export const footH = (t: TCtx) => px(t, 50, 30)
+
+/** Dim source / context label centered on the foot line. */
+export function footLabel(t: TCtx, content: string, p: Partial<TextElement> = {}): TextElement {
+  const h = footH(t)
+  return label(t, content, { y: t.contentBottom - h, h }, 34, { name: 'Fuente', align: 'center', fill: { kind: 'solid', color: '$dim' }, ...p })
+}
+
+/** Support sentence centered on the foot (bottom-anchored on t.contentBottom). */
+export function footSupport(t: TCtx, content: string, lines = 1, size = 46, p: Partial<TextElement> = {}): TextElement {
+  const h = size * t.s * 1.22 * lines + px(t, 6)
+  return support(t, content, { y: t.contentBottom - h, h }, size, { align: 'center', verticalAlign: 'bottom', ...p })
+}
+
+/** Top of the foot zone for a support block of `lines` lines. */
+export const footTop = (t: TCtx, lines = 1, size = 46) => t.contentBottom - (size * t.s * 1.22 * lines + px(t, 6))
 
 /** Team name centered under a crest (keeps the cover linked to the match data). */
 function crestName(t: TCtx, side: 'home' | 'away', x: number, y: number, w: number, size: number) {
@@ -29,80 +77,75 @@ function crestName(t: TCtx, side: 'home' | 'away', x: number, y: number, w: numb
   })
 }
 
+/** Quiet Anton "VS" holding the centre axis between two crests. */
+function versus(t: TCtx, cx: number, cy: number, size: number) {
+  return label(t, 'VS', { x: cx - size * 1.2, y: cy - size * 0.6, w: size * 2.4, h: size * 1.2 }, size / t.s, {
+    name: 'VS',
+    fontFamily: '$headline',
+    fontWeight: 400,
+    align: 'center',
+    verticalAlign: 'middle',
+    lineHeight: 1,
+    letterSpacing: 0,
+    autoFit: false,
+    fill: { kind: 'solid', color: '$dim' },
+  })
+}
+
 export const matchdayElite: TemplateDef = {
   id: 'matchday-elite',
   number: 1,
   name: 'Matchday Elite',
   category: 'match',
-  description: 'Portada de partido: dos escudos grandes con sus nombres, un titular y la fecha.',
+  description: 'Portada de partido: titular arriba, dos escudos grandes con sus nombres y la fecha al pie.',
   build: (t) => {
     const k = vk(t)
     const ns = 46 * k
     const nh = ns * t.s * 1.25
     const ng = px(t, 22)
-    if (t.landscape) {
-      // Text column on the left, the two crests share the right half; both
-      // blocks sit on the same horizontal axis.
-      const colW = t.cw * 0.47
-      const hs = 150 * k
-      const sh = px(t, 60)
-      const gapS = px(t, 28)
-      const mid = t.contentTop + t.ch / 2
-      // Room for a three-line headline + the date line, centered on the axis.
-      const block = hs * t.s * LH * 3 + gapS + sh
-      const sy = Math.min(t.contentBottom - sh, mid + block / 2 - sh)
-      const hb = sy - gapS
-      const gap = px(t, 40)
-      const cs = Math.min((t.cw - colW - px(t, 70) - gap) / 2, t.ch * 0.42)
-      const rx = t.right - cs * 2 - gap
-      const cy = mid - (cs + ng + nh) / 2
-      return {
-        background: ink(),
-        elements: [
-          ...cinematic(t, 'stadium'),
-          signature(t),
-          crestOf('home', rx, cy, cs),
-          crestOf('away', rx + cs + gap, cy, cs),
-          crestName(t, 'home', rx, cy + cs + ng, cs, ns),
-          crestName(t, 'away', rx + cs + gap, cy + cs + ng, cs, ns),
-          hl(t, '{headline}', { y: t.contentTop, w: colW, h: hb - t.contentTop }, hs, { verticalAlign: 'bottom', lineHeight: LH }),
-          support(t, '{competition}  ·  {weekday} {time}', { y: sy, w: colW, h: px(t, 90) }, 44, { name: 'Fecha y competición' }),
-        ],
-      }
-    }
-    const sy = t.contentBottom - px(t, 100)
-    const hb = sy - px(t, 30)
-    const hh = px(t, 400)
-    const hy = hb - hh
-    const room = hy - t.contentTop - px(t, 20)
-    const cs = Math.min(400 * t.s, (room - ng - nh) * 0.9, t.cw * 0.43)
-    const cy = t.contentTop + (room - cs - ng - nh) / 2
+    const z = headZone(t)
+    const fy = footTop(t)
+    const a = z.end + gapV(t)
+    const b = fy - gapV(t)
+    // The two crests own the centre: as big as the room allows, symmetric
+    // around the axis with a quiet VS between them.
+    const cs = Math.min(400 * t.s, b - a - ng - nh, t.cw * 0.42)
+    const gap = Math.max(px(t, 150), Math.min(t.cw - cs * 2, cs * 0.75))
+    const by = a + Math.max(0, (b - a - cs - ng - nh) / 2)
+    const hx = t.cx - gap / 2 - cs
+    const ax = t.cx + gap / 2
     return {
       background: ink(),
       elements: [
         ...cinematic(t, 'stadium'),
-        signature(t),
-        crestOf('home', t.left, cy, cs),
-        crestOf('away', t.right - cs, cy, cs),
-        crestName(t, 'home', t.left, cy + cs + ng, cs, ns),
-        crestName(t, 'away', t.right - cs, cy + cs + ng, cs, ns),
-        hl(t, '{headline}', { y: hy, h: hh }, 170 * k, { verticalAlign: 'bottom', lineHeight: LH }),
-        support(t, '{competition}  ·  {weekday} {time}', { y: sy, h: px(t, 100) }, 46, { name: 'Fecha y competición' }),
+        ...chrome(t),
+        mainHead(t, '{headline}'),
+        crestOf('home', hx, by, cs),
+        crestOf('away', ax, by, cs),
+        crestName(t, 'home', hx, by + cs + ng, cs, ns),
+        crestName(t, 'away', ax, by + cs + ng, cs, ns),
+        versus(t, t.cx, by + cs / 2, Math.min(px(t, 96), gap * 0.42)),
+        footSupport(t, '{competition}  ·  {weekday} {time}', 1, 46, { name: 'Fecha y competición' }),
       ],
     }
   },
 }
 
-/** Small crest pair + match line used as context on typographic slides. */
-function matchTag(t: TCtx, y: number, size = 88, w = t.cw): SlideElement[] {
+/** Small centered crest pair + match line: the context of a typographic slide (foot). */
+function matchTag(t: TCtx, bottom: number, size = 72): { els: SlideElement[]; top: number } {
   const cs = px(t, size, 40)
-  const gap = cs * 0.22
-  const tx = t.left + cs * 2 + gap + px(t, 28)
-  return [
-    crestOf('home', t.left, y, cs, { name: 'Escudo local (pequeño)' }),
-    crestOf('away', t.left + cs + gap, y, cs, { name: 'Escudo visitante (pequeño)' }),
-    label(t, '{home.short} vs {away.short}  ·  {weekday} {time}', { x: tx, y: y + cs * 0.2, w: t.left + w - tx, h: cs * 0.6 }, 44 * vk(t), { name: 'Partido', verticalAlign: 'middle', fill: { kind: 'solid', color: '$muted' } }),
-  ]
+  const gap = cs * 0.3
+  const lh = px(t, 54, 32)
+  const ly = bottom - lh
+  const cy = ly - px(t, 16) - cs
+  return {
+    top: cy,
+    els: [
+      crestOf('home', t.cx - gap / 2 - cs, cy, cs, { name: 'Escudo local (pequeño)' }),
+      crestOf('away', t.cx + gap / 2, cy, cs, { name: 'Escudo visitante (pequeño)' }),
+      label(t, '{home.short} vs {away.short}  ·  {weekday} {time}', { y: ly, h: lh }, 40 * vk(t), { name: 'Partido', align: 'center', verticalAlign: 'middle', fill: { kind: 'solid', color: '$muted' } }),
+    ],
+  }
 }
 
 export const bigStatement: TemplateDef = {
@@ -110,23 +153,26 @@ export const bigStatement: TemplateDef = {
   number: 2,
   name: 'The Big Statement',
   category: 'match',
-  description: 'Titular gigante a toda la pantalla, una palabra en acento y una frase de apoyo.',
+  description: 'Titular gigante a toda la pantalla, una palabra en acento, una frase de apoyo y el partido al pie.',
   build: (t) => {
     const k = vk(t)
-    const tagY = t.contentTop
-    const subH = px(t, 140)
-    const subY = t.contentBottom - px(t, 30) - subH
-    const hb = subY - px(t, 34)
-    const hy = tagY + px(t, 150)
-    const size = t.landscape ? 230 * k : 220 * k
+    const tag = matchTag(t, t.contentBottom)
+    // Support line just above the match tag, the giant claim from the shared
+    // headline line down to it.
+    const ss = 56 * Math.max(0.85, k)
+    const subH = ss * t.s * 1.22 * (t.landscape ? 1 : 2) + px(t, 6)
+    const subY = tag.top - px(t, 40) - subH
+    const hy = t.contentTop
+    const hb = subY - px(t, 48)
+    const size = t.landscape ? 210 * k : 220 * k
     return {
       background: ink(),
       elements: [
         ...cinematic(t, 'spot'),
-        signature(t),
-        ...matchTag(t, tagY),
-        hl(t, '{headline}', { y: hy, h: hb - hy }, size, { name: 'Titular gigante', verticalAlign: 'bottom', lineHeight: LH }),
-        support(t, '{subheadline}', { y: subY, w: Math.min(t.cw, 860 * t.s), h: subH }, 56 * Math.max(0.85, k), { name: 'Subtítulo' }),
+        ...chrome(t),
+        hl(t, '{headline}', { y: hy, h: hb - hy }, size, { name: 'Titular gigante', lineHeight: LH }),
+        support(t, '{subheadline}', { x: t.cx - Math.min(t.cw, 860 * t.s) / 2, y: subY, w: Math.min(t.cw, 860 * t.s), h: subH }, ss, { name: 'Subtítulo', align: 'center', verticalAlign: 'bottom' }),
+        ...tag.els,
       ],
     }
   },
@@ -140,31 +186,26 @@ export const headToHead: TemplateDef = {
   description: 'Cara a cara histórico en tres cifras enormes: victorias de cada equipo y empates.',
   build: (t) => {
     const k = vk(t)
-    // Headline + numbers stacked; side by side in landscape.
-    const split = t.landscape
-    const hw = split ? t.cw * 0.4 : t.cw
-    const hh = split ? t.ch * 0.7 : px(t, 350)
-    const hy = split ? t.contentTop + (t.ch - hh) / 2 : t.contentTop
-    const nx = split ? t.left + t.cw * 0.46 : t.left
-    const nw = split ? t.cw * 0.54 : t.cw
-    const zTop = split ? t.contentTop : hy + hh + px(t, 40)
-    const zBot = t.contentBottom
+    const z = headZone(t)
+    // 16:9: the three columns stay at a readable measure in the centre.
+    const nw = t.landscape ? Math.min(t.cw, 1100) : t.cw
+    const nx = t.cx - nw / 2
     const colW = nw / 3
-    const g1 = px(t, 50)
-    const g2 = px(t, 40)
-    const g3 = px(t, 70)
+    const zTop = z.end + gapV(t)
+    const zBot = t.contentBottom - footH(t) - gapV(t)
+    const g1 = px(t, 44)
+    const g2 = px(t, 36)
     const ls = 46 * k
-    const ss = 34 * k
+    const lh = ls * t.s * 1.3
     // Size crests and numbers to the room available (giant on stories).
-    const room = zBot - zTop - (g1 + g2 + ls * 1.2 + g3 + ss * 1.3)
-    const vs = Math.min(340 * k, colW * 1.15, (room * 0.52) / CAP)
-    const cs = Math.min(250 * k, colW * 0.78, room * 0.46)
+    const room = zBot - zTop - (g1 + g2 + lh)
+    const vs = Math.min(340 * k, colW * 1.15, (room * 0.56) / CAP)
+    const cs = Math.min(230 * k, colW * 0.7, room * 0.4)
     const numH = vs * CAP
-    const block = cs + g1 + numH + g2 + ls * 1.2 + g3 + ss * 1.3
+    const block = cs + g1 + numH + g2 + lh
     const by = zTop + Math.max(0, (zBot - zTop - block) / 2)
     const ny = by + cs + g1
     const ly = ny + numH + g2
-    const sy = ly + ls * 1.2 + g3
     const cols = [
       { v: '4', l: 'Victorias', c: '$accent', side: 'home' as const, n: 'local' },
       { v: '3', l: 'Empates', c: '$muted', side: null, n: 'empates' },
@@ -176,17 +217,17 @@ export const headToHead: TemplateDef = {
       if (col.side) els.push(crestOf(col.side, x + (colW - cs) / 2, by, cs))
       els.push(
         E.statNumber({ name: `Cifra ${col.n}`, x, y: ny, width: colW, height: numH * 1.06, value: col.v, label: '', description: '', layout: 'hero', align: 'center', valueSize: vs, valueColor: col.c }),
-        label(t, col.l, { x, y: ly, w: colW, h: ls * 1.3 }, ls, { name: `Etiqueta ${col.n}`, align: 'center', fill: { kind: 'solid', color: i === 0 ? '$text' : '$muted' } }),
+        label(t, col.l, { x, y: ly, w: colW, h: lh }, ls, { name: `Etiqueta ${col.n}`, align: 'center', fill: { kind: 'solid', color: i === 0 ? '$text' : '$muted' } }),
       )
     })
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        signature(t),
-        hl(t, '{home.short} gana [[4]] de los últimos 9', { y: hy, w: hw, h: hh }, 150 * k, { name: 'Titular', verticalAlign: split ? 'middle' : 'top', lineHeight: LH }),
+        ...chrome(t),
+        mainHead(t, '{home.short} gana [[4]] de los últimos 9'),
         ...els,
-        label(t, 'Últimos 9 enfrentamientos oficiales', { x: nx, y: sy, w: nw, h: ss * 1.3 }, ss, { name: 'Fuente', align: 'center', fill: { kind: 'solid', color: '$dim' } }),
+        footLabel(t, 'Últimos 9 enfrentamientos oficiales'),
       ],
     }
   },
@@ -199,53 +240,29 @@ export const matchdayAgenda: TemplateDef = {
   category: 'match',
   description: 'Agenda del día en filas abiertas: hora grande, escudos y nombres.',
   build: (t) => {
-    const k = vk(t)
     // Break before the accent so the claim reads «HOY SE JUEGA / LA CHAMPIONS».
-    const title = 'Hoy se juega\n[[la Champions]]'
-    if (t.landscape) {
-      // Headline column on the left, open list on the right (wide enough
-      // that long team names never touch).
-      const colW = t.cw * 0.4
-      const lx = t.left + t.cw * 0.44
-      const lw = t.right - lx
-      const n = 5
-      const rowH = Math.min(px(t, 165), (t.ch * 0.96) / (n - 0.2))
-      const ly = t.contentTop + (t.ch - rowH * (n - 0.2)) / 2
-      // Two lines that fit the column (Anton ≈ 5.5 em for «LA CHAMPIONS»).
-      const hs = Math.min(130 * k, colW / (5.6 * t.s))
-      const hh = hs * t.s * 1.04 * 2 + px(t, 8)
-      const dh = px(t, 64)
-      const hy = t.contentTop + (t.ch - hh - dh - px(t, 20)) / 2
-      return {
-        background: ink(),
-        elements: [
-          ...cinematic(t),
-          signature(t),
-          hl(t, title, { y: hy, w: colW, h: hh }, hs, { verticalAlign: 'bottom' }),
-          support(t, '{weekday}  ·  {date}', { y: hy + hh + px(t, 20), w: colW, h: dh }, 44, { name: 'Fecha' }),
-          E.matchList({ name: 'Agenda', x: lx, y: ly, width: lw, height: rowH * n, rowHeight: rowH, maxItems: n, variant: 'editorial' }),
-        ],
-      }
-    }
-    // Two-line headline, the date, then the open list down to the safe line.
-    const hs = (t.story ? 145 : 135) * k
-    const hh = hs * 1.04 * 2 + px(t, 8)
-    const sy = t.contentTop + hh + px(t, 6)
-    const sh = px(t, 60)
-    const ly = sy + sh + px(t, 36)
-    // Square is short: four rows keep names above 40px.
-    const n = t.H / t.W < 1.1 ? 4 : 5
-    const rowH = Math.min(210 * t.s, (t.contentBottom - ly) / (n - 0.2))
-    // Keep the right edge clear of the TikTok buttons on stories.
-    const lw = t.story ? t.cw - 72 : t.cw
+    const title = t.landscape ? 'Hoy se juega [[la Champions]]' : 'Hoy se juega\n[[la Champions]]'
+    const z = headZone(t)
+    // The date sits right under the claim (it belongs to it); the open list
+    // fills the centre down to the safe line.
+    const dh = px(t, 60)
+    const dy = z.end + px(t, 8)
+    const ly = dy + dh + px(t, 48)
+    const room = t.contentBottom - ly
+    // Rows stay ≥140px tall (names ≥40px): five on tall formats, fewer on short ones.
+    const n = Math.max(3, Math.min(5, Math.floor(room / 140 + 0.2)))
+    const rowH = Math.min(210 * t.s, room / (n - 0.2))
+    // 16:9 keeps a comfortable measure; stories stay clear of the TikTok buttons.
+    const lw = t.landscape ? Math.min(t.cw, 1100) : t.story ? t.cw - 72 : t.cw
+    const lx = t.landscape ? t.cx - lw / 2 : t.left
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        signature(t),
-        hl(t, title, { y: t.contentTop, h: hh }, hs),
-        support(t, '{weekday}  ·  {date}', { y: sy, h: sh }, 46, { name: 'Fecha' }),
-        E.matchList({ name: 'Agenda', x: t.left, y: ly, width: lw, height: rowH * n, rowHeight: rowH, maxItems: n, variant: 'editorial' }),
+        ...chrome(t),
+        mainHead(t, title),
+        support(t, '{weekday}  ·  {date}', { y: dy, h: dh }, 46, { name: 'Fecha', align: 'center' }),
+        E.matchList({ name: 'Agenda', x: lx, y: ly + Math.max(0, (room - rowH * (n - 0.2)) / 2), width: lw, height: rowH * n, rowHeight: rowH, maxItems: n, variant: 'editorial' }),
       ],
     }
   },
@@ -260,12 +277,14 @@ export const photoCover: TemplateDef = {
   build: (t) => {
     const k = vk(t)
     const fs = 160 * k
-    // Type at the foot of the content zone.
-    const subH = px(t, 130)
-    const subY = t.contentBottom - px(t, 40) - subH
+    // Type at the foot of the content zone (a photo cover keeps its claim low,
+    // over the picture; centered like every other headline).
+    const ss = 50 * Math.max(0.85, k)
+    const subH = ss * t.s * 1.22 * 2 + px(t, 6)
+    const subY = t.contentBottom - subH
     const hb = subY - px(t, 28)
-    // Landscape: a narrow type column on the left (three lines), the visual
-    // owns the right half.
+    // Landscape: a type column on the left (three lines), the visual owns the
+    // right half.
     const hw = t.landscape ? t.cw * 0.5 : t.cw
     const hy = t.landscape ? t.contentTop : hb - px(t, 420)
     // Photo: full bleed from the top, fading into black behind the type.
@@ -343,7 +362,8 @@ export const photoCover: TemplateDef = {
         })
     const dimTop = 0.18
     return {
-      background: ink(),
+      // Full-bleed photo: flat black underneath (the picture gives the depth).
+      background: inkFlat(),
       elements: [
         ...cinematic(t, 'grain'),
         crestOf('home', cx, cy, cs, { name: 'Escudo de fondo' }),
@@ -361,9 +381,26 @@ export const photoCover: TemplateDef = {
         }),
         E.image({ name: 'Foto', x: ix, y: 0, width: t.W - ix, height: ih, fit: 'cover', focusX: 0.5, focusY: 0.3, fadeBottom: fade }),
         scrim,
+        // Soft shade at the top so the signature reads on a bright photo.
+        ...(t.landscape
+          ? []
+          : [
+              E.shape({
+                name: 'Sombra superior',
+                shape: 'rect',
+                x: 0,
+                y: 0,
+                width: t.W,
+                height: t.top + px(t, 220),
+                cornerRadius: 0,
+                locked: true,
+                fill: { kind: 'linear', angle: 180, stops: [{ offset: 0, color: '$bg', opacity: 0.55 }, { offset: 0.55, color: '$bg', opacity: 0.25 }, { offset: 1, color: '$bg', opacity: 0 }] },
+              }),
+            ]),
+        // Photo cover: the signature stays, the page number is dropped.
         signature(t),
         hl(t, '{headline}', { y: hy, w: hw, h: hb - hy }, fs, { verticalAlign: 'bottom', lineHeight: LH }),
-        support(t, '{subheadline}', { y: subY, w: hw, h: subH }, 50 * Math.max(0.85, k), { name: 'Apoyo' }),
+        support(t, '{subheadline}', { y: subY, w: hw, h: subH }, ss, { name: 'Apoyo', align: 'center' }),
       ],
     }
   },

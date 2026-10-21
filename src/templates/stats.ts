@@ -3,19 +3,18 @@ import type { MatchData, StatRow, TextElement } from '../model/types'
 import { rowLeader } from '../model/stats'
 import type { TemplateDef } from './types'
 import type { TCtx } from './kit'
-import { cinematic, crestOf, hl, ink, label, px, signature, support } from './kit'
+import { chrome, cinematic, crestOf, ink, label, px } from './kit'
+import { LH, footH, footLabel, footSupport, footTop, gapV, headZone, mainHead, vk } from './match'
 
 // ════════════════════════════════════════════════════════════════════════════
 // GOAT EDITORIAL · Estadísticas
 // Fondo negro, cifras enormes, un solo acento, un mensaje por diapositiva.
-// Story / 4:5 / 1:1 apilan titular + gráfico; 16:9 abre en dos columnas
-// (titular a la izquierda, el dato a la derecha).
+// Ritmo de familia (v2, ver match.ts): cromo → titular centrado arriba →
+// el dato en el centro → fuente al pie. 16:9 mantiene el orden con un titular
+// de una línea y el dato a una medida cómoda en el centro.
 // ════════════════════════════════════════════════════════════════════════════
 
 type Side = 'home' | 'away'
-
-/** Headline leading: accented capitals (Á/Ú) clear the line above. */
-const LH = 1.12
 
 /**
  * Leading for a headline that starts with a team name. Anton's cedilla/comma
@@ -26,36 +25,27 @@ function lhFor(match: MatchData, ...sides: Side[]): number {
   return sides.some((s) => /[Çç,;]/.test(match[s].shortName || match[s].name)) ? 1.24 : LH
 }
 
-/** Type factor for short formats (1 on story and 4:5). */
-const vk = (t: TCtx) => Math.min(1, t.v + 0.18)
-
 const other = (s: Side): Side => (s === 'home' ? 'away' : 'home')
-
-/** Editorial headline with the leading used across the stats slides. */
-function head(t: TCtx, content: string, box: { x?: number; y: number; w?: number; h: number }, size: number, p: Partial<TextElement> = {}): TextElement {
-  return hl(t, content, box, size, { lineHeight: LH, ...p })
-}
-
-/** Box height for an n-line headline (size in story px, already scaled for the format). */
-function headH(t: TCtx, size: number, lines = 2, lh = LH): number {
-  return size * t.s * lh * lines + 8
-}
 
 /** Right edge for key data. On stories the TikTok/Reels buttons cover x > 940 between y 900 and 1550. */
 function dataRight(t: TCtx): number {
   return t.story ? Math.min(t.right, t.W - 140) : t.right
 }
 
-/** 16:9 split: headline column on the left, data column on the right. */
-function cols(t: TCtx, share = 0.42) {
-  const lw = Math.round(t.cw * share)
-  const gap = px(t, 80)
-  return { lx: t.left, lw, rx: t.left + lw + gap, rw: t.cw - lw - gap }
+/** The data column: full width on vertical formats, a centered measure on 16:9. */
+function dataCol(t: TCtx, max = 1100) {
+  if (t.landscape) {
+    const w = Math.min(t.cw, max)
+    return { x: t.cx - w / 2, w }
+  }
+  return { x: t.left, w: dataRight(t) - t.left }
 }
 
-/** Dim source line at the foot of the content zone ("de dónde sale el dato"). */
-function source(t: TCtx, content: string, y: number, w = t.cw, x = t.left) {
-  return label(t, content, { x, y, w, h: px(t, 50, 30) }, 34, { name: 'Fuente', fill: { kind: 'solid', color: '$dim' } })
+/** Centre zone between the headline and the foot (or the safe line when the page has no foot). */
+function middle(t: TCtx, withFoot = true, lh = LH) {
+  const a = headZone(t, undefined, undefined, lh).end + gapV(t)
+  const b = withFoot ? t.contentBottom - footH(t) - gapV(t) : t.contentBottom
+  return { a, b, h: b - a }
 }
 
 /** Row id of the xG metric when the match has one, else the first metric. */
@@ -78,15 +68,6 @@ function leaderOf(rows: StatRow[]): Side {
 
 const NUM: Record<number, string> = { 3: 'tres', 4: 'cuatro', 5: 'cinco', 6: 'seis', 7: 'siete', 8: 'ocho', 9: 'nueve', 10: 'diez' }
 
-/**
- * Vertical sizer: story px → format px, shrunk uniformly when the stacked
- * composition (total story px) would not fit the content zone.
- */
-function sizer(t: TCtx, total: number) {
-  const k = Math.min(1, t.ch / Math.max(1, px(t, total)))
-  return (v: number, floor = 0) => Math.max(floor, px(t, v) * k)
-}
-
 /** Approximate height of a statNumber 'hero' block (mirrors the painter). */
 function heroHeight(valueSize: number, withLabel: boolean, descLines: number): number {
   const cap = valueSize * 0.86
@@ -107,6 +88,21 @@ function place(a: number, b: number, est: number, bias = 0.5) {
   return { y, h: Math.max(10, b - y) }
 }
 
+/** Quiet Anton "VS" on the centre axis (same treatment as the match cover). */
+function versus(t: TCtx, cx: number, cy: number, size: number): TextElement {
+  return label(t, 'VS', { x: cx - size * 1.2, y: cy - size * 0.6, w: size * 2.4, h: size * 1.2 }, size / t.s, {
+    name: 'VS',
+    fontFamily: '$headline',
+    fontWeight: 400,
+    align: 'center',
+    verticalAlign: 'middle',
+    lineHeight: 1,
+    letterSpacing: 0,
+    autoFit: false,
+    fill: { kind: 'solid', color: '$dim' },
+  })
+}
+
 // ── 05 · Comparativa audaz ──────────────────────────────────────────────────
 export const statisticalDominance: TemplateDef = {
   id: 'statistical-dominance',
@@ -115,41 +111,22 @@ export const statisticalDominance: TemplateDef = {
   category: 'stats',
   description: 'Comparativa audaz: cifras enormes y barras proporcionales automáticas.',
   build: (t, match) => {
-    // The team name closes the claim, so nothing hangs over an accented capital.
-    const claim = (n: number) => `En los números [[manda {${leaderOf(match.stats.slice(0, n))}.short}]]`
-    const src = 'Promedio por partido  ·  temporada actual'
-    if (t.landscape) {
-      const c = cols(t, 0.36)
-      const sy = t.contentBottom - px(t, 50)
-      return {
-        background: ink(),
-        elements: [
-          ...cinematic(t),
-          signature(t),
-          head(t, claim(3), { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 130),
-          E.statBars({ name: 'Comparativa', x: c.rx, y: t.contentTop, width: c.rw, height: t.ch, showCrests: true, maxRows: 3, statIds: [], valueSize: 112, labelSize: 36, barHeight: 24, rowGap: 44 }),
-          source(t, src, sy, c.lw),
-        ],
-      }
-    }
-    const k = vk(t)
-    const hy = t.contentTop
-    const hh = headH(t, 140 * k)
-    const by = hy + hh + px(t, 70)
-    const sy = t.contentBottom - px(t, 50)
-    const bh = sy - by - px(t, 50)
-    // Three rows only when each keeps ≥150px (labels ≥32px); 4:5 and 1:1 show two.
+    const m = middle(t)
+    const col = dataCol(t)
+    // Three rows only when each keeps ≥150px (labels ≥32px); short formats show two.
     const gap = 64 * t.v
-    const inner = bh - Math.min(120, bh * 0.16) - Math.max(36, gap)
+    const inner = m.h - Math.min(120, m.h * 0.16) - Math.max(36, gap)
     const n = (inner - 2 * gap) / 3 >= 150 ? 3 : 2
+    // The team name closes the claim, so nothing hangs over an accented capital.
+    const claim = t.landscape ? `En los números manda [[{${leaderOf(match.stats.slice(0, n))}.short}]]` : `En los números\n[[manda {${leaderOf(match.stats.slice(0, n))}.short}]]`
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        signature(t),
-        head(t, claim(n), { y: hy, h: hh }, 140 * k),
-        E.statBars({ name: 'Comparativa', x: t.left, y: by, width: dataRight(t) - t.left, height: bh, showCrests: true, maxRows: n, statIds: [], valueSize: 130 * t.s, labelSize: 40 * t.s, barHeight: 26 * t.s, rowGap: gap }),
-        source(t, src, sy),
+        ...chrome(t),
+        mainHead(t, claim),
+        E.statBars({ name: 'Comparativa', x: col.x, y: m.a, width: col.w, height: m.h, showCrests: true, maxRows: n, statIds: [], valueSize: 130 * t.s * vk(t), labelSize: 40 * t.s, barHeight: 26 * t.s, rowGap: gap }),
+        footLabel(t, 'Promedio por partido  ·  temporada actual'),
       ],
     }
   },
@@ -161,67 +138,43 @@ export const theNumbers: TemplateDef = {
   number: 6,
   name: 'The Numbers',
   category: 'stats',
-  description: 'Una sola cifra dominante que demuestra el titular.',
+  description: 'Una sola cifra dominante, centrada, que demuestra el titular.',
   build: (t, match) => {
     // "EN CASA" stays together: the claim breaks after the verb, never before a lone word.
-    const claim = '{home.short} [[sufre]] en\u00A0casa'
-    const lh = lhFor(match, 'home')
-    const src = '{competition}  ·  temporada actual'
-    // The support line is dropped when keeping it would shrink the number (1:1).
-    const stat = (x: number, y: number, w: number, h: number, vs: number) =>
-      E.statNumber({
-        name: 'Cifra principal',
-        x,
-        y,
-        width: w,
-        height: h,
-        value: '3/3',
-        label: 'Partidos en casa encajando',
-        description: heroFit(h, vs, true) >= vs * 0.85 ? '{home} aún no ha dejado la portería a cero como local.' : '',
-        valueSize: vs,
-        layout: 'hero',
-        align: 'left',
-        valueColor: '$accent',
-        labelColor: '$text',
-        textColor: '$muted',
-      })
-    if (t.landscape) {
-      const c = cols(t, 0.4)
-      const sy = t.contentBottom - px(t, 50)
-      const vs = 400
-      const z = place(t.contentTop, t.contentBottom, heroHeight(vs, true, 2), 0.5)
-      return {
-        background: ink(),
-        // Negative stat: the slide suggests red as its single accent.
-        accent: '$red',
-        elements: [
-          ...cinematic(t),
-          signature(t),
-          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 150, { lineHeight: lh }),
-          stat(c.rx, z.y, c.rw, z.h, vs),
-          source(t, src, sy, c.lw),
-        ],
-      }
-    }
-    const k = vk(t)
-    const hy = t.contentTop
-    const hh = headH(t, 150 * k, 2, lh)
-    const sy = t.contentBottom - px(t, 50)
-    // The proof number is the focal point: ~400px on stories, centred in the room left by the claim.
-    const vs = 400 * t.s * k
-    const a = hy + hh + px(t, 60)
-    const b = sy - px(t, 40)
-    const z = place(a, b, heroHeight(vs, true, heroFit(b - a, vs, true) >= vs * 0.85 ? 2 : 0), 0.5)
+    const claim = '{home.short} [[sufre]] en casa'
+    const lh = t.landscape ? LH : lhFor(match, 'home')
+    const m = middle(t, true, lh)
+    const col = dataCol(t)
+    // The proof number is the focal point: ~400px on tall formats, centred in the room left by the claim.
+    const vs = 400 * t.s * vk(t)
+    // The support line is dropped when keeping it would shrink the number.
+    const withDesc = heroFit(m.h, vs, true) >= vs * 0.85
+    const z = place(m.a, m.b, heroHeight(vs, true, withDesc ? 2 : 0), 0.5)
     return {
       background: ink(),
       // Negative stat: the slide suggests red as its single accent.
       accent: '$red',
       elements: [
         ...cinematic(t),
-        signature(t),
-        head(t, claim, { y: hy, h: hh }, 150 * k, { lineHeight: lh }),
-        stat(t.left, z.y, t.cw, z.h, vs),
-        source(t, src, sy),
+        ...chrome(t),
+        mainHead(t, claim, {}, undefined, undefined, lh),
+        E.statNumber({
+          name: 'Cifra principal',
+          x: col.x,
+          y: z.y,
+          width: col.w,
+          height: z.h,
+          value: '3/3',
+          label: 'Partidos en casa encajando',
+          description: withDesc ? '{home} aún no ha dejado la portería a cero como local.' : '',
+          valueSize: vs,
+          layout: 'hero',
+          align: 'center',
+          valueColor: '$accent',
+          labelColor: '$text',
+          textColor: '$muted',
+        }),
+        footLabel(t, '{competition}  ·  temporada actual'),
       ],
     }
   },
@@ -233,62 +186,37 @@ export const keyPlayers: TemplateDef = {
   number: 7,
   name: 'Key Players',
   category: 'stats',
-  description: 'El duelo de los dos jugadores clave: nombres grandes y su cifra.',
+  description: 'El duelo de los dos jugadores clave: nombres grandes y su cifra, con el VS en el eje.',
   build: (t) => {
-    // Forced break: "EL DUELO / QUE DECIDE" (never a lone "DECIDE"). 1:1 keeps one
-    // line; the narrow 16:9 headline column stacks three short lines.
-    const square = !t.story && !t.landscape && t.v < 0.8
-    const claim = square ? 'El duelo [[que decide]]' : t.landscape ? 'El duelo\n[[que]]\n[[decide]]' : 'El duelo\n[[que decide]]'
-    /** One player row: crest + the team's key player (name, note, stat). */
-    const player = (side: Side, x: number, y: number, right: number, rowH: number, cs: number, gapC: number, nameSize: number) => [
-      crestOf(side, x, y + (rowH - cs) / 2, cs),
-      E.playerList({ name: side === 'home' ? 'Clave local' : 'Clave visitante', side, filter: 'key', variant: 'editorial', x: x + cs + gapC, y, width: right - x - cs - gapC, height: rowH, maxItems: 1, nameSize, showStatus: false, showStat: true, statSize: Math.min(rowH * 0.78, nameSize * 2.2), showNumber: false, align: 'left', accentColor: '$accent' }),
-    ]
-    /** A big Anton "VS" in the crest column: crest · VS · crest reads as the face-off. */
-    const versus = (x: number, cy: number, w: number, size: number) =>
-      hl(t, 'VS', { x, y: cy - size * 0.6, w, h: size * 1.2 }, size / t.s, { name: 'VS', align: 'center', verticalAlign: 'middle', lineHeight: 1, autoFit: false, fill: { kind: 'solid', color: '$text' } })
-    if (t.landscape) {
-      const c = cols(t, 0.34)
-      const cs = px(t, 132)
-      const gapC = px(t, 34)
-      const vsH = px(t, 150)
-      const rowH = Math.min(px(t, 380), (t.ch - vsH) / 2)
-      const r1 = t.contentTop + Math.max(0, (t.ch - rowH * 2 - vsH) / 2)
-      const r2 = r1 + rowH + vsH
-      const right = c.rx + c.rw
-      return {
-        background: ink(),
-        elements: [
-          ...cinematic(t),
-          signature(t),
-          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: t.ch }, 124),
-          ...player('home', c.rx, r1, right, rowH, cs, gapC, px(t, 108)),
-          versus(c.rx - px(t, 20), r1 + rowH + vsH / 2, cs + px(t, 40), px(t, 128)),
-          ...player('away', c.rx, r2, right, rowH, cs, gapC, px(t, 108)),
-        ],
-      }
-    }
-    const hs = (headH(t, 150, square ? 1 : 2) - 8) / t.s + 8
-    const S = sizer(t, hs + 80 + 360 + 150 + 360)
-    const f = S(1000) / 1000 / t.s
-    const hy = t.contentTop
-    const hh = S(hs)
-    const cs = S(136, 60)
-    const gapC = S(36, 16)
-    const rowH = S(360, 150)
-    const vsH = S(150, 70)
-    const r1 = hy + hh + S(80)
+    // Forced break: "EL DUELO / QUE DECIDE" (never a lone "DECIDE"); 16:9 fits one line.
+    const claim = t.landscape ? 'El duelo [[que decide]]' : 'El duelo\n[[que decide]]'
+    // The source line is dropped on short formats so the two rows stay big.
+    const withFoot = middle(t).h >= 520
+    const m = middle(t, withFoot)
+    const col = dataCol(t)
+    const f = Math.min(1, m.h / 870)
+    const cs = Math.max(60, 136 * t.s * Math.min(1, f * 1.1))
+    const gapC = px(t, 36, 16)
+    const vsH = Math.max(70, 150 * t.s * f)
+    const rowH = Math.min(360 * t.s, (m.h - vsH) / 2)
+    const nameSize = Math.max(46, Math.min(108 * t.s, rowH * 0.36))
+    const r1 = m.a + Math.max(0, (m.h - rowH * 2 - vsH) / 2)
     const r2 = r1 + rowH + vsH
-    const right = dataRight(t)
+    /** One player row: crest + the team's key player (name, note, stat). */
+    const player = (side: Side, y: number) => [
+      crestOf(side, col.x, y + (rowH - cs) / 2, cs),
+      E.playerList({ name: side === 'home' ? 'Clave local' : 'Clave visitante', side, filter: 'key', variant: 'editorial', x: col.x + cs + gapC, y, width: col.w - cs - gapC, height: rowH, maxItems: 1, nameSize, showStatus: false, showStat: true, statSize: Math.min(rowH * 0.78, nameSize * 2.2), showNumber: false, align: 'left', accentColor: '$accent' }),
+    ]
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        signature(t),
-        head(t, claim, { y: hy, h: hh }, 150 * f),
-        ...player('home', t.left, r1, right, rowH, cs, gapC, S(108, 46)),
-        versus(t.left - S(20), r1 + rowH + vsH / 2, cs + S(40), S(128, 52)),
-        ...player('away', t.left, r2, right, rowH, cs, gapC, S(108, 46)),
+        ...chrome(t),
+        mainHead(t, claim),
+        ...player('home', r1),
+        versus(t, col.x + col.w / 2, r1 + rowH + vsH / 2, Math.min(px(t, 96), vsH * 0.62)),
+        ...player('away', r2),
+        ...(withFoot ? [footLabel(t, '{competition}  ·  temporada actual')] : []),
       ],
     }
   },
@@ -300,47 +228,41 @@ export const performanceComparison: TemplateDef = {
   number: 8,
   name: 'Performance Comparison',
   category: 'stats',
-  description: 'Una sola métrica cara a cara: escudos, dos cifras enormes y una barra.',
+  description: 'Una sola métrica cara a cara: escudos, dos cifras enormes, una barra y la lectura al pie.',
   build: (t, match) => {
     const ids = xgStatId(match)
     const row = match.stats.find((s) => s.id === ids[0])
     const lead: Side = row && rowLeader(row) === 'home' ? 'home' : 'away'
     // The team closes the claim: a hanging Ç (Barça) never lands on the next line.
-    const claim = `El peligro lo\u00A0pone [[{${lead}.short}]]`
+    const claim = t.landscape ? `El peligro lo pone [[{${lead}.short}]]` : `El peligro\nlo pone [[{${lead}.short}]]`
     const reading = `{${lead}} llega con más ocasiones claras por partido que {${other(lead)}}.`
-    /** Crest + short name on each side, then the single-row comparison. */
-    const duel = (x: number, w: number, cy: number, cs: number, ns: number, by: number, bh: number, vs: number) => {
-      const nw = w / 2 - cs - ns * 0.6
-      const ny = cy + cs / 2 - ns * 0.6
-      return [
-        crestOf('home', x, cy, cs),
-        label(t, '{home.short}', { x: x + cs + ns * 0.55, y: ny, w: nw, h: ns * 1.2 }, ns / t.s, { name: 'Nombre local', fill: { kind: 'solid', color: '$text' }, fontWeight: 700 }),
-        crestOf('away', x + w - cs, cy, cs),
-        label(t, '{away.short}', { x: x + w - cs - ns * 0.55 - nw, y: ny, w: nw, h: ns * 1.2 }, ns / t.s, { name: 'Nombre visitante', align: 'right', fill: { kind: 'solid', color: '$text' }, fontWeight: 700 }),
-        E.statBars({ name: 'Métrica', x, y: by, width: w, height: bh, statIds: ids, maxRows: 1, style: 'editorial', colorMode: 'leader', showCrests: false, valueSize: vs, labelSize: 55 * t.s, barHeight: 30 * t.s, rowGap: 0 }),
-      ]
-    }
-    // 16:9 keeps the vertical duel (two columns would push the two values together)
-    // with a one-line headline; the reading line stays at a comfortable measure.
-    const hs = (headH(t, 140, t.landscape ? 1 : 2) - 8) / t.s + 8
-    const S = sizer(t, hs + 100 + 150 + 50 + 440 + 60 + 130)
-    const f = S(1000) / 1000 / t.s
-    const hy = t.contentTop
-    const hh = S(hs)
-    const cs = S(150, 64)
-    const cy = hy + hh + S(t.landscape ? 70 : 100)
-    const by = cy + cs + S(50)
-    const bh = S(440, 190)
-    const sy = by + bh + S(60)
-    const w = dataRight(t) - t.left
+    const k = vk(t)
+    const col = dataCol(t)
+    // Reading line on the foot (two centered lines).
+    const rl = 2
+    const fy = footTop(t, rl, 48)
+    const a = headZone(t).end + gapV(t)
+    const b = fy - gapV(t)
+    const cs = Math.max(64, Math.min(150 * t.s * k, (b - a) * 0.24))
+    const ns = Math.max(28, 46 * t.s * k)
+    const g = px(t, 44)
+    const bh = Math.min(440 * t.s, b - a - cs - g)
+    const cy = a + Math.max(0, (b - a - cs - g - bh) / 2)
+    const by = cy + cs + g
+    const nw = col.w / 2 - cs - ns * 0.6
+    const ny = cy + cs / 2 - ns * 0.6
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        signature(t),
-        head(t, claim, { y: hy, h: hh }, 140 * f),
-        ...duel(t.left, w, cy, cs, S(46, 28), by, bh, 236 * t.s),
-        support(t, reading, { y: sy, w: t.landscape ? Math.min(w, 1000) : w, h: Math.max(S(130, 60), t.contentBottom - sy) }, 48, { name: 'Lectura' }),
+        ...chrome(t),
+        mainHead(t, claim),
+        crestOf('home', col.x, cy, cs),
+        label(t, '{home.short}', { x: col.x + cs + ns * 0.55, y: ny, w: nw, h: ns * 1.2 }, ns / t.s, { name: 'Nombre local', fill: { kind: 'solid', color: '$text' }, fontWeight: 700 }),
+        crestOf('away', col.x + col.w - cs, cy, cs),
+        label(t, '{away.short}', { x: col.x + col.w - cs - ns * 0.55 - nw, y: ny, w: nw, h: ns * 1.2 }, ns / t.s, { name: 'Nombre visitante', align: 'right', fill: { kind: 'solid', color: '$text' }, fontWeight: 700 }),
+        E.statBars({ name: 'Métrica', x: col.x, y: by, width: col.w, height: bh, statIds: ids, maxRows: 1, style: 'editorial', colorMode: 'leader', showCrests: false, valueSize: 236 * t.s * k, labelSize: 55 * t.s, barHeight: 30 * t.s, rowGap: 0 }),
+        footSupport(t, reading, rl, 48, { name: 'Lectura', x: t.cx - Math.min(t.cw, 900 * t.s) / 2, width: Math.min(t.cw, 900 * t.s) }),
       ],
     }
   },
@@ -360,74 +282,51 @@ export const formTrends: TemplateDef = {
     const n = match[lead].form.length
     const w = wins(lead)
     // Number first, team last (a hanging Ç never lands on the next line).
-    const claim = `[[${n ? w : 4} ${n && w === 1 ? 'victoria' : 'victorias'}]] en\u00A0${n || 5} para {${lead}.short}`
+    const claim = `[[${n ? w : 4} ${n && w === 1 ? 'victoria' : 'victorias'}]] en ${n || 5}${t.landscape ? ' ' : '\n'}para {${lead}.short}`
     const nWord = NUM[n || 5] ?? String(n)
-    const src = `Últimos ${nWord} partidos  ·  el más reciente, a la izquierda`
-    // Letters left-aligned from the same x, so both rows share the same letter columns.
-    const row = (side: Side, x: number, y: number, rowH: number, cs: number, fx: number, room: number, fh: number, fg: number) => [
-      crestOf(side, x, y + (rowH - cs) / 2, cs),
-      E.formRow({ name: side === 'home' ? 'Racha local' : 'Racha visitante', source: side, shape: 'letter', align: 'left', x: fx, y: y + (rowH - fh) / 2, width: room, height: fh, gap: fg, winColor: '$accent', drawColor: '$muted', lossColor: '$muted', newestFirst: true }),
-    ]
-    const trend = (x: number, y: number, w: number, h: number, vs: number) =>
-      E.statNumber({ name: 'Tendencia', x, y, width: w, height: h, value: '13', label: `Goles en esos ${nWord} partidos`, description: '', valueSize: vs, layout: 'hero', align: 'left', valueColor: '$text', labelColor: '$muted', minIntensity: 'editorial' })
-    if (t.landscape) {
-      const c = cols(t, 0.44)
-      const sy = t.contentBottom - px(t, 50)
-      const cs = px(t, 104)
-      const fh = px(t, 112)
-      const fg = px(t, 26)
-      const rowH = Math.max(cs, fh)
-      const rowGap = px(t, 56)
-      const fx = c.rx + cs + px(t, 44)
-      const fw = c.rx + c.rw - fx
-      const tvs = 230 * vk(t)
-      const est = heroHeight(tvs, true, 0)
-      const gapT = px(t, 80)
-      const end = sy - px(t, 30)
-      const y0 = t.contentTop + Math.max(0, (end - t.contentTop - rowH * 2 - rowGap - gapT - est) / 2)
-      const r2 = y0 + rowH + rowGap
-      return {
-        background: ink(),
-        elements: [
-          ...cinematic(t),
-          signature(t),
-          head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: sy - t.contentTop - px(t, 40) }, 120),
-          ...row(lead, c.rx, y0, rowH, cs, fx, fw, fh, fg),
-          ...row(other(lead), c.rx, r2, rowH, cs, fx, fw, fh, fg),
-          trend(c.rx, r2 + rowH + gapT, c.rw, Math.max(10, end - (r2 + rowH + gapT)), tvs),
-          source(t, src, sy),
-        ],
-      }
-    }
+    const m = middle(t)
     const k = vk(t)
-    const hy = t.contentTop
-    const hh = headH(t, 150 * k)
+    const tight = !t.story
     const cs = px(t, 104, 52)
     const fh = px(t, 112, 56)
     const fg = px(t, 34, 16)
+    const gapC = px(t, 48, 22)
     const rowH = Math.max(cs, fh)
-    // 4:5 and 1:1 tighten the gaps so the optional trend number still fits big.
-    const tight = !t.story
     const rowGap = px(t, tight ? 48 : 64, 28)
-    const r1 = hy + hh + px(t, tight ? 70 : 90)
-    const r2 = r1 + rowH + rowGap
-    const fx = t.left + cs + px(t, 48, 22)
-    const fw = dataRight(t) - fx
-    const sy = t.contentBottom - px(t, 50)
+    // Crest + letters as one centered group; both rows share the same letter columns.
+    const count = Math.max(1, match.home.form.length, match.away.form.length)
+    const lettersW = count * fh + (count - 1) * fg
+    const groupW = Math.min(dataCol(t).w, cs + gapC + lettersW)
+    const gx = t.cx - groupW / 2
+    const fx = gx + cs + gapC
+    const fw = gx + groupW - fx
+    // The optional trend number sits under the rows when it can stay big (≥140px).
     const tvs = 230 * t.s * k
-    const tz = place(r2 + rowH + px(t, tight ? 60 : 90, 24), sy - px(t, 40), heroHeight(tvs, true, 0), 0.5)
-    // The optional trend number only appears when it can stay big (≥140px).
-    const fitV = (tz.h - Math.min(85, tvs * 0.3) * 1.45) / 0.86
+    const gapT = px(t, tight ? 56 : 80, 24)
+    const rowsH = rowH * 2 + rowGap
+    const trendRoom = m.h - rowsH - gapT
+    const fitV = (trendRoom - Math.min(85, tvs * 0.3) * 1.45) / 0.86
+    const showTrend = fitV >= 140 * t.s
+    const est = showTrend ? rowsH + gapT + Math.min(heroHeight(tvs, true, 0), trendRoom) : rowsH
+    const r1 = m.a + Math.max(0, (m.h - est) / 2)
+    const r2 = r1 + rowH + rowGap
+    const row = (side: Side, y: number) => [
+      crestOf(side, gx, y + (rowH - cs) / 2, cs),
+      E.formRow({ name: side === 'home' ? 'Racha local' : 'Racha visitante', source: side, shape: 'letter', align: 'left', x: fx, y: y + (rowH - fh) / 2, width: fw, height: fh, gap: fg, winColor: '$accent', drawColor: '$muted', lossColor: '$muted', newestFirst: true }),
+    ]
+    const ty = r2 + rowH + gapT
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        signature(t),
-        head(t, claim, { y: hy, h: hh }, 150 * k),
-        ...row(lead, t.left, r1, rowH, cs, fx, fw, fh, fg),
-        ...row(other(lead), t.left, r2, rowH, cs, fx, fw, fh, fg),
-        ...(fitV >= 140 * t.s ? [trend(t.left, tz.y, t.cw, tz.h, tvs)] : []),
-        source(t, src, sy),
+        ...chrome(t),
+        mainHead(t, claim),
+        ...row(lead, r1),
+        ...row(other(lead), r2),
+        ...(showTrend
+          ? [E.statNumber({ name: 'Tendencia', x: t.left, y: ty, width: t.cw, height: Math.max(10, m.b - ty), value: '13', label: `Goles en esos ${nWord} partidos`, description: '', valueSize: tvs, layout: 'hero', align: 'center', valueColor: '$text', labelColor: '$muted', minIntensity: 'editorial' })]
+          : []),
+        footLabel(t, `Últimos ${nWord} partidos  ·  el más reciente, a la izquierda`),
       ],
     }
   },
@@ -439,37 +338,42 @@ export const giantStat: TemplateDef = {
   number: 21,
   name: 'Giant Stat',
   category: 'stats',
-  description: 'Un solo número gigante que llena la diapositiva, con escudo pequeño.',
+  description: 'Un solo número gigante, centrado, que llena la diapositiva, con escudo pequeño arriba.',
   build: (t) => {
+    // Headline zone: the small crest and the team, centered on the axis.
     const cs = px(t, 110, 56)
-    const cy = t.contentTop
-    const sy = t.contentBottom - px(t, 50)
-    const vs = 560 * t.s
-    const z = place(cy + cs + px(t, 80), sy - px(t, 40), heroHeight(vs, true, 2), 0.45)
+    const nh = px(t, 60, 36)
+    const ny = t.contentTop + cs + px(t, 16)
+    const a = ny + nh + gapV(t)
+    const b = t.contentBottom - footH(t) - gapV(t)
+    const vs = 560 * t.s * Math.min(1, t.landscape ? 0.85 : 1)
+    const withDesc = heroFit(b - a, vs, true) >= vs * 0.7
+    const z = place(a, b, heroHeight(vs, true, withDesc ? 2 : 0), 0.45)
+    const col = dataCol(t, 1240)
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
-        signature(t),
-        crestOf('away', t.left, cy, cs),
-        label(t, '{away}', { x: t.left + cs + px(t, 30, 16), y: cy + cs / 2 - px(t, 30, 18), w: t.cw - cs - px(t, 30, 16), h: px(t, 60, 36) }, 48, { name: 'Equipo', fill: { kind: 'solid', color: '$text' }, fontWeight: 700 }),
+        ...chrome(t),
+        crestOf('away', t.cx - cs / 2, t.contentTop, cs),
+        label(t, '{away}', { y: ny, h: nh }, 48, { name: 'Equipo', align: 'center', fill: { kind: 'solid', color: '$text' }, fontWeight: 700 }),
         E.statNumber({
           name: 'Cifra gigante',
-          x: t.left,
+          x: col.x,
           y: z.y,
-          width: t.cw,
+          width: col.w,
           height: z.h,
           value: '72%',
           label: 'De sus goles, tras el descanso',
-          description: 'Ningún equipo marca más que {away} desde el minuto 46.',
+          description: withDesc ? 'Ningún equipo marca más que {away} desde el minuto 46.' : '',
           valueSize: vs,
           layout: 'hero',
-          align: 'left',
+          align: 'center',
           valueColor: '$accent',
           labelColor: '$text',
           textColor: '$muted',
         }),
-        source(t, 'Todas las competiciones  ·  temporada actual', sy),
+        footLabel(t, 'Todas las competiciones  ·  temporada actual'),
       ],
     }
   },
@@ -483,27 +387,23 @@ export const rankingSlide: TemplateDef = {
   category: 'stats',
   description: 'Clasificación editable con barras gruesas y la fila destacada en el acento.',
   build: (t) => {
-    // Forced break: "LOS GOLEADORES / DEL PARTIDO" (1:1 would otherwise orphan "PARTIDO").
-    const claim = 'Los goleadores\n[[del partido]]'
-    // ≥215px per row keeps names ~65-70px and a thick bar (painter: name ≤ 30 % of the row):
-    // the top four on stories, three on short formats. The fifth row stays in the data.
-    const rowsFor = (h: number) => Math.max(3, Math.min(5, Math.floor(h / 215)))
-    const list = (x: number, y: number, w: number, h: number) =>
-      E.ranking({ name: 'Ranking', x, y, width: w, height: h, maxRows: rowsFor(h), nameSize: 80 * t.s, valueSize: 140 * t.s, highlightIndex: 0 })
-    if (t.landscape) {
-      const c = cols(t, 0.4)
-      return {
-        background: ink(),
-        elements: [...cinematic(t), signature(t), head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: t.ch }, 150), list(c.rx, t.contentTop, c.rw, t.ch)],
-      }
-    }
-    const k = vk(t)
-    const hy = t.contentTop
-    const hh = headH(t, 140 * k)
-    const ry = hy + hh + px(t, 70)
+    // Forced break: "LOS GOLEADORES / DEL PARTIDO" (never an orphan "PARTIDO"); 16:9 fits one line.
+    const claim = t.landscape ? 'Los goleadores [[del partido]]' : 'Los goleadores\n[[del partido]]'
+    const m = middle(t)
+    const col = dataCol(t)
+    // ≥190px per row keeps names ~60px and a thick bar (painter: name ≤ 30 % of the row):
+    // four on tall formats, three on short ones. The other rows stay in the data.
+    const n = Math.max(3, Math.min(5, Math.floor(m.h / 190)))
+    // Rows are a list: they stay left-aligned under the centered headline.
     return {
       background: ink(),
-      elements: [...cinematic(t), signature(t), head(t, claim, { y: hy, h: hh }, 140 * k), list(t.left, ry, dataRight(t) - t.left, t.contentBottom - ry)],
+      elements: [
+        ...cinematic(t),
+        ...chrome(t),
+        mainHead(t, claim),
+        E.ranking({ name: 'Ranking', x: col.x, y: m.a, width: col.w, height: m.h, maxRows: n, nameSize: 80 * t.s, valueSize: 140 * t.s, highlightIndex: 0 }),
+        footLabel(t, 'Goles  ·  todas las competiciones'),
+      ],
     }
   },
 }
@@ -518,7 +418,7 @@ export const absences: TemplateDef = {
   build: (t, match) => {
     // Forced break: "LAS BAJAS / QUE PESAN" (never a lone "PESAN"); 16:9 fits one line.
     const claim = t.landscape ? 'Las bajas [[que pesan]]' : 'Las bajas\n[[que pesan]]'
-    /** Crest + team name, then that team's absences as open rows. */
+    /** Crest + team name, then that team's absences as open rows (a list: left-aligned). */
     const block = (side: Side, x: number, y: number, w: number, h: number, cs: number, nameSize: number) => {
       const ly = y + cs + px(t, 26, 12)
       return [
@@ -527,16 +427,13 @@ export const absences: TemplateDef = {
         E.playerList({ name: side === 'home' ? 'Bajas local' : 'Bajas visitante', side, filter: 'absences', variant: 'editorial', x, y: ly, width: w, height: Math.max(10, y + h - ly), maxItems: 3, nameSize, showStatus: true, showStat: false, showNumber: false, align: 'left' }),
       ]
     }
-    const k = vk(t)
-    const hy = t.contentTop
-    if (t.story || (!t.landscape && t.v >= 0.8)) {
-      // Stories and 4:5: the two teams stacked at full column width, so each status
-      // sits far from the name (side-by-side columns squeezed both on 4:5).
-      const hs = t.story ? 150 : 130
-      const hh = headH(t, hs)
-      const top = hy + hh + px(t, t.story ? 80 : 56)
-      const gap = px(t, t.story ? 70 : 40, 28)
-      const cs = px(t, t.story ? 84 : 68, 44)
+    const m = middle(t, false)
+    const top = m.a - px(t, 12)
+    if (t.H / t.W > 1.2) {
+      // Tall formats: the two teams stacked at full column width, so each status
+      // sits far from the name.
+      const gap = px(t, t.story ? 64 : 44, 28)
+      const cs = px(t, t.story ? 84 : 72, 44)
       const ns = px(t, 64, 36)
       // Each team gets room for its own number of absences (1–3 rows), so a team
       // without absences does not leave half the slide empty.
@@ -544,27 +441,28 @@ export const absences: TemplateDef = {
       const head0 = cs + px(t, 26, 12)
       const unit = Math.min(ns * 3.6, (t.contentBottom - top - gap - head0 * 2) / (count('home') + count('away')))
       const hHome = head0 + unit * count('home')
+      const total = hHome + gap + head0 + unit * count('away')
+      const y0 = top + Math.max(0, (t.contentBottom - top - total) / 2)
       const w = dataRight(t) - t.left
       return {
         background: ink(),
         accent: '$red',
         elements: [
           ...cinematic(t),
-          signature(t),
-          head(t, claim, { y: hy, h: hh }, hs),
-          ...block('home', t.left, top, w, hHome, cs, ns),
-          ...block('away', t.left, top + hHome + gap, w, head0 + unit * count('away'), cs, ns),
+          ...chrome(t),
+          mainHead(t, claim),
+          ...block('home', t.left, y0, w, hHome, cs, ns),
+          ...block('away', t.left, y0 + hHome + gap, w, head0 + unit * count('away'), cs, ns),
         ],
       }
     }
     // 1:1 and 16:9: the two teams side by side under the headline.
     // A wide gutter keeps each status attached to its own column.
     const cs = px(t, 84, 44)
-    const hh = headH(t, 150 * k, t.landscape ? 1 : 2)
-    const top = hy + hh + px(t, 70)
-    // The gutter stays clearly wider than the name→status gap inside a column.
     const gap = px(t, t.landscape ? 170 : 120, 44)
-    const w = (t.cw - gap) / 2
+    const cw = t.landscape ? Math.min(t.cw, 1240) : t.cw
+    const x0 = t.cx - cw / 2
+    const w = (cw - gap) / 2
     const h = t.contentBottom - top
     // 16:9 columns are wide enough for bigger names (rows stop at 3.6× the name size).
     const ns = px(t, t.landscape ? 76 : 64, 34)
@@ -573,10 +471,10 @@ export const absences: TemplateDef = {
       accent: '$red',
       elements: [
         ...cinematic(t),
-        signature(t),
-        head(t, claim, { y: hy, h: hh }, 150 * k),
-        ...block('home', t.left, top, w, h, cs, ns),
-        ...block('away', t.left + w + gap, top, w, h, cs, ns),
+        ...chrome(t),
+        mainHead(t, claim),
+        ...block('home', x0, top, w, h, cs, ns),
+        ...block('away', x0 + w + gap, top, w, h, cs, ns),
       ],
     }
   },

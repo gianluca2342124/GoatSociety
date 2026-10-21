@@ -9,3 +9,6 @@ playwright-report
 .vite
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# Local dev server logs
+*.log

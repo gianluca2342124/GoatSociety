@@ -3,6 +3,7 @@ import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dn
 import { CSS } from '@dnd-kit/utilities'
 import { Copy, Plus, Trash2 } from 'lucide-react'
 import type { Project, Slide } from '../model/types'
+import { deletePage } from './actions'
 import { useEditor } from '../store/editor'
 import { useLibrary } from '../store/library'
 import { useUI } from '../store/ui'
@@ -34,7 +35,7 @@ function Thumb({ slide, index, project, active }: { slide: Slide; index: number;
           <Copy size={11} />
         </button>
         {project.slides.length > 1 && (
-          <button type="button" className="rounded bg-ink/85 p-1 text-ivory/80 hover:text-loss" aria-label="Eliminar diapositiva" title="Eliminar" onClick={() => confirm('¿Eliminar esta diapositiva?') && useEditor.getState().deleteSlide(slide.id)}>
+          <button type="button" className="rounded bg-ink/85 p-1 text-ivory/80 hover:text-loss" aria-label="Eliminar diapositiva" title="Eliminar" onClick={() => deletePage(slide.id)}>
             <Trash2 size={11} />
           </button>
         )}
