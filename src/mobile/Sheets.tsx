@@ -31,6 +31,7 @@ import { useUI } from '../store/ui'
 import { TEMPLATES, type TemplateDef } from '../templates'
 import { CATEGORY_LABELS, type TemplateCategory } from '../templates/types'
 import { useTemplateThumb } from '../editor/thumbs'
+import { CatalogGlyph } from '../editor/CatalogGlyph'
 import { CATALOG, CATALOG_CATEGORIES, type CatalogCategory, type CatalogItem } from '../editor/elementCatalog'
 import { FORMATS } from '../model/formats'
 import type { FormatPreset, ImageElement } from '../model/types'
@@ -131,7 +132,9 @@ export function ElementsSheet() {
       <div className="mt-3 grid grid-cols-3 gap-2.5">
         {items.map((i) => (
           <button key={i.id} type="button" onClick={() => insertItem(i)} data-testid={`m-el-${i.id}`} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl bg-white/6 p-2 text-center active:scale-95 active:bg-white/10">
-            <span className={`flex h-10 items-center justify-center font-cond font-bold text-ivory ${i.glyph.length > 6 ? 'text-[13px] leading-tight' : 'text-[24px]'}`}>{i.glyph}</span>
+            <span className="flex h-10 max-w-full items-center justify-center">
+              <CatalogGlyph item={i} />
+            </span>
             <span className="text-[12px] leading-tight font-semibold text-ivory/85">{i.label}</span>
           </button>
         ))}

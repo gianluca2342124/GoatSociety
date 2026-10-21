@@ -58,6 +58,8 @@ Todas las plantillas siguen el sistema descrito en [`docs/DESIGN-SYSTEM.md`](doc
 
 ### Reglas de familia
 
+![Las 35 plantillas en Vertical 3:4](docs/plantillas-3x4.jpg)
+
 Todas las plantillas comparten la misma rejilla: firma GOAT SOCIETY arriba a la izquierda y número de página «1/7» arriba a la derecha, **titular centrado a la misma altura y tamaño** con acabado metálico sutil, el visual en el centro y la fuente o llamada a la acción en una línea común abajo. El fondo es un degradado oscuro elegante (casi negro, nunca plano ni chillón). Los titulares pueden usar **Acabado**: liso, metálico o degradado.
 
 ### Acento e intensidad por diapositiva
@@ -91,6 +93,8 @@ Los proyectos guardados se abren sin cambios visuales salvo dos migraciones segu
 ### En el móvil
 
 En un teléfono (o una tableta pequeña en vertical) el editor cambia solo a un diseño móvil:
+
+![Editor en el móvil](docs/editor-movil.jpg)
 
 | Zona | Qué hace |
 | --- | --- |

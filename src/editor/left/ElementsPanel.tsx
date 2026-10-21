@@ -5,6 +5,7 @@ import { useEditor } from '../../store/editor'
 import { useUI } from '../../store/ui'
 import { CATALOG, CATALOG_CATEGORIES, type CatalogCategory, type CatalogItem } from '../elementCatalog'
 import { PanelTitle } from './contentPanels'
+import { CatalogGlyph } from '../CatalogGlyph'
 
 function insert(item: CatalogItem) {
   const p = useEditor.getState().project
@@ -32,7 +33,9 @@ export function ElementsPanel() {
       <div className="grid grid-cols-3 gap-2 px-4 pb-6">
         {items.map((i) => (
           <button key={i.id} type="button" onClick={() => insert(i)} data-testid={`el-${i.id}`} className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-panel-2 p-1.5 text-center transition hover:border-gold/50 hover:bg-panel-3">
-            <span className={`flex h-8 items-center justify-center font-cond font-bold text-ivory ${i.glyph.length > 6 ? 'text-[11px] leading-tight' : 'text-[20px]'}`}>{i.glyph}</span>
+            <span className="flex h-8 max-w-full items-center justify-center">
+              <CatalogGlyph item={i} size="sm" />
+            </span>
             <span className="text-[10.5px] leading-tight font-semibold text-muted">{i.label}</span>
           </button>
         ))}

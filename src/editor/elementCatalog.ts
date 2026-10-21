@@ -23,6 +23,8 @@ export interface CatalogItem {
   category: CatalogCategory
   /** Short visual hint shown on the tile. */
   glyph: string
+  /** Badges: drawn as a small styled pill in the library instead of a glyph. */
+  badge?: { text: string; style: 'solid' | 'outline' | 'glow' | 'text'; color: string }
   /** Open the text editor right after inserting. */
   editText?: boolean
   make: (f: CanvasFormat) => SlideElement
@@ -38,6 +40,7 @@ const badge = (id: string, label: string, text: string, style: 'solid' | 'outlin
   label,
   category: 'etiquetas',
   glyph: text,
+  badge: { text, style, color },
   make: (f) => E.badge({ name: label, text, style, icon, color, ...box(f, 96, Math.min(cw(f), 620)) }),
 })
 
