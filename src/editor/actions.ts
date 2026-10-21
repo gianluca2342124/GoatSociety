@@ -6,7 +6,7 @@ import { useUI } from '../store/ui'
 import { buildBlankSlide, buildTemplateSlide, templateById, type TemplateDef } from '../templates'
 import { ELEMENT_LABELS } from '../model/elements'
 import { formatOf } from '../model/formats'
-import type { FormatPreset, Slide } from '../model/types'
+import type { CanvasFormat, FormatPreset, MatchData, Slide } from '../model/types'
 import { rescaleSlide } from './dialogs/MiscDialogs'
 
 const undoAction = { label: 'Deshacer', run: () => useEditor.getState().undo() }
@@ -222,6 +222,14 @@ export function setMultiSelect(on: boolean) {
 
 // ── Canvas format ──────────────────────────────────────────────────────────
 
+/** True when a template page still matches what its template builds (ignoring ids). */
+function isPristine(slide: Slide, tpl: TemplateDef, format: CanvasFormat, match: MatchData): boolean {
+  // Ids are random (elements, players, rows…): leave every «id» out of the comparison.
+  const strip = (v: unknown) => JSON.stringify(v, (k, x) => (k === 'id' ? undefined : x))
+  const fresh = buildTemplateSlide(tpl, format, match)
+  return strip(fresh.elements) === strip(slide.elements) && strip(fresh.background) === strip(slide.background)
+}
+
 /** Change the project format: template pages are rebuilt for the new size, free pages are rescaled. */
 export function changeFormat(preset: FormatPreset) {
   const s = useEditor.getState()
@@ -229,10 +237,14 @@ export function changeFormat(preset: FormatPreset) {
   if (!p || p.format.preset === preset) return
   const to = formatOf(preset)
   const from = p.format
-  // Build from the plain (non-draft) slides: rescaling clones them.
+  // Untouched template pages are recomposed for the new size; pages with
+  // manual edits are rescaled so nothing the person did is lost.
+  // (Built from the plain, non-draft slides: rescaling clones them.)
+  let rescaled = 0
   const slides: Slide[] = p.slides.map((sl) => {
     const tpl = templateById(sl.templateId)
-    if (tpl) return { ...buildTemplateSlide(tpl, to, p.match), id: sl.id, name: sl.name, overrides: sl.overrides, accent: sl.accent, intensity: sl.intensity }
+    if (tpl && isPristine(sl, tpl, from, p.match)) return { ...buildTemplateSlide(tpl, to, p.match), id: sl.id, name: sl.name, overrides: sl.overrides, accent: sl.accent, intensity: sl.intensity }
+    if (tpl) rescaled++
     return rescaleSlide(sl, from, to)
   })
   s.update((d) => {
@@ -240,5 +252,5 @@ export function changeFormat(preset: FormatPreset) {
     d.slides = slides as typeof d.slides
   })
   useUI.getState().set({ autoFit: true })
-  toast(`Formato cambiado a ${to.width}×${to.height}`, true)
+  toast(`Formato cambiado a ${to.width}×${to.height}${rescaled ? ` · ${rescaled === 1 ? 'la página editada se ha escalado' : `${rescaled} páginas editadas se han escalado`} para no perder tus cambios` : ''}`, true)
 }
