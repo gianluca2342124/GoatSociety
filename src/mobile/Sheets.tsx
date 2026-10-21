@@ -350,8 +350,11 @@ async function downloadCurrentPage() {
   if (!p) return
   const { blob, name } = await exportSlideBlob(p, activeIndex(), useLibrary.getState().brand, { format: 'png', quality: 0.92, scale: 1, transparent: false })
   if (canShareFiles() && (await shareFiles([new File([blob], name, { type: blob.type })], name))) return
-  downloadBlob(blob, name)
-  useUI.getState().toast(`Descargada ${name}`, 'success')
+  try {
+    if (await downloadBlob(blob, name)) useUI.getState().toast(`Descargada ${name}`, 'success')
+  } catch (e) {
+    useUI.getState().toast(e instanceof Error ? e.message : 'No se pudo descargar', 'error')
+  }
 }
 
 export function PageSheet() {

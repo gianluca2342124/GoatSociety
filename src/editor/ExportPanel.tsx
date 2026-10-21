@@ -64,12 +64,13 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
     try {
       if (many && packaging === 'zip') {
         const { blob, name } = await exportCarouselZip(project, brand, opts, onProgress, indices)
-        downloadBlob(blob, name)
+        if (!(await downloadBlob(blob, name))) return toast('Descarga cancelada', 'info')
         toast(`${indices.length} imágenes descargadas en ${name}`, 'success')
       } else {
         const files = await exportSlideFiles(project, brand, opts, indices, onProgress)
-        await downloadFiles(files)
-        toast(files.length === 1 ? `Descargada ${files[0].name}` : `${files.length} imágenes descargadas`, 'success')
+        const saved = await downloadFiles(files)
+        if (!saved) return toast('Descarga cancelada', 'info')
+        toast(saved === 1 ? `Descargada ${files[0].name}` : `${saved} imágenes descargadas`, 'success')
       }
       finish()
     } catch (e) {

@@ -1,0 +1,45 @@
+// Where the app is running. Inside a claude.ai artifact viewer the page is
+// sandboxed: plain downloads and the share sheet are blocked, so files go
+// through the viewer's «downloads» capability (the viewer asks to confirm).
+
+interface DownloadsCapability {
+  save: (request: { filename: string; data: Blob | string | ArrayBuffer }) => Promise<{ status: 'saved' | 'delivered' }>
+}
+
+type ClaudeHost = { use?: (name: string) => Promise<unknown> }
+
+function host(): ClaudeHost | undefined {
+  return (globalThis as unknown as { claude?: ClaudeHost }).claude
+}
+
+/** True inside a claude.ai artifact viewer. */
+export const inArtifact = typeof host()?.use === 'function'
+
+let downloads: Promise<DownloadsCapability | null> | null = null
+
+/** The viewer's downloads capability, or null outside an artifact (or when the viewer can't save files). */
+export function hostDownloads(): Promise<DownloadsCapability | null> {
+  if (!inArtifact) return Promise.resolve(null)
+  downloads ??= host()!
+    .use!('downloads')
+    .then((d) => (d as DownloadsCapability | null) ?? null)
+    .catch(() => null)
+  return downloads
+}
+
+/** Spanish message for a failed viewer save; null when the viewer simply declined. */
+export function saveErrorMessage(code: string | undefined): string | null {
+  switch (code) {
+    case 'declined':
+      return null
+    case 'rate_limited':
+      return 'Ya hay una descarga esperando tu confirmación. Acéptala o cancélala y vuelve a intentarlo.'
+    case 'too_large':
+      return 'El archivo es demasiado grande para este visor. Prueba con menos páginas o calidad normal.'
+    case 'rejected_extension':
+    case 'extension_not_enabled':
+      return 'Este visor no permite descargar este tipo de archivo.'
+    default:
+      return 'Este visor no permite guardar archivos ahora mismo.'
+  }
+}

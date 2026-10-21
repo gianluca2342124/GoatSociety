@@ -28,7 +28,12 @@ import { TextSheet } from './TextSheet'
 function useViewportHeight() {
   useEffect(() => {
     const vv = window.visualViewport
-    const apply = () => document.documentElement.style.setProperty('--app-h', `${vv ? vv.height : window.innerHeight}px`)
+    const apply = () => {
+      // Hosts may pad the root for the phone's safe areas (the artifact viewer does): fit inside it.
+      const cs = getComputedStyle(document.documentElement)
+      const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)
+      document.documentElement.style.setProperty('--app-h', `${(vv ? vv.height : window.innerHeight) - pad}px`)
+    }
     apply()
     vv?.addEventListener('resize', apply)
     window.addEventListener('resize', apply)

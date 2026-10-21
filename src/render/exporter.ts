@@ -1,4 +1,5 @@
 // High-resolution export. Uses exactly the same painters as the editor canvas.
+import { hostDownloads, inArtifact, saveErrorMessage } from '../host'
 import JSZip from 'jszip'
 import type { BrandKit, Project, Slide } from '../model/types'
 import { slugify } from '../model/ids'
@@ -122,6 +123,8 @@ export async function exportSlideFiles(project: Project, brand: BrandKit, opts: 
 
 /** True when the device can hand image files to the system share sheet (save to Photos on phones). */
 export function canShareFiles(): boolean {
+  // The artifact viewer refuses Web Share; files go through its downloads capability.
+  if (inArtifact) return false
   try {
     const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean }
     return typeof nav.share === 'function' && !!nav.canShare?.({ files: [new File([new Blob(['x'], { type: 'image/png' })], 'x.png', { type: 'image/png' })] })
@@ -141,15 +144,31 @@ export async function shareFiles(files: File[], title: string): Promise<boolean>
   }
 }
 
-/** Download files one by one (browsers handle a short pause between them better). */
-export async function downloadFiles(files: File[]) {
+/** Download files one by one (browsers handle a short pause between them better). Returns how many were saved. */
+export async function downloadFiles(files: File[]): Promise<number> {
+  let saved = 0
   for (const f of files) {
-    downloadBlob(f, f.name)
+    if (!(await downloadBlob(f, f.name))) break
+    saved++
     await new Promise((r) => setTimeout(r, 350))
   }
+  return saved
 }
 
-export function downloadBlob(blob: Blob, name: string) {
+/** Save a file. Resolves false when the person declines the viewer's save prompt. */
+export async function downloadBlob(blob: Blob, name: string): Promise<boolean> {
+  const viewer = await hostDownloads()
+  if (viewer) {
+    try {
+      await viewer.save({ filename: name, data: blob })
+      return true
+    } catch (e) {
+      const msg = saveErrorMessage((e as { code?: string })?.code)
+      if (msg === null) return false
+      throw new Error(msg)
+    }
+  }
+  if (inArtifact) throw new Error(saveErrorMessage(undefined)!)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -158,6 +177,7 @@ export function downloadBlob(blob: Blob, name: string) {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 4000)
+  return true
 }
 
 /** Small JPEG data URL for thumbnails (same pipeline, low scale). */

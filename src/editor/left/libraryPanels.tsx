@@ -1,3 +1,4 @@
+import { askConfirm } from '../../ui/confirm'
 import { useRef, useState } from 'react'
 import { Box, ImagePlus, Trash2, Upload } from 'lucide-react'
 import type { AssetKind, AssetMeta, BrandKit } from '../../model/types'
@@ -72,7 +73,7 @@ function AssetTile({ a }: { a: AssetMeta }) {
           <MenuItem
             danger
             onClick={() => {
-              if (confirm(`¿Eliminar «${a.name}» de la biblioteca? Las diapositivas que lo usen mostrarán un hueco.`)) void removeAsset(a.id)
+              void askConfirm({ title: 'Eliminar de la biblioteca', body: `«${a.name}» se borrará de este navegador. Las páginas que lo usen mostrarán un hueco.`, confirmLabel: 'Eliminar', danger: true }).then((ok) => void (ok && removeAsset(a.id)))
             }}
           >
             <Trash2 size={12} /> Eliminar
@@ -250,7 +251,7 @@ export function BrandPanel() {
           type="button"
           className="btn btn-danger w-full"
           onClick={() => {
-            if (confirm('¿Restaurar la paleta, fuentes y textos por defecto? Tu logo se mantiene.')) resetBrand()
+            void askConfirm({ title: 'Restaurar la marca', body: 'La paleta, las fuentes y los textos vuelven a los valores de GOAT SOCIETY. Tu logo se mantiene.', confirmLabel: 'Restaurar' }).then((ok) => void (ok && resetBrand()))
           }}
         >
           Restaurar valores de GOAT SOCIETY

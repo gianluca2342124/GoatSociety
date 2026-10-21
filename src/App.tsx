@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
 import { useUI } from './store/ui'
 import { useIsMobile } from './ui/useMedia'
+import { ConfirmHost } from './ui/confirm'
+import { isMemoryOnly } from './db/db'
 import { useLibrary } from './store/library'
 import { useEditor } from './store/editor'
 import { preloadAllFonts } from './fonts/fonts'
@@ -60,6 +62,9 @@ export function App() {
     useLibrary
       .getState()
       .init()
+      .then(() => {
+        if (isMemoryOnly()) useUI.getState().toast('Este navegador no deja guardar datos aquí: puedes trabajar y descargar, pero los proyectos se perderán al cerrar. Exporta una copia .goat.json para conservarlos.', 'info')
+      })
       .catch((e) => setError(`No se pudo abrir el almacenamiento local (IndexedDB). ${e instanceof Error ? e.message : ''} Comprueba que el navegador no esté en modo privado estricto.`))
     preloadAllFonts()
       .catch(() => undefined)
@@ -86,6 +91,7 @@ export function App() {
     <>
       {view === 'editor' && hasProject ? <Editor /> : <Home />}
       <Toasts />
+      <ConfirmHost />
     </>
   )
 }

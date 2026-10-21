@@ -94,12 +94,11 @@ export function SlideStyleSection() {
           className="btn text-[11px]"
           title="Aplica GOAT EDITORIAL a todas las diapositivas del proyecto"
           onClick={() => {
-            if (!confirm('¿Aplicar GOAT EDITORIAL a todas las diapositivas? Puedes deshacerlo.')) return
             update((d) => {
               d.slides = d.slides.map((s) => applyEditorial(s as typeof slide)) as never
               d.style = { ...(d.style ?? {}), intensity: 'editorial' }
             })
-            useUI.getState().toast('GOAT EDITORIAL aplicado a todo el proyecto', 'success')
+            useUI.getState().toast('GOAT EDITORIAL aplicado a todo el proyecto', 'success', { label: 'Deshacer', run: () => useEditor.getState().undo() })
           }}
         >
           <Sparkles size={13} /> Todo el proyecto

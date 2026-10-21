@@ -12,3 +12,4 @@ tsconfig.tsbuildinfo
 
 # Local dev server logs
 *.log
+dist-artifact

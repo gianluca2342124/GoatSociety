@@ -1,3 +1,4 @@
+import { askConfirm } from '../ui/confirm'
 import { useRef, useState } from 'react'
 import { Copy, Download, FileUp, LayoutTemplate, MoreHorizontal, Plus, Sparkles, Square, Trash2, WifiOff } from 'lucide-react'
 import { useLibrary } from '../store/library'
@@ -54,7 +55,10 @@ function ProjectCard({ p }: { p: ProjectMeta }) {
           >
             <Download size={13} /> Exportar .goat.json
           </button>
-          <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[12px] text-loss hover:bg-white/5" onClick={() => (setMenu(false), confirm(`¿Eliminar «${p.name}»? Esta acción no se puede deshacer.`) && void removeProject(p.id))}>
+          <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[12px] text-loss hover:bg-white/5" onClick={() => {
+              setMenu(false)
+              void askConfirm({ title: 'Eliminar proyecto', body: `«${p.name}» se borrará de este navegador. No se puede deshacer: si quieres conservarlo, exporta antes una copia .goat.json.`, confirmLabel: 'Eliminar', danger: true }).then((ok) => void (ok && removeProject(p.id)))
+            }}>
             <Trash2 size={13} /> Eliminar
           </button>
         </div>

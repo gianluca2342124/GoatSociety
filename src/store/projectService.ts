@@ -126,8 +126,12 @@ export async function exportProjectFile(project?: Project) {
   if (!p) return
   const bundle = await buildBundle(p, getAsset, useLibrary.getState().brand)
   const blob = new Blob([JSON.stringify(bundle)], { type: 'application/json' })
-  downloadBlob(blob, bundleFileName(p))
-  useUI.getState().toast('Proyecto exportado (.goat.json con recursos incluidos)', 'success')
+  try {
+    if (!(await downloadBlob(blob, bundleFileName(p)))) return
+    useUI.getState().toast('Proyecto exportado (.goat.json con recursos incluidos)', 'success')
+  } catch (e) {
+    useUI.getState().toast(e instanceof Error ? e.message : 'No se pudo guardar el archivo', 'error')
+  }
 }
 
 export async function importProjectFile(file: File, opts: { applyBrand?: boolean } = {}) {

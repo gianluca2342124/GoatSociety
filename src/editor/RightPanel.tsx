@@ -262,7 +262,8 @@ function SlidePanel() {
               className="btn text-[12px]"
               title="Reconstruye el diseño original con los datos actuales del partido"
               onClick={() => {
-                if (confirm('¿Restaurar el diseño original de la plantilla? Se perderán las ediciones manuales de esta diapositiva (puedes deshacer).')) replaceSlide(slide.id, { ...buildTemplateSlide(tpl, project.format, project.match), name: slide.name, overrides: slide.overrides })
+                replaceSlide(slide.id, { ...buildTemplateSlide(tpl, project.format, project.match), name: slide.name, overrides: slide.overrides })
+                useUI.getState().toast('Diseño original restaurado', 'success', { label: 'Deshacer', run: () => useEditor.getState().undo() })
               }}
             >
               <RefreshCw size={13} /> Restaurar
