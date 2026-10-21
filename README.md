@@ -45,7 +45,10 @@ La carpeta `dist/` es estática: puedes copiarla a cualquier hosting estático g
 
 > Fondo negro. Texto blanco grande. Un único color de acento. Un mensaje por diapositiva. Visuales de fútbol grandes. Impacto inmediato. Mínimas distracciones.
 
-Todas las plantillas siguen el sistema descrito en [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md):
+Todas las plantillas siguen el sistema descrito en [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md). En [`docs/antes-despues/`](docs/antes-despues/) hay una comparativa antes/después de las 19 plantillas originales y en [`docs/carrusel-goat-editorial.jpg`](docs/carrusel-goat-editorial.jpg) el «Nuevo carrusel de partido» completo.
+
+![Carrusel GOAT EDITORIAL](docs/carrusel-goat-editorial.jpg)
+
 
 - **Color**: fondo `#070707`, texto `#F5F5F5`, secundario `#B9B9B9`, separadores `#242424` y **un acento por diapositiva**: verde `#2BE477`, amarillo `#FFD43B`, rojo `#FF4055` o azul `#3B8BFF`. El dorado queda solo para la marca.
 - **Tipografía** (local): Anton para titulares y cifras, Barlow Condensed para etiquetas y nombres, Inter Tight para frases de apoyo y Archivo Black como display. Escala fija: titulares 130–170 px, cifras 230–340 px, secundario 55–85 px, apoyo 38–55 px, etiquetas 32–45 px (sobre 1080×1920).
