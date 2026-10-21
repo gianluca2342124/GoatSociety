@@ -192,7 +192,11 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
     tr.nodes(nodes)
     const els = slide.elements.filter((e) => selection.includes(e.id))
     tr.keepRatio(els.length > 0 && els.every((e) => RATIO_TYPES.has(e.type)))
-    tr.getLayer()?.batchDraw()
+    // With no nodes the transformer must disappear now: a deferred redraw after a
+    // delete/undo can otherwise leave the old frame painted on the canvas.
+    tr.visible(nodes.length > 0)
+    if (nodes.length) tr.getLayer()?.batchDraw()
+    else tr.getLayer()?.draw()
   }, [selection, slide, editingTextId, tacticsEditId])
 
   const others = useMemo(() => slide.elements.filter((e) => e.visible && rc.shown(e) && !selection.includes(e.id) && !(e.type === 'effect' && e.width >= W * 0.95)), [slide.elements, selection, W, rc])
