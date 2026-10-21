@@ -88,14 +88,14 @@ export const matchdayElite: TemplateDef = {
 }
 
 /** Small crest pair + match line used as context on typographic slides. */
-function matchTag(t: TCtx, y: number, size = 76, w = t.cw): SlideElement[] {
+function matchTag(t: TCtx, y: number, size = 88, w = t.cw): SlideElement[] {
   const cs = px(t, size, 40)
   const gap = cs * 0.22
   const tx = t.left + cs * 2 + gap + px(t, 28)
   return [
     crestOf('home', t.left, y, cs, { name: 'Escudo local (pequeño)' }),
     crestOf('away', t.left + cs + gap, y, cs, { name: 'Escudo visitante (pequeño)' }),
-    label(t, '{home.short} vs {away.short}  ·  {weekday} {time}', { x: tx, y: y + cs * 0.22, w: t.left + w - tx, h: cs * 0.62 }, 40 * vk(t), { name: 'Partido', verticalAlign: 'middle', fill: { kind: 'solid', color: '$muted' } }),
+    label(t, '{home.short} vs {away.short}  ·  {weekday} {time}', { x: tx, y: y + cs * 0.2, w: t.left + w - tx, h: cs * 0.6 }, 44 * vk(t), { name: 'Partido', verticalAlign: 'middle', fill: { kind: 'solid', color: '$muted' } }),
   ]
 }
 
