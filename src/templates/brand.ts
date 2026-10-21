@@ -17,39 +17,52 @@ const LH = 1.04
 /** Height of `lines` headline lines at story size `size` (scaled by t.s). */
 const hlH = (t: TCtx, size: number, lines: number) => size * t.s * (LH * lines + 0.06)
 
-/** Type factor for typography-only slides: 1 unless `need` (story px) overflows `share` of the safe zone. */
-const fit = (t: TCtx, share: number, need: number) => Math.min(1, (t.ch * share) / need)
-
 /** Mascot artwork aspect ratio (GOAT_VIEW 512×660). */
 const GOAT_RATIO = 512 / 660
 
 const accentFill = { kind: 'solid' as const, color: '$accent' }
 
 // ── 17 · Únete a GOAT SOCIETY (tipografía) ───────────────────────────────────
+
+/** Anton advance per 100 px of the default copy (measured in the app). */
+const W_UNETE = 291 // 'ÚNETE A'
+const W_BRAND = 498 // 'GOAT SOCIETY'
+const W_SOCIETY = 290 // 'SOCIETY'
+
+/** Story-px size at which a line `w100` wide (per 100 px) fills the column. */
+const fillW = (t: TCtx, w100: number) => (t.cw * 0.97) / (w100 / 100) / t.s
+
 export const community: TemplateDef = {
   id: 'community',
   number: 17,
   name: 'GOAT SOCIETY Community',
   category: 'brand',
-  description: 'Cierre de comunidad tipográfico: «Únete a GOAT SOCIETY» enorme y llamada al enlace de la bio.',
+  description: 'Cierre de comunidad tipográfico: «Únete a GOAT SOCIETY» a tamaño cartel y llamada al enlace de la bio.',
   build: (t) => {
-    // Typography is the only visual: keep full size while the stack fits in
-    // ~80% of the safe zone (story, portrait, square), shrink only below that.
-    const k = fit(t, 0.8, hlH(t, 170, 2) + px(t, 132) + (64 * 1.25 + 56 * 1.3) * t.s)
-    const hs = 170 * k
+    const k = vk(t)
     const ss = 64 * k
-    const cs = 56 * k
-    const hh = hlH(t, hs, 2)
+    const cs = 58 * k
     const sh = ss * t.s * 1.25
     const ch = cs * t.s * 1.3
-    const g1 = px(t, 40)
-    const g2 = px(t, 92)
-    const total = hh + g1 + sh + g2 + ch
-    // Centred in the safe zone.
-    const y = t.contentTop + Math.max(0, (t.ch - total) * 0.5)
-    // Extra room above lets a longer brand name wrap to a third line; the
-    // headline stays bottom-aligned so the stack below never moves.
-    const extra = Math.min(hh * 0.5, y - t.contentTop)
+    const g1 = px(t, 44)
+    const g2 = px(t, 80)
+    const rest = g1 + sh + g2 + ch
+    // Largest headline (story px) whose `n` lines fit above the CTA block.
+    const byH = (n: number) => (t.ch - rest) / (LH * n + 0.06) / t.s
+    // Tall formats: poster stack ÚNETE A / GOAT / SOCIETY, each long line
+    // filling the column. Short or wide formats: two lines, the brand
+    // filling the width. The brand wraps by itself (no hard-coded break), so
+    // another brand name still sets and autoFit covers longer ones.
+    const s3 = Math.min(fillW(t, Math.max(W_UNETE, W_SOCIETY)), byH(3))
+    const s2 = Math.min(fillW(t, Math.max(W_UNETE, W_BRAND)), byH(2))
+    const three = s3 > s2 * 1.15 && s3 * t.s * (W_BRAND / 100) > t.cw * 1.02
+    const hs = three ? s3 : s2
+    const hh = hlH(t, hs, three ? 3 : 2)
+    // Any spare height goes above: the block sits low, the goat mark alone on top.
+    const y = t.contentTop + Math.max(0, t.ch - hh - rest) * 0.7
+    // Room above lets a longer brand name take one more line; the headline is
+    // bottom-aligned so the stack below never moves.
+    const extra = Math.min(hlH(t, hs, 1), y - t.contentTop)
     return {
       background: ink(),
       elements: [
@@ -153,13 +166,14 @@ export const communityMascot: TemplateDef = {
 /**
  * Closing-slide copy variants (editor: "Variantes de cierre"). The editor
  * writes `headline` into "Mensaje final" and `sub` into "Submensaje" (the
- * handle line). Only neutral profile/bio calls to action.
+ * handle line). Only neutral profile/bio calls to action. Explicit breaks
+ * keep a clean rag at poster size (no "MI / PERFIL" split, no orphans).
  */
 export const FINAL_VARIANTS = [
-  { id: 'perfil', headline: 'El análisis completo está en [[mi perfil]]', sub: '{handle}' },
-  { id: 'pronostico', headline: 'Pronóstico completo en [[mi perfil]]', sub: '{handle}' },
+  { id: 'perfil', headline: 'El análisis\ncompleto\nestá en\n[[mi perfil]]', sub: '{handle}' },
+  { id: 'pronostico', headline: 'Pronóstico\ncompleto\nen [[mi perfil]]', sub: '{handle}' },
   { id: 'unete', headline: 'Únete a\n[[{brand}]]', sub: '{handle}' },
-  { id: 'comunidad', headline: 'La comunidad está en [[mi bio]]', sub: '{handle}' },
+  { id: 'bio', headline: 'Enlace en\n[[la bio]]', sub: '{handle}' },
 ]
 
 export const finalSlide: TemplateDef = {
@@ -167,34 +181,33 @@ export const finalSlide: TemplateDef = {
   number: 18,
   name: 'Final Carousel Slide',
   category: 'brand',
-  description: 'Cierre del carrusel: una frase enorme que termina en el acento y el usuario debajo (4 variantes).',
+  description: 'Cierre del carrusel: una frase a tamaño cartel que termina en el acento, anclada abajo con el usuario (4 variantes).',
   build: (t) => {
-    const v = FINAL_VARIANTS[0]
-    // The default message sets on three lines; on 16:9 a narrower measure
-    // keeps the same rag instead of a long, low two-line sentence.
-    const lines = 3
-    const hw = t.landscape ? Math.min(t.cw, 980 * t.s) : t.cw
-    const k = fit(t, 0.85, hlH(t, 160, lines) + px(t, 56) + 68 * 1.3 * t.s)
-    const hs = 160 * k
-    const us = 68 * k
+    // Vertical formats: four short lines (widest «EL ANÁLISIS»). 16:9: three
+    // lines across the wide column (widest «COMPLETO ESTÁ»).
+    const wide = t.landscape
+    const copy = wide ? 'El análisis\ncompleto está\nen [[mi perfil]]' : FINAL_VARIANTS[0].headline
+    const lines = wide ? 3 : 4
+    const us = 68 * vk(t)
     const uh = us * t.s * 1.3
-    const gap = px(t, 56)
-    // Bottom-anchored: the handle sits at a fixed line and the headline grows
-    // upwards, so every variant (2–4 lines) keeps the same rhythm. The block
-    // is centred for the default message.
+    const gap = px(t, 48)
+    // ≤190 on vertical formats so every variant keeps its rag («EN MI PERFIL»
+    // fits the column at 190).
+    const hs = Math.min(wide ? 210 : 190, fillW(t, wide ? 584.5 : 428.6), (t.ch - gap - uh) / (LH * lines + 0.06) / t.s)
     const hb = hlH(t, hs, lines)
-    const total = hb + gap + uh
-    const y = t.contentTop + Math.max(0, (t.ch - total) * 0.5)
-    const top = Math.max(t.contentTop, y - hlH(t, hs, 2))
-    const hh = y + hb - top
+    // Anchored low: the handle sits on a fixed line near the bottom of the
+    // safe zone, the statement grows upwards and the space above stays empty.
+    const y = t.contentTop + Math.max(0, t.ch - hb - gap - uh) * 0.8
+    // One spare line of headroom for longer custom messages (autoFit beyond).
+    const top = Math.max(t.contentTop, y - hlH(t, hs, 1))
     const uy = y + hb + gap
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
         goatMark(t, t.left, t.top, 60),
-        hl(t, v.headline, { y: top, w: hw, h: hh }, hs, { name: 'Mensaje final', verticalAlign: 'bottom' }),
-        label(t, v.sub, { y: uy, h: uh }, us, { name: 'Submensaje', fontWeight: 600, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
+        hl(t, copy, { y: top, h: y + hb - top }, hs, { name: 'Mensaje final', verticalAlign: 'bottom' }),
+        label(t, FINAL_VARIANTS[0].sub, { y: uy, h: uh }, us, { name: 'Submensaje', fontWeight: 600, uppercase: false, fill: { kind: 'solid', color: '$text' } }),
       ],
     }
   },

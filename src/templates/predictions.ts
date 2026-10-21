@@ -29,27 +29,35 @@ const fs = (t: TCtx, v: number) => v / t.s
 
 /**
  * Box of the prediction element: the content column, so long picks never
- * cross the side margins (the painter sizes the pick at min(170, w·0.17)).
+ * cross the side margins.
  */
 function predBox(t: TCtx): { x: number; w: number } {
   return { x: t.left, w: t.cw }
 }
 
-/** Lines the pick will take in the editorial painter (Anton ≈ 0.46 em per uppercase glyph). */
+/** Approximate Anton advance of an uppercase string, in em (measured ≈ 0.41–0.46 per glyph). */
+const antonEm = (s: string) => s.length * 0.45
+
+/** Natural pick / odds sizes of paintPredictionEditorial for a box `w` wide (mirrors the painter). */
+const pickSize = (w: number) => Math.min(170, w * 0.182)
+const oddsSize = (w: number) => Math.min(230, w * 0.235)
+
+/** Lines the pick will take in the editorial painter. */
 function pickLines(match: MatchData, w: number): number {
   const pick = match.predictions[0]?.pick ?? ''
-  return pick.length * Math.min(170, w * 0.17) * 0.46 > w ? 2 : 1
+  // Upper bound of the glyph advance, so a borderline pick reserves two lines.
+  return pick.length * 0.46 * pickSize(w) > w ? 2 : 1
 }
 
 /** Height of paintPredictionEditorial's stacked block at full size (mirrors the painter). */
 function predHeight(w: number, o: { lines: number; stamp?: boolean; conf?: boolean; noteLines?: number }): number {
-  const pickS = Math.min(170, w * 0.17)
-  const oddsS = Math.min(210, w * 0.2)
+  const pickS = pickSize(w)
+  const oddsS = oddsSize(w)
   const parts: [number, number][] = []
   if (o.stamp) parts.push([46 * CAP_LABEL, 30])
   parts.push([44 * CAP_LABEL, 34])
-  parts.push([pickS * 0.95 * o.lines, 60])
-  parts.push([oddsS * CAP_ANTON + 16 + 38 * CAP_LABEL, 46])
+  parts.push([pickS * 1.04 * o.lines, 60])
+  parts.push([oddsS * CAP_ANTON + Math.max(16, oddsS * 0.1) + 38 * CAP_LABEL, 46])
   if (o.conf) parts.push([50 * CAP_BODY, 40])
   if (o.noteLines) parts.push([44 * 1.25 * o.noteLines, 0])
   return parts.reduce((a, [h, g], i) => a + h + (i < parts.length - 1 ? g : 0), 0)
@@ -89,9 +97,6 @@ function matchRow(t: TCtx, y: number, cs: number, nameSize: number, tag?: string
   )
   return out
 }
-
-/** Approximate Anton advance of an uppercase string, in em (measured ≈ 0.44–0.46 per glyph). */
-const antonEm = (s: string) => s.length * 0.45
 
 /**
  * Sizer for a stack whose headline may take one or two lines: one line when it
@@ -151,8 +156,8 @@ export const lockedPrediction: TemplateDef = {
   description: 'Pronóstico bloqueado: desenfoque real, candado y llamada al perfil.',
   build: (t, match) => {
     const { x: bx, w: bw } = predBox(t)
-    // The decoy only needs to read as "hidden": 90 % of its natural size.
-    const pe = predHeight(bw, { lines: t.landscape ? pickLines(match, bw) : 2 }) * 0.9
+    // The decoy only needs to read as "hidden": ~80 % of its natural size.
+    const pe = predHeight(bw, { lines: t.landscape ? pickLines(match, bw) : 2 }) * 0.82
     const HS = 140
     const CS = 130
     const G1 = 70
@@ -187,7 +192,10 @@ export const lockedPrediction: TemplateDef = {
   },
 }
 
-// ── 15 · Revelado: la misma composición con el pronóstico visible ──────────
+// ── 15 · Revelado: la composición del bloqueado, con el pronóstico visible ─
+// Same stack as 14 so the pair reads as one reveal when swiping: the blur is
+// gone and BLOQUEADO becomes REVELADO in the accent. The headline carries the
+// word, so the element's own small stamp stays off (no repeated kicker).
 export const predictionReveal: TemplateDef = {
   id: 'prediction-reveal',
   number: 15,
@@ -196,35 +204,42 @@ export const predictionReveal: TemplateDef = {
   description: 'La misma composición que el bloqueado, con el pronóstico revelado.',
   build: (t, match) => {
     const { x: bx, w: bw } = predBox(t)
-    const pe = predHeight(bw, { lines: t.landscape ? pickLines(match, bw) : 2, stamp: true })
-    const CS = 130
-    const G1 = 90
-    const G2 = 90
+    const pe = predHeight(bw, { lines: t.landscape ? pickLines(match, bw) : 2 })
+    // One line, sized to the column (≈ 110 px on a story): a statement under
+    // the 170 px pick, never a second hero competing with it.
+    const em = antonEm('Pronóstico revelado')
+    const HS = Math.min(140, t.cw / em / px(t, 1))
+    const CS = 120
+    const G1 = 64
+    // Headline and CTA read as one closing unit, set apart from the odds.
+    const G2 = 84
+    const G3 = 26
     const CH = 70
-    const G3 = 70
+    const G4 = 56
     const DH = 40
-    const z = sizer(t, CS + G1 + pe + G2 + CH + G3 + DH)
+    const HH = HS * 1.04 + 8
+    const z = sizer(t, CS + G1 + pe + G2 + HH + G3 + CH + G4 + DH)
     const cs = z(CS)
     const ph = z(pe)
     const dy = t.contentBottom - z(DH)
-    // Header on top; prediction + CTA centered in the room left above the disclaimer.
     const top = t.contentTop + cs + z(G1)
-    const py = top + Math.max(0, (dy - z(G3) - top - ph - z(G2) - z(CH)) * 0.5)
-    const cy = py + ph + z(G2)
+    const py = top + Math.max(0, (dy - z(G4) - top - ph - z(G2) - z(HH) - z(G3) - z(CH)) * 0.5)
+    const hy = py + ph + z(G2)
+    const cy = hy + z(HH) + z(G3)
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
         signature(t),
         ...matchRow(t, t.contentTop, cs, z(84)),
-        E.prediction({ name: 'Pronóstico revelado', mode: 'revealed', revealStamp: 'Revelado', x: bx, y: py, width: bw, height: ph, chrome: 'none', showMatch: false, showNote: false, showConfidence: false, showOdds: true }),
+        E.prediction({ name: 'Pronóstico revelado', mode: 'revealed', revealStamp: '', x: bx, y: py, width: bw, height: ph, chrome: 'none', showMatch: false, showNote: false, showConfidence: false, showOdds: true }),
+        hl(t, 'Pronóstico [[revelado]]', { y: hy, h: z(HH) }, fs(t, z(HS)), { align: 'center' }),
         cta(t, 'El análisis completo está en mi perfil  [[↗]]', { y: cy, h: z(CH) }, fs(t, z(52)), { align: 'center' }),
         legal(t, dy),
       ],
     }
   },
 }
-
 // ── 16 · Historial: % de acierto enorme + filas abiertas ───────────────────
 // The list draws the hero rate in the accent, so the headline stays white:
 // one accent focus (the percentage), one short line of context above it.

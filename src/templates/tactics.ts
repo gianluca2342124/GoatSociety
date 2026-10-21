@@ -70,50 +70,51 @@ function board(over: Partial<TacticsData>): TacticsData {
 }
 
 // ── 10 · Pizarra: salida de balón con tres ─────────────────────────────────
-function buildUpData(vertical: boolean, scale: number, homeFormation: string, awayFormation: string): TacticsData {
-  // Home (white) builds from its own goal, the opponent presses with two forwards.
+// The home team builds out from the goal at the top of the board (x = 105) and
+// plays downwards. Tall formats show the whole half (the build-up structure and
+// the press), short ones crop to the last 40 m. No token sits on a crop edge.
+function buildUpData(view: PitchView, scale: number, homeFormation: string, awayFormation: string): TacticsData {
   const home = team('home', [
-    [1, 4, 34],
-    [5, 11, 14, { highlight: true }],
-    [4, 11, 54, { highlight: true }],
-    [6, 23, 34, { highlight: true }],
-    [3, 28, 5],
-    [2, 28, 63],
-    [8, 33, 21],
-    [10, 34, 47],
-    [11, 58, 8],
-    [9, 62, 34],
-    [7, 58, 60],
+    [1, 101, 34],
+    [4, 93, 14, { highlight: true }],
+    [5, 93, 54, { highlight: true }],
+    [6, 81, 34, { highlight: true }],
+    [2, 74, 4],
+    [3, 74, 64],
+    [10, 71, 23],
+    [8, 71, 45],
+    [7, 57, 9],
+    [9, 55, 34],
+    [11, 57, 59],
   ])
   const away = team('away', [
-    [9, 22, 22],
-    [10, 22, 46],
-    [7, 44, 8],
-    [8, 42, 26],
-    [6, 42, 42],
-    [11, 44, 60],
-    [2, 62, 12],
-    [4, 60, 28],
-    [5, 60, 40],
-    [3, 62, 56],
-    [1, 100, 34],
+    [10, 86, 23],
+    [9, 86, 45],
+    [11, 63, 10],
+    [6, 62, 28],
+    [8, 62, 40],
+    [7, 63, 58],
+    [2, 44, 10],
+    [4, 43, 27],
+    [5, 43, 41],
+    [3, 44, 58],
+    [1, 4, 34],
   ])
-  const r = Math.max(14, 2.6 * scale)
   return board({
-    view: 'defensiveThird',
-    vertical,
+    view,
+    vertical: true,
     homeFormation,
     awayFormation,
     homeColor: WHITE,
     awayColor: DARK,
-    playerSize: r,
-    dimOthers: 0.42,
+    playerSize: Math.max(14, 2.6 * scale),
+    dimOthers: 0.4,
     showLabels: false,
     players: [...home, ...away],
     annotations: [
       // The pivot drops between the centre-backs: line of three.
-      action('run', [{ x: 20.2, y: 34 }, { x: 11.5, y: 34 }], 1.1),
-      annotation('ball', [{ x: 7.6, y: 36.2 }], '$text'),
+      action('run', [{ x: 83.8, y: 34 }, { x: 92.6, y: 34 }], 1.1),
+      annotation('ball', [{ x: 98.2, y: 31.4 }], '$text'),
     ],
   })
 }
@@ -128,36 +129,42 @@ export const tacticalBoard: TemplateDef = {
     const k = vk(t)
     const head = '{home.short} sale\n[[con tres]]'
     const sub = 'El pivote baja entre los centrales y forma la línea de tres.'
+    const data = (view: PitchView, scale: number) => buildUpData(view, scale, match.home.formation, match.away.formation)
     if (t.landscape) {
       const colW = t.cw * 0.36
-      const f = sidePitch(t, 'defensiveThird', colW)
+      const f = sidePitch(t, 'half', colW)
       const hh = px(t, 260)
+      const sh = px(t, 200)
+      // Text block centred on the pitch.
+      const ty = f.y + (f.h - hh - px(t, 30) - sh) / 2
       return {
         background: ink(),
         elements: [
           ...cinematic(t),
           signature(t),
-          hl(t, head, { y: f.y, w: colW, h: hh }, 130 * k),
-          support(t, sub, { y: f.y + hh + px(t, 30), w: colW, h: px(t, 200) }, 46, { name: 'Explicación' }),
-          E.tactics({ name: 'Pizarra', x: f.x, y: f.y, width: f.w, height: f.h, tactics: buildUpData(true, f.scale, match.home.formation, match.away.formation) }),
+          hl(t, head, { y: ty, w: colW, h: hh }, 130 * k, { verticalAlign: 'bottom' }),
+          support(t, sub, { y: ty + hh + px(t, 30), w: colW, h: sh }, 46, { name: 'Explicación' }),
+          E.tactics({ name: 'Pizarra', x: f.x, y: f.y, width: f.w, height: f.h, tactics: data('half', f.scale) }),
         ],
       }
     }
-    const hh = px(t, t.story ? 300 : 250)
-    const sh = px(t, 130)
-    const gap = px(t, 50)
-    const fit = fitPitch('defensiveThird', true, t.W, t.ch - hh - sh - gap * 2)
+    // Story: the whole half, full width. Shorter frames: the last 40 m, so the pitch stays full width.
+    const view: PitchView = t.story ? 'half' : 'attackingThird'
+    const hh = px(t, t.story ? 280 : 250)
+    const sh = px(t, t.story ? 120 : 130)
+    const gap = px(t, t.story ? 40 : 50)
+    const fit = fitPitch(view, true, t.W, t.ch - hh - sh - gap * 2)
     // Headline, pitch and caption stacked and centred in the safe area.
-    const y0 = t.contentTop + Math.max(0, (t.ch - (hh + gap * 1.8 + fit.h + sh)) / 2)
+    const y0 = t.contentTop + Math.max(0, (t.ch - (hh + gap * 1.9 + fit.h + sh)) / 2)
     const py = y0 + hh + gap
-    const sy = py + fit.h + gap * 0.8
+    const sy = py + fit.h + gap * 0.9
     return {
       background: ink(),
       elements: [
         ...cinematic(t),
         signature(t),
         hl(t, head, { y: y0, h: hh }, 140 * k, { verticalAlign: 'bottom' }),
-        E.tactics({ name: 'Pizarra', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: buildUpData(true, fit.scale, match.home.formation, match.away.formation) }),
+        E.tactics({ name: 'Pizarra', x: (t.W - fit.w) / 2, y: py, width: fit.w, height: fit.h, tactics: data(view, fit.scale) }),
         support(t, sub, { y: sy, h: sh }, 48, { name: 'Explicación' }),
       ],
     }
@@ -280,10 +287,11 @@ function cutInsideData(vertical: boolean, scale: number, homeFormation: string, 
     awayColor: WHITE,
     highlightColor: '$text',
     playerSize: Math.max(14, Math.min(46, 2.7 * scale)),
-    dimOthers: 0.3,
+    // Low enough that the dimmed accent teammates read as context, not as a second focus.
+    dimOthers: 0.22,
     players: [...home, ...away],
     annotations: [
-      action('curve', [{ x: 80.6, y: 60.3 }, { x: 81.5, y: 48 }, { x: 91.5, y: 41.5 }], 1.0),
+      action('curve', [{ x: 80.6, y: 60.3 }, { x: 81.5, y: 48 }, { x: 91.5, y: 41.5 }], 1.1),
       annotation('pass', [{ x: 92.6, y: 40.6 }, { x: 104.6, y: 31.6 }], '$text', '', 0.4),
     ],
   })
@@ -343,50 +351,59 @@ export const keyMovement: TemplateDef = {
 }
 
 // ── 19 · Estadio 3D: el contragolpe ─────────────────────────────────────────
+// Ball won in midfield, a through ball and ONE bold run in behind the high line.
+// The action is compact (≈25 × 20 m) so the camera can sit close and the players read big.
+const CAM = { azimuth: 180, elevation: 50, fov: 34 }
+/** Look-at point: slightly short of the action centre so it sits in the upper, UI-free part of the frame. */
+const TARGET = { x: 71, y: 20 }
+
 function counterData(homeFormation: string, awayFormation: string): TacticsData {
-  // Ball won in midfield, through ball and a run in behind the high line.
   const home = team('home', [
     [1, 5, 34],
-    [3, 36, 10],
-    [5, 30, 26],
-    [4, 30, 44],
-    [2, 38, 60],
+    [3, 34, 12],
+    [5, 30, 27],
+    [4, 30, 42],
+    [2, 36, 58],
     [6, 46, 36],
-    [8, 58, 30],
-    [10, 56, 48],
-    [11, 64, 11],
-    [9, 66, 38],
+    [8, 61, 28],
+    [10, 56, 46],
+    [11, 65, 12],
+    [9, 66, 37],
     [7, 62, 58],
   ])
   const away = team('away', [
     [1, 100, 34],
-    [2, 69, 9],
-    [5, 70, 26],
-    [4, 70, 42],
-    [3, 69, 58],
-    [6, 60, 26],
-    [8, 58, 40],
-    [7, 52, 14],
-    [10, 54, 34],
-    [11, 52, 56],
-    [9, 46, 30],
+    [3, 70.5, 18],
+    [5, 71, 31],
+    [4, 70.5, 44],
+    [2, 69, 58],
+    [6, 58, 23],
+    [8, 57, 38],
+    [11, 53, 12],
+    [10, 54, 30],
+    [7, 52, 54],
+    [9, 47, 30],
   ])
   return defaultTactics({
     homeFormation,
     awayFormation,
-    homeColor: WHITE,
-    awayColor: DARK,
+    homeColor: '#FFFFFF',
+    awayColor: '#3A3A3A',
     playerSize: 18,
     showLabels: false,
+    // Number badges would be white on white for the light kit: the scene reads by kit colour.
+    showNumbers: false,
     highlightColor: '$accent',
     players: [...home, ...away],
     annotations: [
-      annotation('ball', [{ x: 59.3, y: 31 }], '$text'),
-      annotation('pass', [{ x: 60, y: 29 }, { x: 71, y: 21 }, { x: 84, y: 17 }], '$text', '', 0.5),
-      action('run', [{ x: 65.5, y: 11 }, { x: 78, y: 9 }, { x: 89, y: 20 }]),
+      annotation('ball', [{ x: 62.4, y: 27 }], '$text'),
+      annotation('pass', [{ x: 63, y: 26.4 }, { x: 73.5, y: 21.5 }, { x: 84, y: 18.6 }], '$text', '', 0.6),
+      action('run', [{ x: 66.4, y: 12.6 }, { x: 77, y: 9.6 }, { x: 86, y: 16.6 }], 1.15),
     ],
   })
 }
+
+const LIGHT = { exposure: 0.62, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3 }
 
 export const stadium3D: TemplateDef = {
   id: 'stadium-3d',
@@ -398,6 +415,19 @@ export const stadium3D: TemplateDef = {
     const k = vk(t)
     const head = '{home.short} [[mata]]\na la contra'
     const sub = 'Robo en el centro y carrera a la espalda.'
+    const scene = (x: number, y: number, w: number, h: number, distance: number, target = TARGET) =>
+      E.stadium3d({
+        name: 'Estadio 3D',
+        x,
+        y,
+        width: w,
+        height: h,
+        tactics: counterData(match.home.formation, match.away.formation),
+        camera: { ...CAM, distance, targetX: target.x, targetY: target.y },
+        lighting: { ...LIGHT },
+        background: 'transparent',
+        showStands: false,
+      })
     if (t.landscape) {
       const colW = t.cw * 0.4
       const hh = px(t, 300)
@@ -406,18 +436,7 @@ export const stadium3D: TemplateDef = {
         background: ink(),
         elements: [
           ...cinematic(t, 'stadium'),
-          E.stadium3d({
-            name: 'Estadio 3D',
-            x: sx,
-            y: 0,
-            width: t.W - sx,
-            height: t.H,
-            tactics: counterData(match.home.formation, match.away.formation),
-            camera: { azimuth: 180, elevation: 52, distance: 70, fov: 36, targetX: 70, targetY: 24 },
-            lighting: { exposure: 0.5, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3 },
-            background: 'transparent',
-            showStands: false,
-          }),
+          scene(sx, 0, t.W - sx, t.H, 52, { x: 73, y: 20 }),
           signature(t),
           hl(t, head, { y: t.contentTop, w: colW, h: hh }, 125 * k),
           support(t, sub, { y: t.contentTop + hh + px(t, 30), w: colW, h: px(t, 140) }, 46, { name: 'Explicación' }),
@@ -428,24 +447,14 @@ export const stadium3D: TemplateDef = {
     const sy = t.contentTop + hh + px(t, 16)
     const sh = px(t, 70)
     const top = sy + sh + px(t, 30)
-    // Same framing as the story: wider frames move the camera closer so the pitch still fills them.
-    const dist = 60 * Math.min(1, Math.sqrt((t.H - top) / t.W / 1.07))
+    // The camera keeps the same horizontal framing (≈ 24 m across) whatever the frame's aspect.
+    const aspect = t.W / (t.H - top)
+    const dist = 44 * Math.min(1.25, 0.86 / aspect) ** 0.5
     return {
       background: ink(),
       elements: [
         ...cinematic(t, 'stadium'),
-        E.stadium3d({
-          name: 'Estadio 3D',
-          x: 0,
-          y: top,
-          width: t.W,
-          height: t.H - top,
-          tactics: counterData(match.home.formation, match.away.formation),
-          camera: { azimuth: 180, elevation: 52, distance: dist, fov: 36, targetX: t.story ? 68 : 71, targetY: 22 },
-          lighting: { exposure: 0.5, floodlights: 1.1, fog: 0, accent: '$text', rim: 0.3 },
-          background: 'transparent',
-          showStands: false,
-        }),
+        scene(0, top, t.W, t.H - top, dist),
         signature(t),
         hl(t, head, { y: t.contentTop, h: hh }, 125 * k, { verticalAlign: 'bottom' }),
         support(t, sub, { y: sy, h: sh }, 46, { name: 'Explicación' }),

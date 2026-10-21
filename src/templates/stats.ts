@@ -233,23 +233,23 @@ export const keyPlayers: TemplateDef = {
   category: 'stats',
   description: 'El duelo de los dos jugadores clave: nombres grandes y su cifra.',
   build: (t) => {
-    const claim = 'El duelo [[que decide]]'
+    // Forced break: "EL DUELO / QUE DECIDE" (never a lone "DECIDE"). 1:1 keeps one line.
+    const square = !t.story && !t.landscape && t.v < 0.8
+    const claim = square ? 'El duelo [[que decide]]' : 'El duelo\n[[que decide]]'
     /** One player row: crest + the team's key player (name, note, stat). */
     const player = (side: Side, x: number, y: number, right: number, rowH: number, cs: number, gapC: number, nameSize: number) => [
       crestOf(side, x, y + (rowH - cs) / 2, cs),
       E.playerList({ name: side === 'home' ? 'Clave local' : 'Clave visitante', side, filter: 'key', variant: 'editorial', x: x + cs + gapC, y, width: right - x - cs - gapC, height: rowH, maxItems: 1, nameSize, showStatus: false, showStat: true, showNumber: false, align: 'left', accentColor: '$accent' }),
     ]
-    /** "VS" in the crest column + a rule across the text column, between the two rows. */
-    const versus = (x: number, cy: number, right: number, cs: number, gapC: number, size: number) => [
-      label(t, 'VS', { x, y: cy - size * 0.55, w: cs, h: size * 1.1 }, size / t.s, { name: 'VS', align: 'center', fontWeight: 700, fill: { kind: 'solid', color: '$dim' }, autoFit: false }),
-      rule(t, cy - 1, right - x - cs - gapC, x + cs + gapC),
-    ]
+    /** A big Anton "VS" in the crest column: crest · VS · crest reads as the face-off. */
+    const versus = (x: number, cy: number, w: number, size: number) =>
+      hl(t, 'VS', { x, y: cy - size * 0.6, w, h: size * 1.2 }, size / t.s, { name: 'VS', align: 'center', verticalAlign: 'middle', lineHeight: 1, autoFit: false, fill: { kind: 'solid', color: '$text' } })
     if (t.landscape) {
-      const c = cols(t, 0.36)
-      const cs = px(t, 124)
+      const c = cols(t, 0.34)
+      const cs = px(t, 132)
       const gapC = px(t, 34)
-      const rowH = px(t, 330)
-      const vsH = px(t, 140)
+      const vsH = px(t, 150)
+      const rowH = Math.min(px(t, 380), (t.ch - vsH) / 2)
       const r1 = t.contentTop + Math.max(0, (t.ch - rowH * 2 - vsH) / 2)
       const r2 = r1 + rowH + vsH
       const right = c.rx + c.rw
@@ -259,21 +259,22 @@ export const keyPlayers: TemplateDef = {
           ...cinematic(t),
           signature(t),
           head(t, claim, { x: c.lx, y: t.contentTop, w: c.lw, h: t.ch }, 130),
-          ...player('home', c.rx, r1, right, rowH, cs, gapC, px(t, 100)),
-          ...versus(c.rx, r1 + rowH + vsH / 2, right, cs, gapC, px(t, 60)),
-          ...player('away', c.rx, r2, right, rowH, cs, gapC, px(t, 100)),
+          ...player('home', c.rx, r1, right, rowH, cs, gapC, px(t, 118)),
+          versus(c.rx - px(t, 20), r1 + rowH + vsH / 2, cs + px(t, 40), px(t, 128)),
+          ...player('away', c.rx, r2, right, rowH, cs, gapC, px(t, 118)),
         ],
       }
     }
-    const S = sizer(t, headH(t, 150) / t.s + 90 + 340 + 160 + 340)
+    const hs = (headH(t, 150, square ? 1 : 2) - 8) / t.s + 8
+    const S = sizer(t, hs + 80 + 360 + 150 + 360)
     const f = S(1000) / 1000 / t.s
     const hy = t.contentTop
-    const hh = S(headH(t, 150) / t.s)
-    const cs = S(128, 56)
+    const hh = S(hs)
+    const cs = S(136, 60)
     const gapC = S(36, 16)
-    const rowH = S(340, 150)
-    const vsH = S(160, 70)
-    const r1 = hy + hh + S(90)
+    const rowH = S(360, 150)
+    const vsH = S(150, 70)
+    const r1 = hy + hh + S(80)
     const r2 = r1 + rowH + vsH
     const right = dataRight(t)
     return {
@@ -282,9 +283,9 @@ export const keyPlayers: TemplateDef = {
         ...cinematic(t),
         signature(t),
         head(t, claim, { y: hy, h: hh }, 150 * f),
-        ...player('home', t.left, r1, right, rowH, cs, gapC, S(100, 44)),
-        ...versus(t.left, r1 + rowH + vsH / 2, right, cs, gapC, S(64, 34)),
-        ...player('away', t.left, r2, right, rowH, cs, gapC, S(100, 44)),
+        ...player('home', t.left, r1, right, rowH, cs, gapC, S(108, 46)),
+        versus(t.left - S(20), r1 + rowH + vsH / 2, cs + S(40), S(128, 52)),
+        ...player('away', t.left, r2, right, rowH, cs, gapC, S(108, 46)),
       ],
     }
   },
