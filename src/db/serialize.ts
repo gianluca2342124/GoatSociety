@@ -145,6 +145,7 @@ export function migrateProject(p: Project): Project {
     ...p.match,
     stats: p.match?.stats ?? [],
     predictions: p.match?.predictions ?? [],
+    score: p.match?.score ?? { home: '', away: '', note: '' },
     isSample: p.match?.isSample ?? false,
   }
   return out

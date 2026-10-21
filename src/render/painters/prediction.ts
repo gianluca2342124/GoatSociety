@@ -386,23 +386,57 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
   const regionBottom = Math.max(...present.map((p) => box[p].y + box[p].h)) + 30
   const regionH = regionBottom - regionY
   const s = deviceScale(ctx)
-  const pad = Math.max(20, el.blurIntensity * 2)
+  // Strong obscuration: decoy text, smeared horizontally, then a heavy blur.
+  const blur = Math.max(24, el.blurIntensity)
+  const pad = Math.max(30, blur * 2.2)
   const off = makeCanvas((w + pad * 2) * s, (regionH + pad * 2) * s)
   const octx = off.getContext('2d')!
   octx.scale(s, s)
   octx.translate(pad, -regionY + pad)
-  for (const part of hidden) draw(octx, part, true)
-  const blurred = blurredCopy(off, Math.max(2, el.blurIntensity) * s)
+  for (const dx of [-w * 0.035, 0, w * 0.035]) {
+    octx.save()
+    octx.globalAlpha = dx === 0 ? 1 : 0.55
+    octx.translate(dx, 0)
+    for (const part of hidden) draw(octx, part, true)
+    octx.restore()
+  }
+  const blurred = blurredCopy(off, blur * s)
   const bp = (blurred.width - off.width) / 2 / s
   ctx.save()
-  ctx.globalAlpha *= Math.max(0.25, 1 - el.overlayOpacity * 0.6)
+  ctx.globalAlpha *= Math.max(0.3, 1 - el.overlayOpacity * 0.55)
   ctx.drawImage(blurred, -pad - bp, regionY - pad - bp, w + pad * 2 + bp * 2, regionH + pad * 2 + bp * 2)
   ctx.restore()
+  if (el.frost !== false) {
+    // Frosted veil: a soft elliptical light that fades out in every direction.
+    ctx.save()
+    const fcx = w / 2
+    const fcy = regionY + regionH / 2
+    const rx = w * 0.62
+    const ry = regionH * 0.72
+    ctx.translate(fcx, fcy)
+    ctx.scale(1, ry / rx)
+    const fg = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
+    fg.addColorStop(0, 'rgba(255,255,255,0.07)')
+    fg.addColorStop(0.6, 'rgba(255,255,255,0.035)')
+    fg.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = fg
+    ctx.fillRect(-rx, -rx, rx * 2, rx * 2)
+    ctx.restore()
+  }
   if (el.lockStyle !== 'none') {
     const ts = el.teaser ? Math.min(46, w * 0.045) : 0
     const lockSize = Math.min(170, regionH * 0.5, w * 0.18)
     const blockH = lockSize + (ts ? ts * 2 : 0)
     const lcy = regionY + (regionH - blockH) / 2 + lockSize / 2
+    const glow = el.lockGlow ?? 0
+    if (glow > 0) {
+      const gr = ctx.createRadialGradient(cx, lcy, 0, cx, lcy, lockSize * 1.7)
+      gr.addColorStop(0, withAlpha(accent, 0.38 * glow))
+      gr.addColorStop(0.5, withAlpha(accent, 0.12 * glow))
+      gr.addColorStop(1, withAlpha(accent, 0))
+      ctx.fillStyle = gr
+      ctx.fillRect(cx - lockSize * 1.7, lcy - lockSize * 1.7, lockSize * 3.4, lockSize * 3.4)
+    }
     if (el.lockStyle === 'padlock') drawSolidLock(ctx, cx, lcy, lockSize, accent, rc.color('$bg'))
     else {
       const icon = el.lockStyle === 'shield' ? 'shield' : 'key'

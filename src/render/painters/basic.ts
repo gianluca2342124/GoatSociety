@@ -1,5 +1,5 @@
 import type { EffectElement, GlassElement, IconElement, ImageElement, ShapeElement, TextElement } from '../../model/types'
-import { withAlpha } from '../../model/tokens'
+import { mix, withAlpha } from '../../model/tokens'
 import type { RenderCtx } from '../context'
 import { blurredCopy, canvasFilterSupported, deviceScale, ellipsePath, fillStyle, makeCanvas, polygonPath, roundRect, type Ctx } from '../paint/canvas'
 import { cloudTexture, grainTexture, seeded } from '../paint/noise'
@@ -56,16 +56,42 @@ export function paintText(ctx: Ctx, el: TextElement, rc: RenderCtx) {
   ctx.save()
   ctx.translate(padX, padY)
   const fill = fillStyle(ctx, el.fill, w, h, rc.color)
+  const accent = rc.color(el.accentColor)
+  const base = el.fill.kind === 'solid' ? rc.color(el.fill.color) : '#FFFFFF'
+  const lineFill = el.effect === 'metallic' || el.effect === 'gradient' ? premiumLineFill(ctx, el.effect, base, accent) : undefined
   drawLayout(ctx, layout, fstyle, {
+    lineFill,
     width: w,
     height: h,
     align: el.align,
     verticalAlign: el.verticalAlign,
     fill,
-    accent: rc.color(el.accentColor),
+    accent,
     stroke: el.stroke && el.stroke.width > 0 ? { color: rc.color(el.stroke.color), width: el.stroke.width } : undefined,
   })
   ctx.restore()
+}
+
+/**
+ * Subtle per-line finishes. Metallic: a soft silver sheen (bright top, a
+ * faint darker band under the midline, bright again) that keeps contrast.
+ * Gradient: the text color easing into the accent toward the baseline.
+ */
+function premiumLineFill(ctx: Ctx, effect: 'metallic' | 'gradient', base: string, accent: string) {
+  return (top: number, baseline: number, isAccent: boolean) => {
+    const g = ctx.createLinearGradient(0, top, 0, baseline)
+    const c = isAccent ? accent : base
+    if (effect === 'metallic') {
+      g.addColorStop(0, mix(c, '#ffffff', 0.35))
+      g.addColorStop(0.48, c)
+      g.addColorStop(0.56, mix(c, '#000000', 0.2))
+      g.addColorStop(1, mix(c, '#ffffff', 0.12))
+    } else {
+      g.addColorStop(0, c)
+      g.addColorStop(1, isAccent ? mix(accent, '#ffffff', 0.25) : mix(base, accent, 0.45))
+    }
+    return g
+  }
 }
 
 // ── Shapes ──────────────────────────────────────────────────────────────────

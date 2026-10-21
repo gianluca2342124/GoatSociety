@@ -8,6 +8,22 @@ Toda plantilla nueva o rediseñada debe cumplirlo. Se aprenden los principios de
 grandes cuentas de fútbol (jerarquía, tamaño, contraste, un solo mensaje), sin copiar
 gráficos, logos ni maquetaciones de nadie.
 
+## 0. Reglas de familia (v2, prioridad máxima)
+
+Todas las plantillas forman una familia: misma retícula, mismo ritmo, misma lógica de alineación.
+
+1. **Titulares centrados** por defecto (`hl()` ya centra y aplica acabado metálico). Solo se alinea
+   a la izquierda cuando la composición lo exige de verdad (p. ej. un ranking o una lista).
+2. **Cromo de marca en las páginas estándar**: `chrome(t)` = firma GOAT SOCIETY arriba a la izquierda
+   + número de página «1/7» arriba a la derecha (`{pageof}`, se oculta solo en posts de una página).
+   Las portadas con foto y las de comunidad pueden prescindir del número, nunca de la marca.
+3. **Fondo**: `ink()` = negro con un degradado radial muy sutil arriba. `inkFlat()` solo bajo fotos.
+4. **Titular metálico** (`effect: 'metallic'`): brillo plateado sutil por línea; la palabra en acento
+   conserva su color. Nunca recargado.
+5. **Formato principal: vertical 3:4 (1080×1440)**. También 9:16, 4:5, 1:1 y 16:9.
+6. **Ritmo vertical común**: cromo → titular (zona superior) → visual o dato principal (centro) →
+   apoyo / CTA (zona inferior). Márgenes de 72 px, espacios múltiplos de 24.
+
 ## 1. Principios
 
 1. **Un mensaje por diapositiva**, legible en 2 segundos en un móvil (≈390 px de ancho, escala 0,36).
@@ -90,8 +106,13 @@ interlineado a 1,12 en esa plantilla.
 | Marca | `brandMark` | `variant: 'editorial'` (firma) o `'icon'` (logo pequeño) |
 | Mascota | `mascot` | solo en diapositivas de comunidad; en el resto, como mucho el logo pequeño |
 
-Ayudantes de plantilla (`src/templates/kit.ts`): `ink()`, `signature()`, `goatMark()`, `hl()`,
-`support()`, `label()`, `cta()`, `disclaimer()`, `rule()`, `crestOf()`, `cinematic()`, `px()`, `TYPE`.
+Ayudantes de plantilla (`src/templates/kit.ts`): `ink()`, `inkFlat()`, `chrome()`, `signature()`,
+`pageNo()`, `goatMark()`, `hl()`, `support()`, `label()`, `cta()`, `disclaimer()`, `rule()`, `crestOf()`,
+`cinematic()`, `px()`, `TYPE`.
+
+Bloques nuevos: `badge` (etiqueta sólida, contorno, mini-tarjeta iluminada o texto: «ACERTADO»,
+«SOLO EN MI COMUNIDAD», «RESULTADO FINAL», «GANADO»…) y `scoreboard` (marcador enlazado a
+`match.score`: fila, apilado o píldora). Tokens `{score}`, `{score.home}`, `{score.away}`, `{score.note}`.
 
 ## 6. Intensidad visual
 

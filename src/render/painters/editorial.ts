@@ -1,9 +1,12 @@
 // GOAT EDITORIAL charts: rankings list and three-way probability bar.
 // Flat, thick, proportional — one accent, everything else neutral.
-import type { ProbabilityElement, RankingElement, RankingRow } from '../../model/types'
+import type { BadgeElement, ProbabilityElement, RankingElement, RankingRow, ScoreboardElement } from '../../model/types'
 import { formatNumber } from '../../model/stats'
+import { luminance, withAlpha } from '../../model/tokens'
 import type { RenderCtx } from '../context'
-import { roundRect, type Ctx } from '../paint/canvas'
+import { clearShadow, roundRect, setShadow, type Ctx } from '../paint/canvas'
+import { paintIconGlyph } from './basic'
+import { paintCrestBox } from './crest'
 import { drawLabel, labelWidth } from '../text/draw'
 import { capHeightOf } from '../text/layout'
 import { teamColors } from './stats'
@@ -163,4 +166,160 @@ export function paintProbability(ctx: Ctx, el: ProbabilityElement, rc: RenderCtx
     }
     x += len + gap
   }
+}
+
+// ── Badge: a short label as a solid tag, an outline, an illuminated mini-card or plain text.
+const BADGE_ICON: Record<BadgeElement['icon'], string | null> = { none: null, check: 'check', lock: 'lock', star: 'star', bolt: 'zap', trophy: 'trophy', arrow: 'arrowUpRight' }
+
+export function paintBadge(ctx: Ctx, el: BadgeElement, rc: RenderCtx) {
+  const { width: w, height: h } = el
+  const color = rc.color(el.color)
+  const label = rc.text(el.text)
+  const fam = rc.font(el.font)
+  const boxed = el.style !== 'text'
+  let fs = Math.min(el.fontSize, h * (boxed ? 0.46 : 0.8))
+  const icon = BADGE_ICON[el.icon]
+  const measure = (size: number) => {
+    const tw = labelWidth(label, { family: fam, size, weight: 700, uppercase: true, letterSpacing: size * 0.04 })
+    const iconS = icon ? size * 1.05 : 0
+    const gap = icon && label ? size * 0.42 : 0
+    const padX = boxed ? size * 0.85 : 0
+    return { tw, iconS, gap, padX, total: tw + iconS + gap + padX * 2 }
+  }
+  let m = measure(fs)
+  if (m.total > w) {
+    fs *= w / m.total
+    m = measure(fs)
+  }
+  const bw = m.total
+  const bh = boxed ? Math.min(h, fs * 2.15) : h
+  const bx = el.align === 'left' ? 0 : el.align === 'right' ? w - bw : (w - bw) / 2
+  const by = (h - bh) / 2
+  const r = Math.min(el.radius, bh / 2)
+  // Text on a solid tag picks a readable color automatically.
+  let textC = rc.color(el.textColor)
+  if (el.style === 'solid' && el.textColor === '$text' && luminance(color) > 0.4) textC = '#050505'
+  if (el.style === 'outline' || el.style === 'text') textC = el.textColor === '$text' ? color : textC
+  if (el.style === 'solid') {
+    roundRect(ctx, bx, by, bw, bh, r)
+    ctx.fillStyle = color
+    ctx.fill()
+  } else if (el.style === 'outline') {
+    roundRect(ctx, bx + 1.5, by + 1.5, bw - 3, bh - 3, r)
+    ctx.strokeStyle = color
+    ctx.lineWidth = Math.max(2, fs * 0.08)
+    ctx.stroke()
+  } else if (el.style === 'glow') {
+    ctx.save()
+    setShadow(ctx, withAlpha(color, 0.55), fs * 0.9)
+    roundRect(ctx, bx, by, bw, bh, r)
+    ctx.fillStyle = withAlpha(color, 0.14)
+    ctx.fill()
+    clearShadow(ctx)
+    ctx.restore()
+    roundRect(ctx, bx + 1, by + 1, bw - 2, bh - 2, r)
+    ctx.strokeStyle = withAlpha(color, 0.9)
+    ctx.lineWidth = Math.max(1.5, fs * 0.06)
+    ctx.stroke()
+  }
+  let x = bx + m.padX
+  const cy = h / 2
+  if (icon) {
+    const iconColor = el.style === 'solid' ? textC : color
+    paintIconGlyph(ctx, icon, x, cy - m.iconS / 2, m.iconS, iconColor, 2.6)
+    x += m.iconS + m.gap
+  }
+  if (label) drawLabel(ctx, label, x, cy, { family: fam, size: fs, weight: 700, color: textC, uppercase: true, letterSpacing: fs * 0.04 })
+}
+
+// ── Scoreboard: crests, names and a big score from the shared match data.
+export function scoreOf(rc: RenderCtx): { home: string; away: string; note: string } {
+  const s = rc.match.score
+  return { home: s?.home || '0', away: s?.away || '0', note: s?.note ?? '' }
+}
+
+export function paintScoreboard(ctx: Ctx, el: ScoreboardElement, rc: RenderCtx) {
+  const { width: w, height: h } = el
+  const sc = scoreOf(rc)
+  const textC = rc.color(el.textColor)
+  const mutedC = rc.color(el.mutedColor)
+  const accent = rc.color(el.accentColor)
+  const hn = parseFloat(sc.home)
+  const an = parseFloat(sc.away)
+  const winner = Number.isFinite(hn) && Number.isFinite(an) && hn !== an ? (hn > an ? 'home' : 'away') : null
+  const colorOf = (side: 'home' | 'away') => (el.highlightWinner && winner === side ? accent : textC)
+  const scoreFont = rc.font(el.scoreFont)
+  const nameFont = rc.font(el.nameFont)
+  const capK = capHeightOf(scoreFont, 100, 400, false) / 100 || 0.72
+  const home = rc.match.home
+  const away = rc.match.away
+  if (el.layout === 'compact') {
+    // Pill: HOME 2 - 1 AWAY
+    const fs = Math.min(h * 0.5, el.scoreSize * 0.4)
+    const txt = `${sc.home} - ${sc.away}`
+    roundRect(ctx, 0, 0, w, h, h / 2)
+    ctx.fillStyle = withAlpha(textC, 0.08)
+    ctx.fill()
+    ctx.strokeStyle = withAlpha(textC, 0.25)
+    ctx.lineWidth = 2
+    ctx.stroke()
+    const cs = h * 0.62
+    if (el.showCrests) {
+      ctx.save()
+      ctx.translate(h * 0.3, (h - cs) / 2)
+      paintCrestBox(ctx, home, cs, cs, rc)
+      ctx.restore()
+      ctx.save()
+      ctx.translate(w - h * 0.3 - cs, (h - cs) / 2)
+      paintCrestBox(ctx, away, cs, cs, rc)
+      ctx.restore()
+    }
+    drawLabel(ctx, txt, w / 2, h / 2, { family: scoreFont, size: fs * 1.25, color: textC, align: 'center', maxWidth: w - (el.showCrests ? cs * 2 + h : h) })
+    return
+  }
+  if (el.layout === 'stacked') {
+    const nameS = Math.min(56, h * 0.13)
+    const noteS = el.showNote && sc.note ? Math.min(40, h * 0.1) : 0
+    const avail = h - (el.showNames ? nameS * 1.8 : 0) - (noteS ? noteS * 1.8 : 0)
+    const ss = Math.max(20, Math.min(el.scoreSize, avail / capK))
+    let y = 0
+    if (el.showNames) {
+      drawLabel(ctx, home.shortName || home.name, w * 0.25, y, { family: nameFont, size: nameS, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: w * 0.46 })
+      drawLabel(ctx, away.shortName || away.name, w * 0.75, y, { family: nameFont, size: nameS, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: w * 0.46 })
+      y += nameS * 1.8
+    }
+    drawLabel(ctx, sc.home, w * 0.25, y, { family: scoreFont, size: ss, color: colorOf('home'), align: 'center', baseline: 'top', maxWidth: w * 0.42 })
+    drawLabel(ctx, '-', w * 0.5, y + (ss * capK) / 2, { family: scoreFont, size: ss * 0.5, color: mutedC, align: 'center' })
+    drawLabel(ctx, sc.away, w * 0.75, y, { family: scoreFont, size: ss, color: colorOf('away'), align: 'center', baseline: 'top', maxWidth: w * 0.42 })
+    if (noteS) drawLabel(ctx, sc.note, w / 2, y + ss * capK + noteS * 0.9, { family: nameFont, size: noteS, weight: 600, color: mutedC, align: 'center', baseline: 'top', uppercase: true, letterSpacing: noteS * 0.04, maxWidth: w })
+    return
+  }
+  // Row: crest  2 - 1  crest (names under crests, note under the score)
+  const noteS = el.showNote && sc.note ? Math.min(40, h * 0.12) : 0
+  const nameS = el.showNames ? Math.min(46, h * 0.13) : 0
+  const cs = el.showCrests ? Math.min(h - (nameS ? nameS * 1.9 : 0), w * 0.24) : 0
+  const ss = Math.max(20, Math.min(el.scoreSize, (h - (noteS ? noteS * 1.9 : 0)) / capK, (w - cs * 2) / 2.6 / 0.62))
+  const cap = ss * capK
+  const top = (h - cap - (noteS ? noteS * 1.9 : 0)) / 2
+  if (el.showCrests) {
+    const cy = nameS ? (h - nameS * 1.9 - cs) / 2 : (h - cs) / 2
+    ctx.save()
+    ctx.translate(0, cy)
+    paintCrestBox(ctx, home, cs, cs, rc)
+    ctx.restore()
+    ctx.save()
+    ctx.translate(w - cs, cy)
+    paintCrestBox(ctx, away, cs, cs, rc)
+    ctx.restore()
+    if (nameS) {
+      drawLabel(ctx, home.shortName || home.name, cs / 2, cy + cs + nameS * 0.6, { family: nameFont, size: nameS, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: cs * 1.4 })
+      drawLabel(ctx, away.shortName || away.name, w - cs / 2, cy + cs + nameS * 0.6, { family: nameFont, size: nameS, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: cs * 1.4 })
+    }
+  }
+  const mid = w / 2
+  const sideW = (w - cs * 2) / 2
+  drawLabel(ctx, sc.home, mid - ss * 0.32, top, { family: scoreFont, size: ss, color: colorOf('home'), align: 'right', baseline: 'top', maxWidth: sideW * 0.8 })
+  drawLabel(ctx, '-', mid, top + cap / 2, { family: scoreFont, size: ss * 0.45, color: mutedC, align: 'center' })
+  drawLabel(ctx, sc.away, mid + ss * 0.32, top, { family: scoreFont, size: ss, color: colorOf('away'), align: 'left', baseline: 'top', maxWidth: sideW * 0.8 })
+  if (noteS) drawLabel(ctx, sc.note, mid, top + cap + noteS * 0.9, { family: nameFont, size: noteS, weight: 600, color: mutedC, align: 'center', baseline: 'top', uppercase: true, letterSpacing: noteS * 0.04, maxWidth: w - cs * 2 })
 }

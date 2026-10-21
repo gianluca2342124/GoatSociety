@@ -6,7 +6,7 @@ import { Copy, GripVertical, LayoutTemplate, Plus, Replace, Sparkles, Trash2 } f
 import { useEditor } from '../../store/editor'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
-import { TEMPLATES, buildMatchCarousel, buildTemplateSlide, type TemplateDef } from '../../templates'
+import { TEMPLATES, buildBlankSlide, buildMatchCarousel, buildTemplateSlide, type TemplateDef } from '../../templates'
 import { CATEGORY_LABELS, type TemplateCategory } from '../../templates/types'
 import { useSlideThumb, useTemplateThumb } from '../thumbs'
 import type { EffectElement, MascotElement, Project, Slide } from '../../model/types'
@@ -20,7 +20,6 @@ import { TACTICAL_PRESETS, defaultTactics } from '../../tactics/presets'
 import { FORMATIONS } from '../../tactics/formations'
 import { FINAL_VARIANTS } from '../../templates/brand'
 import { makeCtx, atmosphere } from '../../templates/kit'
-import { emptySlide } from '../../model/defaults'
 
 export function PanelTitle({ title, sub }: { title: string; sub?: string }) {
   return (
@@ -187,7 +186,7 @@ export function SlidesPanel() {
             type="button"
             className="btn text-[12px]"
             onClick={() => {
-              const s = emptySlide(`Diapositiva ${project.slides.length + 1}`)
+              const s = buildBlankSlide(project.format, `Página ${project.slides.length + 1}`)
               s.elements = atmosphere(makeCtx(project.format), 'noir')
               useEditor.getState().addSlide(s)
             }}

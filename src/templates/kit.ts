@@ -25,6 +25,8 @@ export interface TCtx {
   ch: number
   landscape: boolean
   story: boolean
+  /** Canvas preset ('vertical' = 3:4 default). */
+  preset: CanvasFormat['preset']
   /** Vertical density: <1 on short formats. */
   v: number
 }
@@ -64,6 +66,12 @@ export function makeCtx(format: CanvasFormat): TCtx {
       contentBottom = H - 320
       footer = H - 250
       break
+    case 'vertical':
+      top = 64
+      contentTop = 156
+      contentBottom = H - 96
+      footer = H - 80
+      break
     case 'portrait':
       top = 64
       contentTop = 150
@@ -77,7 +85,7 @@ export function makeCtx(format: CanvasFormat): TCtx {
       footer = H - 72
   }
   const ch = contentBottom - contentTop
-  return { W, H, cw, left, right: left + cw, cx: W / 2, s: Math.min(1, cw / 936), top, contentTop, contentBottom, footer, ch, landscape, story, v: Math.min(1, ch / 1290) }
+  return { W, H, cw, left, right: left + cw, cx: W / 2, s: Math.min(1, cw / 936), top, contentTop, contentBottom, footer, ch, landscape, story, preset, v: Math.min(1, ch / 1290) }
 }
 
 /** y/h for a fraction range of the content zone. */
@@ -91,7 +99,16 @@ export function zone(t: TCtx, from: number, to: number): { y: number; h: number 
 // ════════════════════════════════════════════════════════════════════════════
 
 /** Solid editorial background. */
+/**
+ * Editorial background: near-black with a restrained radial lift at the top
+ * (premium depth without textures). Fully opaque — exports never go transparent.
+ */
 export function ink(): SlideBackground {
+  return bg({ kind: 'radial', cx: 0.5, cy: 0, radius: 1.15, stops: [{ offset: 0, color: '#1C1C1C' }, { offset: 0.45, color: '#0D0D0D' }, { offset: 1, color: '$bg' }] })
+}
+
+/** Flat black (photo templates, where the picture provides the depth). */
+export function inkFlat(): SlideBackground {
   return bg({ kind: 'solid', color: '$bg' })
 }
 
@@ -104,6 +121,31 @@ export function px(t: TCtx, v: number, floor = 0): number {
 export function signature(t: TCtx, p: Partial<BrandMarkElement> = {}): BrandMarkElement {
   const h = px(t, 44, 28)
   return E.brandMark({ name: 'Firma', variant: 'editorial', align: 'left', x: t.left, y: t.top, width: 460 * t.s, height: h, color: '$text', accentColor: '$text', ...p })
+}
+
+/** Page number "1/7" at the top-right (hidden on single posts and when page numbers are off). */
+export function pageNo(t: TCtx, p: Partial<TextElement> = {}): TextElement {
+  const h = px(t, 44, 28)
+  const fs = px(t, 34, 22)
+  return text(t, '{pageof}', { x: t.right - 240 * t.s, y: t.top + (h - fs * 1.2) / 2, w: 240 * t.s, h: fs * 1.2 }, {
+    name: 'Nº de página',
+    fontFamily: '$label',
+    fontSize: fs,
+    fontWeight: 600,
+    letterSpacing: fs * 0.04,
+    lineHeight: 1,
+    uppercase: true,
+    align: 'right',
+    verticalAlign: 'middle',
+    fill: { kind: 'solid', color: '$muted' },
+    autoFit: false,
+    ...p,
+  })
+}
+
+/** Standard brand chrome for editorial pages: signature top-left + page number top-right. */
+export function chrome(t: TCtx): SlideElement[] {
+  return [signature(t), pageNo(t)]
 }
 
 /** Small goat mark (everyday slides) — never a hero. */
@@ -124,10 +166,12 @@ export function hl(t: TCtx, content: string, box: { x?: number; y: number; w?: n
     lineHeight: 1.04,
     letterSpacing: 0,
     uppercase: true,
-    align: 'left',
+    // House rule: main headlines are centered, with a subtle metallic finish.
+    align: 'center',
     verticalAlign: 'top',
     fill: { kind: 'solid', color: '$text' },
     accentColor: '$accent',
+    effect: 'metallic',
     autoFit: true,
     minFontSize: Math.min(fs, Math.max(44, fs * 0.45)),
     ...p,

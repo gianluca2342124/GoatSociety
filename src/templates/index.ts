@@ -1,6 +1,6 @@
 import { uid } from '../model/ids'
 import type { CanvasFormat, MatchData, Project, Slide } from '../model/types'
-import { makeCtx } from './kit'
+import { chrome, cinematic, ink, makeCtx } from './kit'
 import { MATCH_TEMPLATES } from './match'
 import { STATS_TEMPLATES } from './stats'
 import { TACTICS_TEMPLATES } from './tactics'
@@ -26,6 +26,15 @@ export function buildTemplateSlide(def: TemplateDef, format: CanvasFormat, match
     ...(out.accent ? { accent: out.accent } : {}),
     ...(out.intensity ? { intensity: out.intensity } : {}),
   }
+}
+
+/**
+ * Blank editorial page: gradient background, GOAT SOCIETY signature top-left
+ * and the page number top-right, ready to compose from scratch.
+ */
+export function buildBlankSlide(format: CanvasFormat, name = 'Página en blanco'): Slide {
+  const t = makeCtx(format)
+  return { id: uid('sl'), name, templateId: null, background: ink(), elements: [...cinematic(t), ...chrome(t)], overrides: {} }
 }
 
 /** The seven-slide "New Match Carousel" composition. */

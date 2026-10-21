@@ -13,7 +13,7 @@ import { paintPrediction } from './prediction'
 import { paintTactics } from './tactics'
 import { paintBrandMark, paintMascot } from './brand'
 import { paint3D } from './three'
-import { paintProbability, paintRanking } from './editorial'
+import { paintBadge, paintProbability, paintRanking, paintScoreboard } from './editorial'
 
 type Painter = (ctx: Ctx, el: never, rc: RenderCtx) => void
 
@@ -33,6 +33,8 @@ export const PAINTERS: Record<SlideElement['type'], Painter> = {
   resultsList: paintResultsList as Painter,
   ranking: paintRanking as Painter,
   probability: paintProbability as Painter,
+  badge: paintBadge as Painter,
+  scoreboard: paintScoreboard as Painter,
   tactics: paintTactics as Painter,
   stadium3d: paint3D as Painter,
   model3d: paint3D as Painter,

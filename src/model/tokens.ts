@@ -227,6 +227,11 @@ export const TEXT_TOKENS: { token: string; label: string }[] = [
   { token: '{handle}', label: 'Usuario' },
   { token: '{brand}', label: 'Marca' },
   { token: '{community}', label: 'Destino de la comunidad (opcional)' },
+  { token: '{pageof}', label: 'Página (1/7)' },
+  { token: '{score}', label: 'Resultado (2 - 1)' },
+  { token: '{score.home}', label: 'Goles local' },
+  { token: '{score.away}', label: 'Goles visitante' },
+  { token: '{score.note}', label: 'Estado del partido' },
   { token: '{page}', label: 'Nº de página' },
   { token: '{pages}', label: 'Total páginas' },
   { token: '{disclaimer}', label: 'Aviso legal' },
@@ -310,6 +315,21 @@ export function tokenValue(key: string, ctx: TokenContext): string | undefined {
       return pad(ctx.page)
     case 'pages':
       return pad(ctx.pages)
+    // "1/7" — empty on single posts so a lone page never reads "1/1".
+    case 'pageof':
+      return ctx.pages > 1 ? `${ctx.page}/${ctx.pages}` : ''
+    case 'num':
+      return String(ctx.page)
+    case 'total':
+      return String(ctx.pages)
+    case 'score':
+      return `${match.score?.home || '0'} - ${match.score?.away || '0'}`
+    case 'score.home':
+      return match.score?.home || '0'
+    case 'score.away':
+      return match.score?.away || '0'
+    case 'score.note':
+      return match.score?.note ?? ''
     default: {
       const pm = /^pick(\d)$/.exec(key)
       if (pm) return prediction(match, Number(pm[1]) - 1)?.pick ?? ''

@@ -131,6 +131,7 @@ export function sampleMatch(): MatchData {
       { id: uid('pr'), market: 'Goles', pick: 'Más de 2.5 goles', odds: '1.70', confidence: 64, note: 'Ambos equipos promedian más de dos goles.' },
       { id: uid('pr'), market: 'Ambos marcan', pick: 'Sí', odds: '1.62', confidence: 60, note: '' },
     ],
+    score: { home: '2', away: '1', note: 'Final' },
     notes: '',
     isSample: true,
   }
@@ -182,7 +183,7 @@ export function newProject(opts: { name?: string; preset?: FormatPreset; kind?: 
     createdAt: now,
     updatedAt: now,
     schemaVersion: SCHEMA_VERSION,
-    format: formatOf(opts.preset ?? 'story'),
+    format: formatOf(opts.preset ?? 'vertical'),
     match: opts.match ?? sampleMatch(),
     agenda: sampleAgenda(),
     results: sampleResults(),

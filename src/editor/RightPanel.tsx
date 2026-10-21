@@ -305,7 +305,7 @@ function SlidePanel() {
           onChange={(v) =>
             update((d) => {
               d.pageNumbers = v
-              for (const s of d.slides) for (const e of s.elements) if (e.type === 'text' && e.text.includes('{page}')) e.visible = v
+              for (const s of d.slides) for (const e of s.elements) if (e.type === 'text' && (e.text.includes('{page}') || e.text.includes('{pageof}'))) e.visible = v
             })
           }
         />

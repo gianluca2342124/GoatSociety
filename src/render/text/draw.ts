@@ -26,6 +26,8 @@ export interface DrawLayoutOptions {
   fill: string | CanvasGradient | null
   accent: string
   stroke?: { color: string; width: number }
+  /** Optional per-line paint (premium effects): receives the line's cap top/baseline. */
+  lineFill?: (capTop: number, baseline: number, accent: boolean) => string | CanvasGradient
 }
 
 /** Draw a laid-out paragraph inside a box. Caps are centered in each line box. */
@@ -54,7 +56,7 @@ export function drawLayout(ctx: Ctx, layout: TextLayout, style: TextStyle, o: Dr
         fillTextSpaced(ctx, run.text, ox + run.x, baseline, letterSpacing, true)
         ctx.restore()
       }
-      const style = run.accent ? o.accent : o.fill
+      const style = o.lineFill ? o.lineFill(baseline - cap, baseline, !!run.accent) : run.accent ? o.accent : o.fill
       if (!style) continue
       ctx.fillStyle = style
       fillTextSpaced(ctx, run.text, ox + run.x, baseline, letterSpacing)

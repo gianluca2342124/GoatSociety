@@ -7,7 +7,8 @@
 
 export type ID = string
 
-export type FormatPreset = 'story' | 'portrait' | 'square' | 'landscape'
+/** 'vertical' = 3:4 (1080×1440), the default feed format. */
+export type FormatPreset = 'vertical' | 'story' | 'portrait' | 'square' | 'landscape'
 
 export interface CanvasFormat {
   preset: FormatPreset
@@ -103,6 +104,8 @@ export interface TextElement extends BaseElement {
   autoFit: boolean
   minFontSize: number
   stroke?: { color: ColorValue; width: number }
+  /** Premium finish: 'metallic' (silver sheen per line) or 'gradient' (text → accent). */
+  effect?: 'none' | 'metallic' | 'gradient'
   /** Optional pill/box behind text. */
   background?: { color: ColorValue; opacity: number; paddingX: number; paddingY: number; radius: number }
 }
@@ -331,6 +334,10 @@ export interface PredictionElement extends BaseElement {
   headlineFont: string
   /** 'none' = editorial layout without card, header, pills or gauges. Undefined = card. */
   chrome?: 'card' | 'none'
+  /** Frosted overlay over the hidden content (editorial locked mode). Default on. */
+  frost?: boolean
+  /** Soft glow behind the lock (0..1). */
+  lockGlow?: number
 }
 
 export interface ResultsListElement extends BaseElement {
@@ -348,6 +355,38 @@ export interface ResultsListElement extends BaseElement {
   cardColor: ColorValue
   /** 'editorial' = hero hit-rate summary + open rows. Undefined = cards. */
   variant?: 'card' | 'editorial'
+}
+
+// ── Badges & scoreboards (standalone building blocks) ──────────────────────
+export interface BadgeElement extends BaseElement {
+  type: 'badge'
+  text: string
+  /** solid = filled with the color · outline = border only · glow = illuminated mini-card · text = label only. */
+  style: 'solid' | 'outline' | 'glow' | 'text'
+  color: ColorValue
+  textColor: ColorValue
+  icon: 'none' | 'check' | 'lock' | 'star' | 'bolt' | 'trophy' | 'arrow'
+  font: string
+  fontSize: number
+  radius: number
+  align: 'left' | 'center' | 'right'
+}
+
+export interface ScoreboardElement extends BaseElement {
+  type: 'scoreboard'
+  /** row = crest · score · crest; stacked = names over a big score; compact = pill with score only. */
+  layout: 'row' | 'stacked' | 'compact'
+  showCrests: boolean
+  showNames: boolean
+  showNote: boolean
+  textColor: ColorValue
+  mutedColor: ColorValue
+  accentColor: ColorValue
+  /** Paint the winning side's number with the accent. */
+  highlightWinner: boolean
+  scoreFont: string
+  nameFont: string
+  scoreSize: number
 }
 
 // ── Ranking & probability (editorial charts) ───────────────────────────────
@@ -586,6 +625,8 @@ export type SlideElement =
   | ResultsListElement
   | RankingElement
   | ProbabilityElement
+  | BadgeElement
+  | ScoreboardElement
   | TacticsElement
   | Stadium3DElement
   | Model3DElement
@@ -648,6 +689,8 @@ export interface MatchData {
   subheadline: string
   stats: StatRow[]
   predictions: Prediction[]
+  /** Final or live score (free text so '2', '(4)', '-' all work) and a status like 'FINAL'. */
+  score?: { home: string; away: string; note: string }
   notes: string
   /** True while the demo data has not been replaced by the user. */
   isSample: boolean

@@ -1,6 +1,7 @@
 import type { CanvasFormat, FormatPreset } from './types'
 
 export const FORMATS: Record<FormatPreset, CanvasFormat & { label: string; hint: string }> = {
+  vertical: { preset: 'vertical', width: 1080, height: 1440, label: 'Vertical 3:4', hint: '1080 × 1440' },
   story: { preset: 'story', width: 1080, height: 1920, label: 'Story / TikTok', hint: '1080 × 1920' },
   portrait: { preset: 'portrait', width: 1080, height: 1350, label: 'Instagram vertical', hint: '1080 × 1350' },
   square: { preset: 'square', width: 1080, height: 1080, label: 'Cuadrado', hint: '1080 × 1080' },
@@ -20,6 +21,8 @@ export function safeArea(format: CanvasFormat): { top: number; bottom: number; l
   switch (format.preset) {
     case 'story':
       return { top: 200, bottom: 340, left: 48, right: 150 }
+    case 'vertical':
+      return { top: 70, bottom: 120, left: 60, right: 60 }
     case 'portrait':
       return { top: 70, bottom: 140, left: 60, right: 60 }
     case 'square':
