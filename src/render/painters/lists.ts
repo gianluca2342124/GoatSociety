@@ -282,10 +282,11 @@ function paintPlayerRowsEditorial(ctx: Ctx, el: PlayerListElement, rc: RenderCtx
     if (sub) {
       // Notes shrink only to a floor, then get an ellipsis (keeps rows consistent).
       const body = rc.font('$body')
-      const floor = Math.max(30, nameSize * 0.36)
+      const floor = Math.max(30, nameSize * 0.32)
       const full = labelWidth(sub, { family: body, size: subSize, weight: 500 })
-      const size = full <= nameMax ? subSize : Math.max(floor, (subSize * nameMax) / full)
-      const text = labelWidth(sub, { family: body, size, weight: 500 }) <= nameMax ? sub : ellipsize(sub, body, size, nameMax)
+      const size = full <= nameMax ? subSize : Math.max(floor, (subSize * nameMax * 0.99) / full)
+      // Small tolerance: drawLabel's maxWidth absorbs rounding, only real overflow gets "…".
+      const text = labelWidth(sub, { family: body, size, weight: 500 }) <= nameMax * 1.03 ? sub : ellipsize(sub, body, size, nameMax)
       drawLabel(ctx, text, x, nameY + capN + subSize * 0.45, { family: body, size, weight: 500, color: mutedC, align, baseline: 'top', maxWidth: nameMax })
     }
     const ex = right ? 0 : w
