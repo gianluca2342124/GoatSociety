@@ -36,7 +36,7 @@ import { Stadium3DProps, TacticsProps } from './props/tacticsProps'
 import { Section, Slider, TextField, Toggle } from '../ui/controls'
 import { buildTemplateSlide, templateById } from '../templates'
 import { SlideStyleSection } from './StylePanel'
-import { alignSelection, type AlignMode } from './actions'
+import { alignSelection, deleteSelection as deleteWithUndo, type AlignMode } from './actions'
 
 export function ElementSpecific({ el }: { el: SlideElement }) {
   switch (el.type) {
@@ -95,11 +95,12 @@ export function ElementSpecific({ el }: { el: SlideElement }) {
 
 function ElementHeader({ el }: { el: SlideElement }) {
   const updateElement = useEditor((s) => s.updateElement)
-  const { duplicateSelection, deleteSelection, reorderSelection } = useEditor.getState()
+  const { duplicateSelection, reorderSelection } = useEditor.getState()
   return (
     <div className="sticky top-0 z-10 border-b border-line bg-panel/95 px-3.5 py-3 backdrop-blur">
       <div className="label-xs mb-1 text-gold">{ELEMENT_LABELS[el.type]}</div>
       <input className="field mb-2 font-semibold" aria-label="Nombre de la capa" value={el.name} onChange={(e) => updateElement(el.id, { name: e.target.value }, { key: `name-${el.id}` })} />
+      <p className="mb-2 text-[10.5px] leading-snug text-dim">Para mover o escalar varios a la vez: Shift + clic en otros elementos, o arrastra desde un hueco del lienzo.</p>
       <div className="flex items-center gap-0.5">
         <button type="button" className="icon-btn" title={el.visible ? 'Ocultar' : 'Mostrar'} aria-label={el.visible ? 'Ocultar' : 'Mostrar'} onClick={() => updateElement(el.id, { visible: !el.visible })}>
           {el.visible ? <Eye size={15} /> : <EyeOff size={15} />}
@@ -123,7 +124,7 @@ function ElementHeader({ el }: { el: SlideElement }) {
         <button type="button" className="icon-btn" title="Duplicar (Ctrl+D)" aria-label="Duplicar" onClick={duplicateSelection}>
           <Copy size={15} />
         </button>
-        <button type="button" className="icon-btn hover:!text-loss" title="Eliminar (Supr)" aria-label="Eliminar" onClick={() => (el.locked ? updateElement(el.id, { locked: false }) : deleteSelection())}>
+        <button type="button" className="icon-btn hover:!text-loss" title="Eliminar (Supr)" aria-label="Eliminar" onClick={deleteWithUndo}>
           <Trash2 size={15} />
         </button>
       </div>
@@ -179,7 +180,7 @@ function MultiPanel({ els }: { els: SlideElement[] }) {
           <button type="button" className="btn" onClick={() => useEditor.getState().duplicateSelection()}>
             <Copy size={14} /> Duplicar
           </button>
-          <button type="button" className="btn btn-danger" onClick={() => useEditor.getState().deleteSelection()}>
+          <button type="button" className="btn btn-danger" onClick={deleteWithUndo}>
             <Trash2 size={14} /> Eliminar
           </button>
         </div>

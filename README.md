@@ -101,7 +101,7 @@ Los proyectos guardados se abren sin cambios visuales salvo dos migraciones segu
 1. **Nuevo carrusel de partido** → elige los dos equipos (de la biblioteca o escribiendo), competición, fecha, hora y formato (por defecto **Vertical 3:4**, 1080×1440).
 2. Se crean **7 diapositivas enlazadas**: portada, cifras clave, movimiento táctico, jugadores clave, estadísticas, pronóstico bloqueado y llamada a la comunidad.
 3. Rellena tus datos en **Partido**, **Equipos** y **Estadísticas**. Todas las diapositivas se actualizan solas.
-4. Ajusta lo que quieras en el lienzo (doble clic en un texto para editarlo; doble clic en una pizarra táctica para mover jugadores y dibujar flechas).
+4. Ajusta lo que quieras en el lienzo (doble clic en un texto para editarlo, solo cambia ese texto; Shift + clic para seleccionar varios; doble clic en una pizarra táctica para mover jugadores y dibujar flechas).
 5. **Vista previa** → **Exportar** → ZIP con `goat-society-local-visitante-01.png`, `-02.png`…
 
 ### En el móvil
@@ -119,7 +119,8 @@ En un teléfono (o una tableta pequeña en vertical) el editor cambia solo a un 
 | Tira de páginas | Miniaturas: toca para cambiar de página; toca la página actual para sus opciones (duplicar, mover, cambiar plantilla, renombrar, descargar esta página, eliminar). **+** añade una página en blanco, desde plantilla o duplicada. |
 | Navegación inferior | **Plantillas**, **Elementos**, **Fotos**, **Datos** (partido, equipos, estadísticas) y **Estilo** (acento, intensidad, fondo, formato y marca). |
 
-- **Editar texto** abre un cuadro fijo sobre el teclado: la página sigue visible y se actualiza mientras escribes. Los textos vinculados muestran las palabras reales (nunca `{tokens}`): si el texto es el titular del partido, al editarlo cambias el titular de todo el carrusel.
+- **Editar texto** abre un cuadro fijo sobre el teclado: la página sigue visible y se actualiza mientras escribes. **Solo cambia ese texto**, en esa página. Los textos que vienen de los datos del partido muestran las palabras reales (nunca `{tokens}`); para cambiar el dato en todas las páginas (por ejemplo, el titular), usa el enlace «Cambiar … en todas las páginas» o **Datos → Partido**.
+- **Seleccionar varios**: en las herramientas de un elemento toca **Varios** (o ⋯ → *Seleccionar varios* / *Seleccionar todo*). Cada toque añade o quita un elemento; arrastra cualquiera para mover el grupo, usa las esquinas para escalarlo y **Alinear** para alinearlos o repartirlos. **Listo** termina.
 - **Borrar es seguro**: borrar un elemento o una página, cambiar de plantilla o de formato se hace al instante y aparece **Deshacer** durante unos segundos, sin ventanas de confirmación.
 - **Copiar y pegar entre páginas**: ⋯ → Copiar, cambia de página y toca **Pegar aquí**.
 - **Fotos**: subir desde el móvil rellena el hueco «Foto» de las plantillas con foto; si no hay hueco, la añade a la página.
@@ -238,6 +239,7 @@ Formatos de lienzo: **Vertical 3:4 1080×1440 (por defecto)**, Story/TikTok 1080
 | Flechas (Shift ×10) | Mover selección |
 | Ctrl/⌘ + ] / [ | Subir / bajar capa |
 | Ctrl/⌘ + A | Seleccionar todo |
+| Shift + clic · arrastrar en un hueco | Seleccionar varios (se mueven, escalan y alinean juntos) |
 | Espacio + arrastrar · Ctrl/⌘ + rueda | Desplazar · zoom |
 | + / − / 0 | Acercar / alejar / ajustar |
 | RePág / AvPág | Diapositiva anterior / siguiente |
