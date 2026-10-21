@@ -64,6 +64,16 @@ export function activeSlideOf(s: Pick<EditorState, 'project' | 'activeSlideId'>)
   return s.project.slides.find((sl) => sl.id === s.activeSlideId) ?? s.project.slides[0] ?? null
 }
 
+/** After undo/redo: show a page that came back (e.g. an undone delete), else stay put if possible. */
+function activeAfterTimeTravel(from: Project, to: Project, current: string | null): string | null {
+  const back = to.slides.find((sl) => !from.slides.some((x) => x.id === sl.id))
+  if (back) return back.id
+  if (to.slides.some((sl) => sl.id === current)) return current
+  // The current page disappeared (an undone add): go to its neighbour.
+  const i = from.slides.findIndex((sl) => sl.id === current)
+  return to.slides[Math.min(Math.max(0, i - 1), to.slides.length - 1)]?.id ?? null
+}
+
 function draftSlide(d: Draft<Project>, id: string | null): Draft<Slide> | undefined {
   return d.slides.find((s) => s.id === id) ?? d.slides[0]
 }
@@ -110,15 +120,15 @@ export const useEditor = create<EditorState>((set, get) => ({
     const { past, project, future } = get()
     if (!past.length || !project) return
     const prev = past[past.length - 1]
-    const slideExists = prev.slides.some((s) => s.id === get().activeSlideId)
+    const activeSlideId = activeAfterTimeTravel(project, prev, get().activeSlideId)
     set((s) => ({
       project: prev,
       past: past.slice(0, -1),
       future: [project, ...future].slice(0, HISTORY_LIMIT),
       lastKey: null,
       revision: s.revision + 1,
-      activeSlideId: slideExists ? s.activeSlideId : (prev.slides[0]?.id ?? null),
-      selection: s.selection.filter((id) => activeSlideOf({ project: prev, activeSlideId: s.activeSlideId })?.elements.some((e) => e.id === id)),
+      activeSlideId,
+      selection: s.selection.filter((id) => activeSlideOf({ project: prev, activeSlideId })?.elements.some((e) => e.id === id)),
     }))
   },
 
@@ -126,15 +136,15 @@ export const useEditor = create<EditorState>((set, get) => ({
     const { past, project, future } = get()
     if (!future.length || !project) return
     const next = future[0]
-    const slideExists = next.slides.some((s) => s.id === get().activeSlideId)
+    const activeSlideId = activeAfterTimeTravel(project, next, get().activeSlideId)
     set((s) => ({
       project: next,
       past: [...past, project].slice(-HISTORY_LIMIT),
       future: future.slice(1),
       lastKey: null,
       revision: s.revision + 1,
-      activeSlideId: slideExists ? s.activeSlideId : (next.slides[0]?.id ?? null),
-      selection: s.selection.filter((id) => activeSlideOf({ project: next, activeSlideId: s.activeSlideId })?.elements.some((e) => e.id === id)),
+      activeSlideId,
+      selection: s.selection.filter((id) => activeSlideOf({ project: next, activeSlideId })?.elements.some((e) => e.id === id)),
     }))
   },
 
