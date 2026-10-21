@@ -9,7 +9,7 @@
 //
 // Selecting an element swaps the strip + nav for that element's tools.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ChevronLeft, ClipboardPaste, Download, Image as ImageIcon, LayoutTemplate, Minimize2, MoreHorizontal, Palette, Play, Plus, Redo2, Shapes, Table2, Undo2 } from 'lucide-react'
+import { ChevronLeft, ClipboardPaste, Download, Image as ImageIcon, LayoutTemplate, Minimize2, MoreHorizontal, Palette, Play, Plus, Redo2, Shapes, Table2, Undo2, X } from 'lucide-react'
 import { activeSlideOf, useEditor } from '../store/editor'
 import { useLibrary } from '../store/library'
 import { useUI } from '../store/ui'
@@ -192,7 +192,7 @@ export function MobileEditor() {
   useViewportHeight()
   const hasSlide = useEditor((s) => (s.project?.slides.length ?? 0) > 0)
   const selected = useEditor((s) => s.selection.length > 0)
-  const hasClip = useEditor((s) => !!s.clipboard?.length)
+  const pasteChip = useMobile((s) => s.pasteChip) && hasClipboard()
   const sheet = useMobile((s) => s.sheet)
   const focus = useMobile((s) => s.focus)
   const editingTextId = useUI((s) => s.editingTextId)
@@ -235,10 +235,15 @@ export function MobileEditor() {
       <div ref={canvasBox} className="relative min-h-0 flex-1">
         {hasSlide && <EditorCanvas mobile />}
         <SelectionPill containerW={box.w} containerH={box.h} />
-        {hasClip && !selected && !sheet && !editingText && (
-          <button type="button" className="absolute bottom-3 left-1/2 z-20 flex h-10 -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-[#1b1d22]/95 px-4 text-[13px] font-semibold shadow-xl active:scale-95" onClick={pasteClipboard} data-testid="m-paste">
-            <ClipboardPaste size={16} /> Pegar aquí
-          </button>
+        {pasteChip && !selected && !sheet && !editingText && (
+          <div className="absolute bottom-3 left-1/2 z-20 flex h-10 -translate-x-1/2 items-center overflow-hidden rounded-full border border-white/15 bg-[#1b1d22]/95 text-[13px] font-semibold shadow-xl">
+            <button type="button" className="flex h-full items-center gap-2 pr-2 pl-4 active:bg-white/10" onClick={() => (pasteClipboard(), useMobile.getState().set({ pasteChip: false }))} data-testid="m-paste">
+              <ClipboardPaste size={16} /> Pegar aquí
+            </button>
+            <button type="button" className="flex h-full w-9 items-center justify-center border-l border-white/10 text-muted active:bg-white/10" aria-label="Descartar" onClick={() => useMobile.getState().set({ pasteChip: false })}>
+              <X size={15} />
+            </button>
+          </div>
         )}
         {focus && (
           <button type="button" className="absolute top-[calc(12px+env(safe-area-inset-top))] right-3 z-20 flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-[#1b1d22]/90 px-3.5 text-[13px] font-semibold shadow-xl" onClick={() => useMobile.getState().set({ focus: false })} data-testid="m-exit-focus">
@@ -249,6 +254,10 @@ export function MobileEditor() {
       {bottom}
     </div>
   )
+}
+
+function hasClipboard() {
+  return !!useEditor.getState().clipboard?.length
 }
 
 /** Selected element (for tests and debugging). */

@@ -355,6 +355,8 @@ export interface ResultsListElement extends BaseElement {
   cardColor: ColorValue
   /** 'editorial' = hero hit-rate summary + open rows. Undefined = cards. */
   variant?: 'card' | 'editorial'
+  /** Editorial hit-rate block alignment (default left). */
+  summaryAlign?: 'left' | 'center'
 }
 
 // ── Badges & scoreboards (standalone building blocks) ──────────────────────

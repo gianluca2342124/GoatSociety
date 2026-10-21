@@ -274,7 +274,7 @@ export const verifiedResults: TemplateDef = {
         ...chrome(t),
         mainHead(t, head, {}, 1),
         // A square only has room for three legible rows under the hero rate.
-        E.resultsList({ name: 'Resultados', x: t.left, y: ly, width: t.cw, height: dy - px(t, 48) - ly, maxItems: t.ch < 1000 ? 3 : 4, variant: 'editorial', showSummary: true, showOdds: true }),
+        E.resultsList({ name: 'Resultados', x: t.left, y: ly, width: t.cw, height: dy - px(t, 48) - ly, maxItems: t.ch < 1000 ? 3 : 4, variant: 'editorial', summaryAlign: 'center', showSummary: true, showOdds: true }),
         legal(t, dy, note, 2),
       ],
     }

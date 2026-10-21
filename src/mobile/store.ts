@@ -13,6 +13,8 @@ interface MobileState {
   photoMode: PhotoMode
   /** Focus mode hides pages and navigation: just the design. */
   focus: boolean
+  /** «Pegar aquí» chip: shown right after copying, gone after pasting. */
+  pasteChip: boolean
   set: (p: Partial<Omit<MobileState, 'set' | 'open'>>) => void
   open: (sheet: MobileSheet, extra?: Partial<Omit<MobileState, 'set' | 'open' | 'sheet'>>) => void
 }
@@ -23,6 +25,7 @@ export const useMobile = create<MobileState>((set) => ({
   templateMode: 'add',
   photoMode: 'add',
   focus: false,
+  pasteChip: false,
   set: (p) => set(p),
   open: (sheet, extra = {}) => set({ sheet, tool: null, ...extra }),
 }))

@@ -184,17 +184,18 @@ test('complete carousel workflow: create, edit, save, reload, export', async ({ 
   for (const name of names) {
     const buf = await zip.files[name].async('nodebuffer')
     expect(buf.readUInt32BE(16)).toBe(1080)
-    expect(buf.readUInt32BE(20)).toBe(1920)
+    // New projects default to vertical 3:4.
+    expect(buf.readUInt32BE(20)).toBe(1440)
     const stats = await page.evaluate(async (b64) => {
       const img = new Image()
       img.src = `data:image/png;base64,${b64}`
       await img.decode()
       const c = document.createElement('canvas')
       c.width = 270
-      c.height = 480
+      c.height = 360
       const ctx = c.getContext('2d')!
-      ctx.drawImage(img, 0, 0, 270, 480)
-      const d = ctx.getImageData(0, 0, 270, 480).data
+      ctx.drawImage(img, 0, 0, 270, 360)
+      const d = ctx.getImageData(0, 0, 270, 360).data
       let sum = 0
       let sum2 = 0
       let transparent = 0

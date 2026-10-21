@@ -178,6 +178,12 @@ export function PhotosSheet() {
       const side = mode === 'crest-home' ? 'home' : 'away'
       s.update((d) => void (d.match[side].crestAssetId = assetId))
       useUI.getState().toast('Escudo cambiado en todas las páginas', 'success')
+    } else if (slide.elements.some((e) => e.type === 'image' && !e.assetId && e.visible)) {
+      // The page has an empty photo slot (photo templates): fill it instead of stacking a new image.
+      const slot = slide.elements.find((e) => e.type === 'image' && !e.assetId && e.visible)!
+      s.updateElement(slot.id, { assetId } as Partial<ImageElement>)
+      s.select([slot.id])
+      useUI.getState().toast('Foto colocada · toca «Encuadre» para ajustarla', 'success')
     } else {
       const meta = useLibrary.getState().assets.find((a) => a.id === assetId)
       const w = p.format.width - 144
@@ -404,7 +410,7 @@ export function MoreSheet() {
     <Sheet title={el ? ELEMENT_LABELS[el.type] : 'Opciones'} onClose={close} height="auto" testId="sheet-more">
       <div className="-mx-1">
         <div className="grid grid-cols-3 gap-2 px-1 pb-2">
-          <button type="button" className="btn h-14 flex-col gap-0.5 text-[12px]" onClick={() => (copySelection(), close(), useEditor.getState().select([]))} data-testid="more-copy">
+          <button type="button" className="btn h-14 flex-col gap-0.5 text-[12px]" onClick={() => (copySelection(), close(), useEditor.getState().select([]), useMobile.getState().set({ pasteChip: true }))} data-testid="more-copy">
             <Copy size={18} /> Copiar
           </button>
           <button type="button" className="btn h-14 flex-col gap-0.5 text-[12px]" disabled={!hasClip} onClick={() => (pasteClipboard(), close())} data-testid="more-paste">
@@ -465,6 +471,7 @@ export function PropsSheet() {
 
 export function MenuSheet() {
   const project = useEditor((s) => s.project)!
+  const hasClip = useEditor((s) => !!s.clipboard?.length)
   return (
     <Sheet title={project.name} onClose={close} height="auto" testId="sheet-menu">
       <div className="-mx-1">
@@ -476,6 +483,7 @@ export function MenuSheet() {
         <ActionRow icon={Save} label="Guardar copia (.goat.json)" onClick={() => (void exportProjectFile(), close())} />
         <ActionRow icon={FolderOpen} label="Mis proyectos" onClick={() => (close(), void goHome())} />
         <ActionRow icon={Square} label="Página en blanco" onClick={() => (addBlankPage(), close())} />
+        {hasClip && <ActionRow icon={ClipboardPaste} label="Pegar en esta página" hint="Lo último que copiaste" onClick={() => (pasteClipboard(), close())} testId="menu-paste" />}
       </div>
     </Sheet>
   )

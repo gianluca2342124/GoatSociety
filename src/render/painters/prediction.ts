@@ -9,13 +9,15 @@ import { paintCrestBox } from './crest'
 import { paintIconGlyph } from './basic'
 
 /** Deterministic decoy text so a locked export never contains the real pick. */
+/** Decoy text for locked picks. Its shape is fixed (it ignores the real
+ *  letters and length), so not even the outline of the blur gives the pick away. */
 export function scramble(text: string, seed = 17): string {
-  const rnd = seeded(seed + text.length)
+  const rnd = seeded(seed)
   const letters = 'ABCDEFGHIJKLMNOPRSTUVZ'
-  return text.replace(/[A-Za-zÀ-ÿ0-9]/g, (ch) => {
-    if (/[0-9]/.test(ch)) return String(Math.floor(rnd() * 10))
-    return letters[Math.floor(rnd() * letters.length)]
-  })
+  const word = (n: number) => Array.from({ length: n }, () => letters[Math.floor(rnd() * letters.length)]).join('')
+  if (/^[\s\d.,:/+-]+$/.test(text)) return `${1 + Math.floor(rnd() * 8)}.${Math.floor(rnd() * 10)}${Math.floor(rnd() * 10)}`
+  if (text.length > 28) return `${word(5)} ${word(3)} ${word(7)} ${word(4)} ${word(6)}`
+  return `${word(4)} ${word(9)}`
 }
 
 function drawLock(ctx: Ctx, style: PredictionElement['lockStyle'], cx: number, cy: number, size: number, accent: string) {
@@ -343,7 +345,7 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
         drawLabel(c, el.revealStamp, cx, b.y, { family: labelFont, size: stampS * k, weight: 700, color: accent, align: 'center', baseline: 'top', uppercase: true, maxWidth: w })
         break
       case 'market':
-        drawLabel(c, pred.market || 'Mercado', cx, b.y, { family: labelFont, size: marketS * k, weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true, maxWidth: w })
+        drawLabel(c, decoy ? scramble(pred.market || 'Mercado', 5) : pred.market || 'Mercado', cx, b.y, { family: labelFont, size: Math.max(Math.min(32, marketS), marketS * k), weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true, maxWidth: w })
         break
       case 'pick': {
         const lay = decoy ? fitText(scramble(pickText), pickStyle, w, pickS * 2.15, 40) : pickLay
@@ -357,7 +359,7 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
       case 'odds': {
         const os = oddsS * k
         drawLabel(c, decoy ? scramble(pred.odds) : pred.odds, cx, b.y, { family: numFont, size: os, color: accent, align: 'center', baseline: 'top', maxWidth: w })
-        drawLabel(c, 'cuota', cx, b.y + capOf(numFont, os) + oddsGap * k, { family: labelFont, size: 38 * k, weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true })
+        drawLabel(c, 'cuota', cx, b.y + capOf(numFont, os) + oddsGap * k, { family: labelFont, size: Math.max(32, 38 * k), weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true })
         break
       }
       case 'conf': {

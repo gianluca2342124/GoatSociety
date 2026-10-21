@@ -362,15 +362,17 @@ function paintResultsEditorial(ctx: Ctx, el: ResultsListElement, rc: RenderCtx, 
     const sum = summarizeResults(rc.project.results)
     const big = Math.min(250, h * 0.24)
     const capB = capHeightOf(rc.font('$numbers'), big, 400, false)
+    const align = el.summaryAlign === 'center' ? 'center' : 'left'
+    const sx = align === 'center' ? w / 2 : 0
     const rate = sum.rate == null ? '—' : `${Math.round(sum.rate * 100)}%`
-    drawLabel(ctx, rate, 0, 0, { family: rc.font('$numbers'), size: big, color: win, baseline: 'top' })
+    drawLabel(ctx, rate, sx, 0, { family: rc.font('$numbers'), size: big, color: win, baseline: 'top', align })
     const ls = Math.max(40, big * 0.26)
     const capL = capHeightOf(rc.font('$label'), ls, 700, false)
-    drawLabel(ctx, 'de acierto', 0, capB + big * 0.12, { family: rc.font('$label'), size: ls, weight: 700, color: textC, baseline: 'top', uppercase: true })
+    drawLabel(ctx, 'de acierto', sx, capB + big * 0.12, { family: rc.font('$label'), size: ls, weight: 700, color: textC, baseline: 'top', uppercase: true, align })
     const ss = Math.max(32, big * 0.19)
     const parts = [`${sum.won} ${sum.won === 1 ? 'acierto' : 'aciertos'}`, `${sum.lost} ${sum.lost === 1 ? 'fallo' : 'fallos'}`]
     if (sum.pending) parts.push(`${sum.pending} pendiente${sum.pending === 1 ? '' : 's'}`)
-    drawLabel(ctx, parts.join('  ·  '), 0, capB + big * 0.12 + capL + ls * 0.5, { family: rc.font('$body'), size: ss, weight: 500, color: mutedC, baseline: 'top', maxWidth: w })
+    drawLabel(ctx, parts.join('  ·  '), sx, capB + big * 0.12 + capL + ls * 0.5, { family: rc.font('$body'), size: ss, weight: 500, color: mutedC, baseline: 'top', maxWidth: w, align })
     top = capB + big * 0.12 + capL + ls * 0.5 + ss * 1.2 + Math.max(40, h * 0.05)
   }
   const n = Math.max(1, entries.length)

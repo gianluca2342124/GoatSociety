@@ -168,13 +168,15 @@ export function changeFormat(preset: FormatPreset) {
   if (!p || p.format.preset === preset) return
   const to = formatOf(preset)
   const from = p.format
+  // Build from the plain (non-draft) slides: rescaling clones them.
+  const slides: Slide[] = p.slides.map((sl) => {
+    const tpl = templateById(sl.templateId)
+    if (tpl) return { ...buildTemplateSlide(tpl, to, p.match), id: sl.id, name: sl.name, overrides: sl.overrides, accent: sl.accent, intensity: sl.intensity }
+    return rescaleSlide(sl, from, to)
+  })
   s.update((d) => {
     d.format = to
-    d.slides = d.slides.map((sl) => {
-      const tpl = templateById(sl.templateId)
-      if (tpl) return { ...buildTemplateSlide(tpl, to, p.match), id: sl.id, name: sl.name, overrides: sl.overrides, accent: sl.accent, intensity: sl.intensity } as typeof sl
-      return rescaleSlide(sl as Slide, from, to) as typeof sl
-    })
+    d.slides = slides as typeof d.slides
   })
   useUI.getState().set({ autoFit: true })
   toast(`Formato cambiado a ${to.width}×${to.height}`, true)

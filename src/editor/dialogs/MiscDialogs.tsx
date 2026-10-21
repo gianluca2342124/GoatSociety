@@ -17,7 +17,8 @@ export function rescaleSlide(slide: Slide, from: { width: number; height: number
   const sy = to.height / from.height
   const s = Math.min(sx, sy)
   const elements = slide.elements.map((e) => {
-    const c = structuredClone(e) as SlideElement
+    // JSON copy: also works when called with an immer draft (structuredClone cannot clone proxies).
+    const c = JSON.parse(JSON.stringify(e)) as SlideElement
     const full = e.x <= 1 && e.y <= 1 && e.width >= from.width - 2 && e.height >= from.height - 2
     if (full) {
       c.x = 0
