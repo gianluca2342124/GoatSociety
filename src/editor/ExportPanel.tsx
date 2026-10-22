@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { AlertTriangle, Check, Download, FileArchive, Share2 } from 'lucide-react'
+import { AlertTriangle, Check, Download, FileArchive, ImageDown } from 'lucide-react'
 import { useEditor } from '../store/editor'
 import { useLibrary } from '../store/library'
 import { useUI } from '../store/ui'
 import { Segmented, Slider, Spinner, Toggle } from '../ui/controls'
 import { inArtifact } from '../host'
-import { canShareFiles, downloadBlob, downloadFiles, exportCarouselZip, exportSlideFiles, exportWarnings, shareFiles, type ExportFormat } from '../render/exporter'
+import { downloadBlob, downloadFiles, exportCarouselZip, exportSlideFiles, exportWarnings, type ExportFormat } from '../render/exporter'
+import { openPhotoGallery, PHOTO_HINT, photoMessage, photoMethod, saveToPhotos } from './saveToPhotos'
 import { useSlideThumb } from './thumbs'
 import type { Project, Slide } from '../model/types'
 
@@ -48,7 +49,10 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
   const [progress, setProgress] = useState(0)
   /** Rendering is done and the file is being handed over (inside claude.ai: waiting for the person to confirm). */
   const [saving, setSaving] = useState(false)
-  const share = canShareFiles()
+  // Phones (and touch tablets) get «Guardar en Fotos» as the main action.
+  const phone = compact || (typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+  const method = photoMethod()
+  const [busyPhotos, setBusyPhotos] = useState(false)
   const indices = scope === 'current' ? [current] : scope === 'all' ? project.slides.map((_, i) => i) : [...picked].sort((a, b) => a - b)
   const many = indices.length > 1
   const opts = { format, quality, scale: Number(scale), transparent: transparent && format !== 'jpeg' }
@@ -91,25 +95,74 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
     }
   }
 
-  const saveToPhone = async () => {
-    if (!indices.length) return
-    setBusy(true)
+  /** Pages as loose images (never a ZIP: Photos can't open one). */
+  const renderFiles = async () => {
     setProgress(0)
     exportWarnings.length = 0
+    return exportSlideFiles(project, brand, opts, indices, onProgress)
+  }
+
+  const savePhotos = async () => {
+    if (!indices.length) return
+    setBusy(true)
+    setBusyPhotos(true)
     try {
-      const files = await exportSlideFiles(project, brand, opts, indices, onProgress)
-      const ok = await shareFiles(files, project.name)
-      if (!ok) await downloadFiles(files)
-      finish()
+      const files = await renderFiles()
+      setSaving(true)
+      const r = await saveToPhotos(files)
+      const msg = photoMessage(r, files.length)
+      if (msg) toast(msg.text, msg.kind)
+      if (r.method !== 'gallery' && r.saved === files.length && !r.error) finish()
     } catch (e) {
       console.error(e)
       toast(`No se pudo exportar: ${e instanceof Error ? e.message : 'error desconocido'}`, 'error')
     } finally {
       setBusy(false)
+      setBusyPhotos(false)
+      setSaving(false)
     }
   }
 
-  const label = scope === 'current' ? 'Descargar esta página' : many ? (packaging === 'zip' ? `Descargar ${indices.length} en ZIP` : `Descargar ${indices.length} imágenes`) : 'Descargar imagen'
+  /** «Guardar a mano»: the press-and-hold screen, whatever the device. */
+  const manualPhotos = async () => {
+    if (!indices.length) return
+    setBusy(true)
+    setBusyPhotos(true)
+    try {
+      await openPhotoGallery(await renderFiles())
+    } catch (e) {
+      toast(`No se pudo preparar: ${e instanceof Error ? e.message : 'error desconocido'}`, 'error')
+    } finally {
+      setBusy(false)
+      setBusyPhotos(false)
+    }
+  }
+
+  const label = phone
+    ? many
+      ? packaging === 'zip'
+        ? `Descargar archivo ZIP (${indices.length})`
+        : `Descargar ${indices.length} archivos`
+      : 'Descargar archivo'
+    : scope === 'current'
+      ? 'Descargar esta página'
+      : many
+        ? packaging === 'zip'
+          ? `Descargar ${indices.length} en ZIP`
+          : `Descargar ${indices.length} imágenes`
+        : 'Descargar imagen'
+
+  const packagingControl = (
+    <Segmented
+      ariaLabel="Cómo descargar"
+      value={packaging}
+      onChange={setPackaging}
+      options={[
+        { value: 'zip', label: 'Un archivo ZIP' },
+        { value: 'files', label: 'Imágenes sueltas' },
+      ]}
+    />
+  )
 
   return (
     <div className="space-y-4">
@@ -120,7 +173,7 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
         </div>
       )}
       <div className="space-y-2">
-        <div className="text-[12px] font-semibold text-muted">¿Qué quieres descargar?</div>
+        <div className="text-[12px] font-semibold text-muted">{phone ? '¿Qué páginas?' : '¿Qué quieres descargar?'}</div>
         <Segmented
           ariaLabel="Páginas a descargar"
           value={scope}
@@ -138,17 +191,7 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
             ))}
           </div>
         )}
-        {many && (
-          <Segmented
-            ariaLabel="Cómo descargar"
-            value={packaging}
-            onChange={setPackaging}
-            options={[
-              { value: 'zip', label: 'Un archivo ZIP' },
-              { value: 'files', label: 'Imágenes sueltas' },
-            ]}
-          />
-        )}
+        {many && !phone && packagingControl}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
@@ -183,15 +226,30 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
         {project.format.width * Number(scale)}×{project.format.height * Number(scale)} px por imagen · solo el diseño, sin guías ni controles.
       </p>
       <div className="flex flex-col gap-2 pt-1">
-        {share && (
-          <button type="button" className="btn btn-gold h-12 w-full text-[14px]" disabled={busy || !indices.length} onClick={() => void saveToPhone()} data-testid="share-export">
-            {busy ? <Spinner size={15} /> : <Share2 size={16} />} {busy ? `Preparando ${Math.round(progress * 100)}%` : indices.length > 1 ? `Guardar ${indices.length} en el móvil` : 'Guardar en el móvil'}
+        {phone && (
+          <>
+            <button type="button" className="btn btn-gold h-12 w-full text-[15px]" disabled={busy || !indices.length} onClick={() => void savePhotos()} data-testid="save-photos">
+              {busyPhotos ? <Spinner size={15} /> : <ImageDown size={17} />}
+              {busyPhotos ? (saving ? (inArtifact ? 'Confirma en el aviso…' : 'Abriendo…') : `Preparando ${Math.round(progress * 100)}%`) : indices.length > 1 ? `Guardar ${indices.length} en Fotos` : 'Guardar en Fotos'}
+            </button>
+            <p className="-mt-0.5 text-center text-[11px] leading-snug text-dim">{PHOTO_HINT[method]}</p>
+          </>
+        )}
+        {phone && (
+          <div className="mt-2 flex items-center gap-2 text-[11px] font-semibold tracking-wide text-dim uppercase">
+            <span className="h-px flex-1 bg-line" /> o como archivo <span className="h-px flex-1 bg-line" />
+          </div>
+        )}
+        {many && phone && packagingControl}
+        <button type="button" className={`btn h-12 w-full text-[14px] ${phone ? '' : 'btn-gold'}`} disabled={busy || !indices.length} onClick={() => void download()} data-testid="do-export">
+          {busy && !busyPhotos ? <Spinner size={15} /> : many && packaging === 'zip' ? <FileArchive size={16} /> : <Download size={16} />}
+          {busy && !busyPhotos ? (saving ? (inArtifact ? 'Confirma la descarga en el aviso…' : 'Guardando…') : `Renderizando ${Math.round(progress * 100)}%`) : label}
+        </button>
+        {phone && method !== 'gallery' && (
+          <button type="button" className="mt-0.5 self-center py-1 text-[12px] font-semibold text-gold underline-offset-2 active:underline disabled:opacity-40" disabled={busy || !indices.length} onClick={() => void manualPhotos()} data-testid="photos-manual">
+            ¿No aparecen en Fotos? Guárdalas a mano
           </button>
         )}
-        <button type="button" className={`btn h-12 w-full text-[14px] ${share ? '' : 'btn-gold'}`} disabled={busy || !indices.length} onClick={() => void download()} data-testid="do-export">
-          {busy && !share ? <Spinner size={15} /> : many && packaging === 'zip' ? <FileArchive size={16} /> : <Download size={16} />}
-          {busy && !share ? (saving ? (inArtifact ? 'Confirma la descarga en el aviso…' : 'Guardando…') : `Renderizando ${Math.round(progress * 100)}%`) : label}
-        </button>
       </div>
     </div>
   )

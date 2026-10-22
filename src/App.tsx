@@ -3,6 +3,7 @@ import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
 import { useUI } from './store/ui'
 import { useIsMobile } from './ui/useMedia'
 import { ConfirmHost } from './ui/confirm'
+import { PhotoGallery } from './ui/PhotoGallery'
 import { isMemoryOnly } from './db/db'
 import { useLibrary } from './store/library'
 import { useEditor } from './store/editor'
@@ -92,6 +93,7 @@ export function App() {
       {view === 'editor' && hasProject ? <Editor /> : <Home />}
       <Toasts />
       <ConfirmHost />
+      <PhotoGallery />
     </>
   )
 }

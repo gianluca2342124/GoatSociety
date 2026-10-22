@@ -215,6 +215,15 @@ test('mobile editor: create, edit, pages, elements, photos, preview, export', as
   await expect(page.getByTestId('m-preview-screen').getByTestId('preview-frame')).toBeVisible({ timeout: 30_000 })
   await page.getByTestId('m-preview-close').tap()
 
+  // «Guardar en Fotos»: without a share sheet (headless browser) the press-and-hold screen opens.
+  await page.getByTestId('m-download').tap()
+  await page.getByTestId('save-photos').tap()
+  await expect(page.getByTestId('photo-gallery')).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByTestId('photo-gallery').locator('img')).toHaveCount(10)
+  await page.getByTestId('photo-gallery-close').tap()
+  await expect(page.getByTestId('photo-gallery')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cerrar' }).first().tap()
+
   // Export everything as a ZIP of 3:4 PNGs.
   await page.getByTestId('m-download').tap()
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 180_000 }), page.getByTestId('do-export').tap()])

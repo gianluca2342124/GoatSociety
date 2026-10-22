@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import {
   BoxSelect,
+  ImageDown,
   ListChecks,
   ArrowLeftRight,
   ChevronLeft,
@@ -45,7 +46,8 @@ import { ExportPanel } from '../editor/ExportPanel'
 import { ElementSpecific, LayersPanel } from '../editor/RightPanel'
 import { AppearanceSection, FillEditor, TransformSection } from '../editor/props/common'
 import { exportProjectFile, goHome } from '../store/projectService'
-import { exportSlideBlob, downloadBlob, canShareFiles, shareFiles } from '../render/exporter'
+import { exportSlideBlob, downloadBlob } from '../render/exporter'
+import { photoMessage, saveToPhotos } from '../editor/saveToPhotos'
 import {
   activeIndex,
   addBlankPage,
@@ -348,14 +350,29 @@ export function ExportSheet() {
 
 // ── Page actions ───────────────────────────────────────────────────────────
 
-async function downloadCurrentPage() {
-  const s = useEditor.getState()
-  const p = s.project
-  if (!p) return
+async function currentPageFile(): Promise<File | null> {
+  const p = useEditor.getState().project
+  if (!p) return null
   const { blob, name } = await exportSlideBlob(p, activeIndex(), useLibrary.getState().brand, { format: 'png', quality: 0.92, scale: 1, transparent: false })
-  if (canShareFiles() && (await shareFiles([new File([blob], name, { type: blob.type })], name))) return
+  return new File([blob], name, { type: blob.type })
+}
+
+async function savePageToPhotos() {
   try {
-    if (await downloadBlob(blob, name)) useUI.getState().toast(`Descargada ${name}`, 'success')
+    const file = await currentPageFile()
+    if (!file) return
+    const r = await saveToPhotos([file])
+    const msg = photoMessage(r, 1)
+    if (msg) useUI.getState().toast(msg.text, msg.kind)
+  } catch (e) {
+    useUI.getState().toast(e instanceof Error ? e.message : 'No se pudo guardar', 'error')
+  }
+}
+
+async function downloadCurrentPage() {
+  try {
+    const file = await currentPageFile()
+    if (file && (await downloadBlob(file, file.name))) useUI.getState().toast(`Descargada ${file.name}`, 'success')
   } catch (e) {
     useUI.getState().toast(e instanceof Error ? e.message : 'No se pudo descargar', 'error')
   }
@@ -389,7 +406,8 @@ export function PageSheet() {
           </div>
           <ActionRow icon={LayoutTemplate} label="Cambiar plantilla" hint="Mantiene los datos del partido" onClick={() => useMobile.getState().open('templates', { templateMode: 'replace' })} testId="page-template" />
           <ActionRow icon={PenLine} label="Renombrar" hint={slide.name} onClick={() => setRenaming(true)} />
-          <ActionRow icon={Download} label="Descargar esta página" hint="PNG en alta calidad" onClick={() => void downloadCurrentPage()} testId="page-download" />
+          <ActionRow icon={ImageDown} label="Guardar en Fotos" hint="Esta página, lista para publicar" onClick={() => void savePageToPhotos()} testId="page-photos" />
+          <ActionRow icon={Download} label="Descargar archivo" hint="PNG en alta calidad" onClick={() => void downloadCurrentPage()} testId="page-download" />
           <ActionRow icon={Trash2} label="Eliminar página" hint="Puedes deshacerlo" danger disabled={project.slides.length <= 1} onClick={() => (deletePage(), close())} testId="page-delete" />
         </div>
       )}

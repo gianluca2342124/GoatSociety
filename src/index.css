@@ -332,3 +332,10 @@ input[type='range']::-moz-range-thumb {
   animation: spin 0.9s linear infinite;
 }
 }
+
+/* Images in «Guardar en Fotos» must keep the system press-and-hold menu. */
+.photo-saveable {
+  -webkit-touch-callout: default;
+  -webkit-user-select: auto;
+  user-select: auto;
+}
