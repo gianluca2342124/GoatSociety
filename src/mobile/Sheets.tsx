@@ -413,6 +413,20 @@ export function PageSheet() {
   const slide = useActiveSlide()
   const i = activeIndex()
   const [renaming, setRenaming] = useState(false)
+  // Rendering the page takes a moment: show it and ignore repeated taps meanwhile.
+  const [busy, setBusy] = useState<null | 'photos' | 'download'>(null)
+  const busyRef = useRef(false)
+  const run = async (kind: 'photos' | 'download', fn: () => Promise<void>) => {
+    if (busyRef.current) return
+    busyRef.current = true
+    setBusy(kind)
+    try {
+      await fn()
+    } finally {
+      busyRef.current = false
+      setBusy(null)
+    }
+  }
   if (!slide) return null
   return (
     <Sheet title={`Página ${i + 1} de ${project.slides.length}`} onClose={close} height="auto" testId="sheet-page">
@@ -436,8 +450,8 @@ export function PageSheet() {
           </div>
           <ActionRow icon={LayoutTemplate} label="Cambiar plantilla" hint="Mantiene los datos del partido" onClick={() => useMobile.getState().open('templates', { templateMode: 'replace' })} testId="page-template" />
           <ActionRow icon={PenLine} label="Renombrar" hint={slide.name} onClick={() => setRenaming(true)} />
-          <ActionRow icon={ImageDown} label="Guardar en Fotos" hint="Esta página, lista para publicar" onClick={() => void savePageToPhotos()} testId="page-photos" />
-          <ActionRow icon={Download} label="Descargar archivo" hint="PNG en alta calidad" onClick={() => void downloadCurrentPage()} testId="page-download" />
+          <ActionRow icon={ImageDown} label="Guardar en Fotos" hint={busy === 'photos' ? 'Preparando la imagen…' : 'Esta página, lista para publicar'} disabled={!!busy} onClick={() => void run('photos', savePageToPhotos)} testId="page-photos" />
+          <ActionRow icon={Download} label="Descargar archivo" hint={busy === 'download' ? 'Preparando la imagen…' : 'PNG en alta calidad'} disabled={!!busy} onClick={() => void run('download', downloadCurrentPage)} testId="page-download" />
           <ActionRow icon={Trash2} label="Eliminar página" hint="Puedes deshacerlo" danger disabled={project.slides.length <= 1} onClick={() => (deletePage(), close())} testId="page-delete" />
         </div>
       )}

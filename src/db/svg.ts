@@ -1,6 +1,17 @@
 // Safe SVG handling: strip scripts, event handlers, foreignObject and external
 // references; ensure intrinsic size so the image draws correctly on canvas.
-const FORBIDDEN_TAGS = ['script', 'foreignobject', 'iframe', 'object', 'embed', 'audio', 'video', 'link', 'meta', 'style']
+const FORBIDDEN_TAGS = ['script', 'foreignobject', 'iframe', 'object', 'embed', 'audio', 'video', 'link', 'meta']
+
+/**
+ * CSS inside an SVG (Illustrator colours shapes through <style> classes):
+ * kept, minus imports, external url() references and script-like values.
+ */
+function cleanCss(css: string): string {
+  return css
+    .replace(/@import[^;]*;?/gi, '')
+    .replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi, (all, _q: string, ref: string) => (ref.trim().startsWith('#') || /^data:image\//i.test(ref.trim()) ? all : 'none'))
+    .replace(/expression\s*\(|javascript:|-moz-binding|behavior\s*:/gi, '')
+}
 
 export function sanitizeSvg(source: string): string | null {
   if (typeof DOMParser === 'undefined') return null
@@ -9,8 +20,13 @@ export function sanitizeSvg(source: string): string | null {
   if (!root || root.nodeName.toLowerCase() !== 'svg' || doc.getElementsByTagName('parsererror').length) return null
   const walk = (node: Element) => {
     for (const child of Array.from(node.children)) {
-      if (FORBIDDEN_TAGS.includes(child.nodeName.toLowerCase())) {
+      const tag = child.nodeName.toLowerCase()
+      if (FORBIDDEN_TAGS.includes(tag)) {
         child.remove()
+        continue
+      }
+      if (tag === 'style') {
+        child.textContent = cleanCss(child.textContent ?? '')
         continue
       }
       walk(child)
@@ -19,6 +35,7 @@ export function sanitizeSvg(source: string): string | null {
       const name = attr.name.toLowerCase()
       const value = attr.value.trim().toLowerCase()
       if (name.startsWith('on')) node.removeAttribute(attr.name)
+      else if (name === 'style') node.setAttribute(attr.name, cleanCss(attr.value))
       else if ((name === 'href' || name === 'xlink:href') && !value.startsWith('#') && !value.startsWith('data:image/')) node.removeAttribute(attr.name)
       else if (value.includes('javascript:')) node.removeAttribute(attr.name)
     }

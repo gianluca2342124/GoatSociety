@@ -39,7 +39,8 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
   const n = project.slides.length
   const current = Math.max(0, project.slides.findIndex((s) => s.id === activeId))
   const [scope, setScope] = useState<Scope>(n > 1 ? 'all' : 'current')
-  const [picked, setPicked] = useState<number[]>(() => [current])
+  // Picked pages are kept by id, so undo/redo or moved pages never change what gets exported.
+  const [picked, setPicked] = useState<string[]>(() => [project.slides[current]?.id ?? ''])
   const [packaging, setPackaging] = useState<Packaging>('zip')
   const [format, setFormat] = useState<ExportFormat>('png')
   const [quality, setQuality] = useState(0.92)
@@ -53,7 +54,7 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
   const phone = compact || (typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
   const method = photoMethod()
   const [busyPhotos, setBusyPhotos] = useState(false)
-  const indices = scope === 'current' ? [current] : scope === 'all' ? project.slides.map((_, i) => i) : [...picked].sort((a, b) => a - b)
+  const indices = scope === 'current' ? [current] : scope === 'all' ? project.slides.map((_, i) => i) : project.slides.flatMap((sl, i) => (picked.includes(sl.id) ? [i] : []))
   const many = indices.length > 1
   const opts = { format, quality, scale: Number(scale), transparent: transparent && format !== 'jpeg' }
   const onProgress = (d: number, t: number) => setProgress(d / t)
@@ -187,7 +188,7 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
         {scope === 'pick' && (
           <div className="grid grid-cols-4 gap-2 pt-1 sm:grid-cols-6" data-testid="export-pick">
             {project.slides.map((s, i) => (
-              <PickThumb key={s.id} project={project} slide={s} index={i} on={picked.includes(i)} toggle={() => setPicked((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]))} />
+              <PickThumb key={s.id} project={project} slide={s} index={i} on={picked.includes(s.id)} toggle={() => setPicked((p) => (p.includes(s.id) ? p.filter((x) => x !== s.id) : [...p, s.id]))} />
             ))}
           </div>
         )}

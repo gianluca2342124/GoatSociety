@@ -37,7 +37,7 @@ import { Section, Slider, TextField, Toggle } from '../ui/controls'
 import { buildTemplateSlide, templateById } from '../templates'
 import { SlideStyleSection } from './StylePanel'
 import { CONTENT_SHADE } from '../render/painters/basic'
-import { alignSelection, deleteSelection as deleteWithUndo, duplicateSelection as duplicateWithToast, undoToast, type AlignMode } from './actions'
+import { alignSelection, deleteSelection as deleteWithUndo, duplicateSelection as duplicateWithToast, historyMark, undoToast, type AlignMode } from './actions'
 
 export function ElementSpecific({ el }: { el: SlideElement }) {
   switch (el.type) {
@@ -236,8 +236,9 @@ function SlidePanel() {
               className="btn text-[12px]"
               title="Reconstruye el diseño original con los datos actuales del partido"
               onClick={() => {
+                const mark = historyMark()
                 replaceSlide(slide.id, { ...buildTemplateSlide(tpl, project.format, project.match), name: slide.name, overrides: slide.overrides })
-                undoToast('Diseño original restaurado')
+                undoToast('Diseño original restaurado', mark)
               }}
             >
               <RefreshCw size={13} /> Restaurar

@@ -21,6 +21,8 @@ export interface RenderCtx {
   color: (v: string | undefined) => string
   font: (v: string) => string
   text: (s: string) => string
+  /** Editor only: where an element being dragged is right now (the model updates on drop). */
+  live?: (id: string) => { x: number; y: number } | null
 }
 
 export function makeRenderCtx(project: Project, slide: Slide, brand: BrandKit, mode: RenderCtx['mode'], scale3d = EDITOR_3D_SCALE): RenderCtx {

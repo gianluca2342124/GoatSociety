@@ -32,6 +32,17 @@ const FIXED: Record<string, string> = {
 const colorCache = new Map<string, boolean>()
 let colorProbe: CanvasRenderingContext2D | null | undefined
 
+function probe(): CanvasRenderingContext2D | null {
+  if (colorProbe === undefined) {
+    try {
+      colorProbe = typeof document !== 'undefined' && typeof navigator !== 'undefined' && !/jsdom/i.test(navigator.userAgent) ? document.createElement('canvas').getContext('2d') : null
+    } catch {
+      colorProbe = null
+    }
+  }
+  return colorProbe
+}
+
 /**
  * True for a colour the canvas accepts. A half-typed hex such as «#2B» would
  * otherwise reach CanvasGradient.addColorStop, which throws and breaks the
@@ -40,21 +51,21 @@ let colorProbe: CanvasRenderingContext2D | null | undefined
 export function isCssColor(v: string): boolean {
   if (/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return true
   if (v.startsWith('#')) return false
-  if (/^(?:rgb|hsl)a?\(\s*[-\d.%\s,/]+\)$/i.test(v)) return true
+  // rgb()/hsl() need 3 or 4 parts: «rgb(255,0)» while typing is not a colour yet.
+  const fn = /^(?:rgb|hsl)a?\((.*)\)$/i.exec(v.trim())
+  if (fn) {
+    const body = fn[1].trim()
+    const parts = body.includes(',') ? body.split(',').map((x) => x.trim()) : body.replace('/', ' ').split(/\s+/)
+    if ((parts.length !== 3 && parts.length !== 4) || parts.some((x) => !/^[-+]?(?:\d+\.?\d*|\.\d+)(?:%|deg|grad|rad|turn)?$/i.test(x))) return false
+  }
   const known = colorCache.get(v)
   if (known !== undefined) return known
-  if (colorProbe === undefined) {
-    try {
-      colorProbe = typeof document !== 'undefined' && typeof navigator !== 'undefined' && !/jsdom/i.test(navigator.userAgent) ? document.createElement('canvas').getContext('2d') : null
-    } catch {
-      colorProbe = null
-    }
-  }
+  const c = probe()
   let ok = true
-  if (colorProbe) {
-    colorProbe.fillStyle = '#010203'
-    colorProbe.fillStyle = v
-    ok = colorProbe.fillStyle !== '#010203'
+  if (c) {
+    c.fillStyle = '#010203'
+    c.fillStyle = v
+    ok = c.fillStyle !== '#010203'
   }
   colorCache.set(v, ok)
   return ok
@@ -147,11 +158,30 @@ export function parseColor(input: string): { r: number; g: number; b: number; a:
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a }
   }
   const m = s.match(/rgba?\(([^)]+)\)/)
-  if (m) {
+  if (m && m[1].includes(',')) {
     const parts = m[1].split(',').map((x) => parseFloat(x))
     return { r: parts[0] || 0, g: parts[1] || 0, b: parts[2] || 0, a: parts[3] ?? 1 }
   }
+  if (s.toLowerCase() === 'transparent') return { r: 0, g: 0, b: 0, a: 0 }
+  // Named, hsl() and other CSS colours: let the canvas turn them into #hex or rgba().
+  const norm = normalizedColor(s)
+  if (norm && norm !== s) return parseColor(norm)
   return { r: 0, g: 0, b: 0, a: 1 }
+}
+
+const normCache = new Map<string, string | null>()
+function normalizedColor(v: string): string | null {
+  const known = normCache.get(v)
+  if (known !== undefined) return known
+  const c = probe()
+  let out: string | null = null
+  if (c && isCssColor(v)) {
+    c.fillStyle = '#000000'
+    c.fillStyle = v
+    out = String(c.fillStyle)
+  }
+  normCache.set(v, out)
+  return out
 }
 
 export function withAlpha(color: string, alpha: number): string {

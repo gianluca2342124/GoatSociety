@@ -281,18 +281,33 @@ export function paintImage(ctx: Ctx, el: ImageElement, rc: RenderCtx) {
       c.putImageData(d, 0, 0)
     }
   }
-  if (!needsOffscreen) {
+  // The shade under content darkens the photo layer itself, so it needs one too.
+  const shade = photoShade(el, rc)
+  if (!needsOffscreen && !shade) {
     draw(ctx)
-    shadeUnderContent(ctx, el, rc)
     return
   }
   const s = deviceScale(ctx)
-  const off = makeCanvas(w * s, h * s)
+  const off = photoLayer(el.id, w * s, h * s)
   const octx = off.getContext('2d')!
-  octx.scale(s, s)
+  octx.setTransform(s, 0, 0, s, 0, 0)
   draw(octx)
+  if (shade) applyShade(octx, octx.getTransform().multiply(shade.slideToLocal), shade.boxes, shade.strength, true)
   ctx.drawImage(off, 0, 0, w, h)
-  shadeUnderContent(ctx, el, rc)
+}
+
+// Offscreen photo layers are reused (one per photo, a few at most) instead of
+// allocating a page-sized canvas on every redraw while something is dragged.
+const layers = new Map<string, HTMLCanvasElement>()
+function photoLayer(id: string, w: number, h: number): HTMLCanvasElement {
+  let c = layers.get(id)
+  if (c && c.width === Math.max(1, Math.ceil(w)) && c.height === Math.max(1, Math.ceil(h))) {
+    c.getContext('2d')!.clearRect(0, 0, c.width, c.height)
+  } else c = makeCanvas(w, h)
+  layers.delete(id)
+  layers.set(id, c)
+  if (layers.size > 6) layers.delete(layers.keys().next().value!)
+  return c
 }
 
 // ── Automatic shade under content placed over photos ───────────────────────
@@ -304,7 +319,13 @@ type Box = { x: number; y: number; w: number; h: number }
 
 const SHADE_IGNORE = new Set(['effect', 'glass'])
 /** These only count as content when small; full-page ones are layers of the photo itself. */
-const SHADE_IF_SMALL = new Set(['image', 'shape', 'tactics', 'stadium3d', 'model3d', 'mascot'])
+const SHADE_IF_SMALL = new Set(['image', 'tactics', 'stadium3d', 'model3d', 'mascot'])
+
+/** An element while it is being dragged in the editor sits where its node is, not where the model says. */
+function live<T extends SlideElement>(el: T, rc: RenderCtx): T {
+  const p = rc.live?.(el.id)
+  return p ? { ...el, x: p.x, y: p.y } : el
+}
 
 function rotatedBox(el: SlideElement, lx: number, ly: number, lw: number, lh: number): Box {
   const r = (el.rotation * Math.PI) / 180
@@ -337,57 +358,102 @@ function contentBox(el: SlideElement, rc: RenderCtx): Box | null {
   return rotatedBox(el, 0, 0, el.width, el.height)
 }
 
-/**
- * Darken a photo exactly where content sits on top of it, with a soft black
- * shade, so scores, numbers, crests and texts always read. `slideToDevice`
- * maps slide coordinates to the canvas; the caller has clipped to the photo.
- */
-export function paintContentShade(ctx: Ctx, rc: RenderCtx, slideToDevice: DOMMatrix, above: SlideElement[], area: Box, strength: number) {
-  if (strength <= 0) return
+/** Texts, scores, crests, stats, icons… count; reading shadows, colour washes and big layers don't. */
+function needsShade(el: SlideElement, rc: RenderCtx, pageArea: number): boolean {
+  if (!el.visible || el.opacity < 0.05 || !rc.shown(el) || SHADE_IGNORE.has(el.type)) return false
+  if (el.type === 'shape') {
+    // Gradients and see-through fills are the template's own shadows over the photo.
+    const f = el.fill
+    return f.kind === 'solid' && (f.opacity ?? 1) * el.opacity >= 0.5 && el.width * el.height <= pageArea * 0.12
+  }
+  if (SHADE_IF_SMALL.has(el.type)) return el.width * el.height <= pageArea * 0.35
+  return true
+}
+
+/** Slide-space boxes of the content placed over `area`. */
+function shadeBoxes(rc: RenderCtx, above: SlideElement[], area: Box): Box[] {
   const pageArea = rc.project.format.width * rc.project.format.height
   const boxes: Box[] = []
-  for (const el of above) {
-    if (!el.visible || el.opacity < 0.05 || !rc.shown(el) || SHADE_IGNORE.has(el.type)) continue
-    if (SHADE_IF_SMALL.has(el.type) && el.width * el.height > pageArea * 0.35) continue
-    const b = contentBox(el, rc)
+  for (const raw of above) {
+    if (!needsShade(raw, rc, pageArea)) continue
+    const b = contentBox(live(raw, rc), rc)
     if (!b || b.x > area.x + area.w || b.x + b.w < area.x || b.y > area.y + area.h || b.y + b.h < area.y) continue
     boxes.push(b)
   }
-  if (!boxes.length) return
+  return boxes
+}
+
+// One small canvas for the shade mask, reused (painting is synchronous).
+let maskCanvas: HTMLCanvasElement | null = null
+
+/**
+ * Lay a soft black shade around `boxes` (slide coordinates) over `target`.
+ * `slideToTarget` maps slide coordinates to the target's pixels. With `atop`
+ * the target holds only a photo, and only its own pixels darken, in
+ * proportion to their alpha: faded edges, letterboxing and cut-out
+ * transparency stay untouched.
+ */
+function applyShade(target: Ctx, slideToTarget: DOMMatrix, boxes: Box[], strength: number, atop: boolean) {
   // Wide, soft falloff: it should read as a fade in the photo, never as a box.
   const avg = boxes.reduce((a, b) => a + Math.min(b.w, b.h), 0) / boxes.length
   const blur = Math.max(80, Math.min(240, avg * 0.9))
+  const W = target.canvas.width
+  const H = target.canvas.height
+  // Drawn at half a pixel per slide unit at most, then scaled up: it is a soft
+  // fade anyway, it is cheaper, and the blur stays under the browser's cap
+  // (beyond it, 2× exports and zoomed-in views got a tighter, darker shade).
+  const unit = Math.hypot(slideToTarget.a, slideToTarget.b) || 1
+  const m = Math.min(1, 0.5 / unit)
+  const mw = Math.max(1, Math.ceil(W * m))
+  const mh = Math.max(1, Math.ceil(H * m))
+  const mask = maskCanvas ?? (maskCanvas = makeCanvas(mw, mh))
+  if (mask.width !== mw || mask.height !== mh) {
+    mask.width = mw
+    mask.height = mh
+  }
+  const mc = mask.getContext('2d')!
+  mc.setTransform(1, 0, 0, 1, 0, 0)
+  mc.clearRect(0, 0, mw, mh)
+  mc.setTransform(new DOMMatrix().scale(mw / W, mh / H).multiply(slideToTarget))
   // Offset trick: the shapes are drawn far away and only their blurred shadow lands here.
   const FAR = 100000
-  ctx.save()
-  ctx.setTransform(slideToDevice)
-  ctx.beginPath()
+  mc.beginPath()
   for (const b of boxes) {
     const pad = Math.max(24, Math.min(110, Math.min(b.w, b.h) * 0.3))
-    ctx.rect(b.x - pad - FAR, b.y - pad, b.w + pad * 2, b.h + pad * 2)
+    mc.rect(b.x - pad - FAR, b.y - pad, b.w + pad * 2, b.h + pad * 2)
   }
-  setShadow(ctx, `rgba(0,0,0,${Math.min(1, strength)})`, blur, FAR, 0)
-  ctx.fillStyle = '#000'
-  ctx.fill()
-  ctx.restore()
+  setShadow(mc, `rgba(0,0,0,${Math.min(1, strength)})`, blur, FAR, 0)
+  mc.fillStyle = '#000'
+  mc.fill()
+  mc.shadowColor = 'rgba(0,0,0,0)'
+  target.save()
+  target.setTransform(1, 0, 0, 1, 0, 0)
+  if (atop) target.globalCompositeOperation = 'source-atop'
+  target.drawImage(mask, 0, 0, W, H)
+  target.restore()
+}
+
+/**
+ * Darken a photo exactly where content sits on top of it, with a soft black
+ * shade, so scores, numbers, crests and texts always read. `slideToDevice`
+ * maps slide coordinates to the canvas; the caller clips to the photo.
+ */
+export function paintContentShade(ctx: Ctx, rc: RenderCtx, slideToDevice: DOMMatrix, above: SlideElement[], area: Box, strength: number) {
+  if (strength <= 0) return
+  const boxes = shadeBoxes(rc, above, area)
+  if (boxes.length) applyShade(ctx, slideToDevice, boxes, strength, false)
 }
 
 /** The shade for a photo element, from the elements stacked above it. */
-function shadeUnderContent(ctx: Ctx, el: ImageElement, rc: RenderCtx) {
+function photoShade(el: ImageElement, rc: RenderCtx): { boxes: Box[]; strength: number; slideToLocal: DOMMatrix } | null {
   const strength = el.autoShade ?? CONTENT_SHADE
   const i = strength > 0 ? rc.slide.elements.findIndex((e) => e.id === el.id) : -1
-  if (i < 0) return
-  ctx.save()
-  if (el.cornerRadius > 0) roundRect(ctx, 0, 0, el.width, el.height, el.cornerRadius)
-  else {
-    ctx.beginPath()
-    ctx.rect(0, 0, el.width, el.height)
-  }
-  ctx.clip()
+  if (i < 0) return null
+  const self = live(el, rc)
+  const boxes = shadeBoxes(rc, rc.slide.elements.slice(i + 1), rotatedBox(self, 0, 0, self.width, self.height))
+  if (!boxes.length) return null
   // The painter runs in the element's own space: map slide coordinates through it.
-  const local = new DOMMatrix().translate(el.x, el.y).rotate(el.rotation)
-  paintContentShade(ctx, rc, ctx.getTransform().multiply(local.inverse()), rc.slide.elements.slice(i + 1), rotatedBox(el, 0, 0, el.width, el.height), strength)
-  ctx.restore()
+  return { boxes, strength, slideToLocal: new DOMMatrix().translate(self.x, self.y).rotate(self.rotation).inverse() }
 }
 
 // ── Icons (lucide geometry) ────────────────────────────────────────────────

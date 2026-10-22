@@ -2,6 +2,7 @@
 // «{headline}» show their real words; the first keystroke turns them into
 // plain text for this element. Changing the match data for every page is a
 // separate, explicit action (Datos → Partido).
+import { useState } from 'react'
 import { activeSlideOf, useEditor } from '../store/editor'
 import { useLibrary } from '../store/library'
 import { applyOverrides, resolveText } from '../model/tokens'
@@ -35,10 +36,14 @@ export interface EditableText {
   hasLive: boolean
 }
 
+let sessions = 0
+
 export function useEditableText(el: TextElement | BadgeElement | null): EditableText | null {
   const project = useEditor((s) => s.project)
   const slide = useEditor((s) => activeSlideOf(s))
   const brand = useLibrary((s) => s.brand)
+  // Everything typed in one editing session is one undo step.
+  const [session] = useState(() => ++sessions)
   if (!el || !project || !slide) return null
   const ctx = { match: applyOverrides(project.match, slide.overrides), brand, page: project.slides.indexOf(slide) + 1, pages: project.slides.length, pageNumbers: project.pageNumbers }
   // Team, competition and headline tokens show their words; live ones stay as tokens.
@@ -46,7 +51,7 @@ export function useEditableText(el: TextElement | BadgeElement | null): Editable
   const single = /^\{([a-z.]+)\}$/i.exec(el.text.trim())
   return {
     value,
-    onChange: (v) => useEditor.getState().updateElement(el.id, { text: v } as Partial<TextElement>, { key: `text-${el.id}` }),
+    onChange: (v) => useEditor.getState().updateElement(el.id, { text: v } as Partial<TextElement>, { key: `text-${el.id}-${session}`, sticky: true }),
     linked: value !== el.text,
     fieldLabel: single ? (FIELD_LABELS[single[1]] ?? null) : null,
     hasLive: /\{[a-zA-Z0-9.]+\}/.test(value),

@@ -1,4 +1,4 @@
-import { undoToast } from './actions'
+import { historyMark, undoToast } from './actions'
 import { Sparkles, Wand2 } from 'lucide-react'
 import type { ColorValue, Intensity } from '../model/types'
 import { ACCENTS, INTENSITIES } from '../model/brand'
@@ -95,11 +95,12 @@ export function SlideStyleSection() {
           className="btn text-[11px]"
           title="Aplica GOAT EDITORIAL a todas las diapositivas del proyecto"
           onClick={() => {
+            const mark = historyMark()
             update((d) => {
               d.slides = d.slides.map((s) => applyEditorial(s as typeof slide)) as never
               d.style = { ...(d.style ?? {}), intensity: 'editorial' }
             })
-            undoToast('GOAT EDITORIAL aplicado a todo el proyecto')
+            undoToast('GOAT EDITORIAL aplicado a todo el proyecto', mark)
           }}
         >
           <Sparkles size={13} /> Todo el proyecto

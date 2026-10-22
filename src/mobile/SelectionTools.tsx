@@ -51,6 +51,7 @@ import type { BadgeElement, SlideElement, TextElement } from '../model/types'
 import { activeSlideOf, useEditor } from '../store/editor'
 import { useUI } from '../store/ui'
 import { useLibrary } from '../store/library'
+import { sliderGesture } from '../ui/controls'
 import { FONTS } from '../fonts/fonts'
 import { resolveColor, slideAccent } from '../model/tokens'
 import { MASCOT_PRESETS } from '../editor/props/basicProps'
@@ -153,7 +154,7 @@ function RangeRow({ label, value, min, max, step = 1, onChange, format }: { labe
   return (
     <label className="flex items-center gap-3 py-1.5">
       <span className="w-20 shrink-0 text-[13px] text-ivory/80">{label}</span>
-      <input type="range" className="m-range flex-1" min={min} max={max} step={step} value={value} style={{ ['--fill' as string]: `${pct}%` }} onChange={(e) => onChange(Number(e.target.value))} aria-label={label} />
+      <input type="range" className="m-range flex-1" min={min} max={max} step={step} value={value} style={{ ['--fill' as string]: `${pct}%` }} onPointerDown={sliderGesture} onChange={(e) => onChange(Number(e.target.value))} aria-label={label} />
       <span className="w-12 text-right text-[12px] text-muted tabular-nums">{format ? format(value) : Math.round(value)}</span>
     </label>
   )
@@ -588,7 +589,7 @@ function toolsFor(el: SlideElement, replaceModel: () => void): Tool[] {
     case 'prediction':
       return [{ id: 'mode', label: 'Modo', icon: Lock }, ...(el.mode === 'locked' ? [{ id: 'blur', label: 'Desenfoque', icon: Contrast }] : []), data, opacity, layer, more]
     case 'tactics':
-      return [{ id: 'edit', label: 'Editar jugadores', icon: Pencil, run: () => useUI.getState().set({ tacticsEditId: el.id, tacticsSel: null }) }, opacity, layer, more]
+      return [{ id: 'edit', label: 'Editar jugadores', icon: Pencil, run: () => useUI.getState().set({ tacticsEditId: el.id, tacticsSel: null, tacticsTool: 'select' }) }, opacity, layer, more]
     case 'model3d':
       return [{ id: 'replace', label: 'Cambiar 3D', icon: Box, run: replaceModel }, { id: 'scale', label: 'Tamaño y giro', icon: Move3d }, opacity, layer, more]
     case 'mascot':

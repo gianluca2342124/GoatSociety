@@ -3,7 +3,7 @@ import { Group, Circle, Rect, Line, RegularPolygon } from 'react-konva'
 import type Konva from 'konva'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import type { TacticalAnnotation, TacticsElement } from '../../model/types'
-import { useEditor } from '../../store/editor'
+import { beginGesture, endGesture, useEditor } from '../../store/editor'
 import { useUI } from '../../store/ui'
 import { playerRadius, tacticsProjection } from '../../render/painters/tactics'
 import { uid } from '../../model/ids'
@@ -136,6 +136,8 @@ export function TacticsOverlay({ el, zoom }: { el: TacticsElement; zoom: number 
                 e.cancelBubble = true
                 useUI.getState().set({ tacticsSel: a.id })
               }}
+              onDragStart={beginGesture}
+              onDragEnd={endGesture}
               onDragMove={(e) => {
                 const np = clampPitch(proj.toPitch({ x: e.target.x(), y: e.target.y() }))
                 updateTactics((tt) => {
@@ -175,6 +177,8 @@ export function TacticsOverlay({ el, zoom }: { el: TacticsElement; zoom: number 
                 e.cancelBubble = true
                 useUI.getState().set({ tacticsSel: p.id })
               }}
+              onDragStart={beginGesture}
+              onDragEnd={endGesture}
               onDragMove={(e) => {
                 const np = clampPitch(proj.toPitch({ x: e.target.x(), y: e.target.y() + lift }))
                 updateTactics((tt) => {

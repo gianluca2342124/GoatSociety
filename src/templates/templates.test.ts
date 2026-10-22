@@ -66,6 +66,12 @@ describe('export naming and locked predictions', () => {
     expect(scramble('Gana Barcelona')).toBe(a)
     expect(scramble('Más de 2.5')).not.toMatch(/2\.5/)
   })
+
+  it('gives every hidden pick the same decoy shape, whatever its length or kind', () => {
+    const shapes = ['Sí', 'Empate', 'Gana Barcelona', 'Gana Barcelona y más de 2.5 goles', '2-1'].map((x) => scramble(x).replace(/[A-Z]/g, 'A'))
+    expect(new Set(shapes).size).toBe(1)
+    expect(scramble('2-1')).not.toMatch(/\d/)
+  })
 })
 
 describe('rich text markup', () => {

@@ -5,11 +5,22 @@ import { useUI } from '../store/ui'
 import { saveNow } from '../store/projectService'
 import { setZoom } from './ZoomBar'
 
+const TEXT_TYPES = new Set(['', 'text', 'search', 'number', 'email', 'url', 'tel', 'password'])
+
+/** Focus is in a control that edits text: its keys (letters, arrows, its own undo) belong to it. */
 function typing(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null
   if (!t) return false
-  const tag = t.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable
+  if (t.tagName === 'TEXTAREA' || t.isContentEditable) return true
+  return t.tagName === 'INPUT' && TEXT_TYPES.has((t as HTMLInputElement).type)
+}
+
+/** Focus is on a widget that uses the arrow and page keys itself (slider, select, colour picker…). */
+export function ownsArrows(target: EventTarget | null): boolean {
+  const t = target as HTMLElement | null
+  if (!t?.tagName) return false
+  if (t.tagName === 'INPUT' || t.tagName === 'SELECT') return true
+  return !!t.closest('[role=slider],[role=listbox],[role=radiogroup],[role=tablist],[role=menu]')
 }
 
 export const SHORTCUTS: [string, string][] = [
@@ -37,7 +48,8 @@ export function useShortcuts() {
     const onKey = (e: KeyboardEvent) => {
       const ui = useUI.getState()
       if (ui.modal && e.key !== 'Escape') return
-      if (typing(e)) return
+      // Already handled by the focused widget (e.g. arrows on the colour picker).
+      if (e.defaultPrevented || typing(e)) return
       const ed = useEditor.getState()
       const mod = e.metaKey || e.ctrlKey
       const k = e.key.toLowerCase()
@@ -88,8 +100,13 @@ export function useShortcuts() {
         return
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (ui.tacticsEditId && ui.tacticsSel) {
+        e.preventDefault()
+        // Holding the key down must not go on deleting.
+        if (e.repeat) return
+        // While editing a board, Supr only removes the player or drawing picked on it.
+        if (ui.tacticsEditId) {
           const sel = ui.tacticsSel
+          if (!sel) return
           ed.updateElement(ui.tacticsEditId, (d) => {
             if (d.type !== 'tactics') return
             d.tactics.annotations = d.tactics.annotations.filter((a) => a.id !== sel)
@@ -98,7 +115,6 @@ export function useShortcuts() {
           ui.set({ tacticsSel: null })
           return
         }
-        e.preventDefault()
         deleteSelection()
         return
       }
@@ -108,7 +124,8 @@ export function useShortcuts() {
         else ed.select([])
         return
       }
-      if (e.key.startsWith('Arrow') && ed.selection.length) {
+      if ((e.key.startsWith('Arrow') || e.key.startsWith('Page')) && ownsArrows(e.target)) return
+      if (e.key.startsWith('Arrow') && ed.selection.length && !ui.tacticsEditId) {
         e.preventDefault()
         const d = e.shiftKey ? 10 : 1
         const dx = e.key === 'ArrowLeft' ? -d : e.key === 'ArrowRight' ? d : 0

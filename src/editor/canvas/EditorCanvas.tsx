@@ -21,6 +21,9 @@ interface GuideLine {
 const RATIO_TYPES = new Set(['crest', 'mascot', 'image', 'icon', 'brandMark', 'progressRing', 'model3d'])
 const CORNER_ANCHORS = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
 const ALL_ANCHORS = ['top-left', 'top-center', 'top-right', 'middle-right', 'middle-left', 'bottom-left', 'bottom-center', 'bottom-right']
+// Each resize/rotate gesture is one undo step, however slow. Module-wide so a
+// remounted canvas (desktop ↔ phone layout) never reuses an earlier key.
+let transformSeq = 0
 
 function ElementNode({
   el,
@@ -183,7 +186,10 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
 
   const rc = useMemo(() => {
     void assetVersion
-    return makeRenderCtx(project, slide, brand, 'editor')
+    const r = makeRenderCtx(project, slide, brand, 'editor')
+    // While elements are dragged, the shade under content follows their nodes live.
+    r.live = (id) => (dragLead.current && dragStart.current.has(id) ? (stageRef.current?.findOne(`#${id}`)?.position() ?? null) : null)
+    return r
   }, [project, slide, brand, assetVersion])
 
   // An undo/redo or page change can remove the element being edited: drop the stale edit state.
@@ -263,8 +269,6 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
     [select],
   )
 
-  // Each resize/rotate gesture is one undo step, however slow.
-  const gesture = useRef(0)
 
   // Konva's transformer drags every selected node together (it starts a drag on
   // each of them), so the element under the pointer leads and the others follow.
@@ -383,7 +387,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
             t.letterSpacing = t.letterSpacing * k
           }
         },
-        { key: `transform-${gesture.current}`, sticky: true },
+        { key: `transform-${transformSeq}`, sticky: true },
       )
     },
     [update, slide.id],
@@ -391,7 +395,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
 
   const onDblClick = useCallback((el: SlideElement) => {
     if (el.type === 'text') useUI.getState().set({ editingTextId: el.id })
-    else if (el.type === 'tactics') useUI.getState().set({ tacticsEditId: el.id, tacticsSel: null })
+    else if (el.type === 'tactics') useUI.getState().set({ tacticsEditId: el.id, tacticsSel: null, tacticsTool: 'select' })
   }, [])
 
   /** Drawn (rotated) bounding box of an element, in page units. */
@@ -492,18 +496,26 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
   }, [])
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName
-      if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
-        setSpaceDown(true)
-        e.preventDefault()
-      }
+      if (e.code !== 'Space' || useUI.getState().modal) return
+      // Space keeps working on buttons, switches, tabs and fields.
+      const t = e.target as HTMLElement | null
+      if (t?.closest?.('input,textarea,select,button,a,[contenteditable=true],[role=button],[role=switch],[role=tab],[role=checkbox],[role=menuitem]')) return
+      setSpaceDown(true)
+      e.preventDefault()
     }
     const up = (e: KeyboardEvent) => e.code === 'Space' && setSpaceDown(false)
+    // The key can be released in another window: never stay stuck in pan mode.
+    const reset = () => setSpaceDown(false)
+    const hidden = () => document.hidden && reset()
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
+    window.addEventListener('blur', reset)
+    document.addEventListener('visibilitychange', hidden)
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', reset)
+      document.removeEventListener('visibilitychange', hidden)
     }
   }, [])
 
@@ -663,7 +675,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
             anchorCornerRadius={mobile ? 9 : 2}
             enabledAnchors={mobile || selection.length > 1 ? CORNER_ANCHORS : ALL_ANCHORS}
             onTransformStart={() => {
-              gesture.current++
+              transformSeq++
               useUI.getState().set({ canvasBusy: true })
             }}
             onTransformEnd={() => useUI.getState().set({ canvasBusy: false })}

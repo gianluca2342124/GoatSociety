@@ -104,4 +104,14 @@ describe('svg sanitizer', () => {
     expect(out).toContain('height="50"')
     expect(sanitizeSvg('<html></html>')).toBeNull()
   })
+
+  it('keeps class colours from <style> but drops imports and external urls', () => {
+    const out = sanitizeSvg(
+      '<svg viewBox="0 0 10 10"><defs><style>@import url(https://evil.example/x.css);.cls-1{fill:#e30613}.cls-2{fill:url(#g)}.cls-3{fill:url(https://evil.example/p.svg#a)}</style></defs><path class="cls-1" d="M0 0h5v5z" style="fill:url(http://evil.example/a)"/></svg>',
+    )!
+    expect(out).toContain('.cls-1{fill:#e30613}')
+    expect(out).toContain('url(#g)')
+    expect(out).not.toContain('evil')
+    expect(out).not.toContain('@import')
+  })
 })

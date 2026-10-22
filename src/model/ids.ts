@@ -8,11 +8,15 @@ export function uid(prefix = ''): string {
   return `${prefix}${time}${counter.toString(36).padStart(4, '0')}${rand}`
 }
 
+// Letters that don't decompose into a base letter plus accents.
+const PLAIN: Record<string, string> = { ł: 'l', ø: 'o', ß: 'ss', æ: 'ae', œ: 'oe', đ: 'd', ð: 'd', ı: 'i', þ: 'th', ħ: 'h' }
+
 export function slugify(input: string): string {
   return input
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
+    .replace(/[łøßæœđðıþħ]/g, (c) => PLAIN[c])
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)

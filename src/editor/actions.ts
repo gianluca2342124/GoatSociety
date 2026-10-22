@@ -6,23 +6,34 @@ import { useUI } from '../store/ui'
 import { buildBlankSlide, buildTemplateSlide, templateById, type TemplateDef } from '../templates'
 import { ELEMENT_LABELS } from '../model/elements'
 import { formatOf } from '../model/formats'
-import type { CanvasFormat, FormatPreset, MatchData, Slide } from '../model/types'
-import { rescaleSlide } from './dialogs/MiscDialogs'
+import type { CanvasFormat, FormatPreset, MatchData, Slide, SlideElement } from '../model/types'
+
+/** Marks the history before an action; pass it to undoToast afterwards. */
+export function historyMark(): number {
+  return useEditor.getState().steps
+}
 
 /**
- * Success toast with a «Deshacer» bound to the change just made: as soon as
- * anything else changes, the toast goes away, so it can never undo a newer edit.
+ * Success toast with a «Deshacer» bound to the change just made (recorded
+ * after `since`): as soon as anything else changes the toast goes away, so it
+ * can never undo a newer edit. Without a new step there is nothing to undo
+ * and it is a plain toast.
  */
-export function undoToast(text: string) {
-  const at = useEditor.getState().past.length
+export function undoToast(text: string, since: number) {
+  const s = useEditor.getState()
+  if (s.steps === since) {
+    useUI.getState().toast(text, 'success')
+    return
+  }
+  const after = s.project
   const id = useUI.getState().toast(text, 'success', {
     label: 'Deshacer',
     run: () => {
-      if (useEditor.getState().past.length === at) useEditor.getState().undo()
+      if (useEditor.getState().project === after) useEditor.getState().undo()
     },
   })
-  const unsub = useEditor.subscribe((s) => {
-    if (s.past.length !== at) {
+  const unsub = useEditor.subscribe((st) => {
+    if (st.project !== after) {
       useUI.getState().dismiss(id)
       unsub()
     }
@@ -30,8 +41,8 @@ export function undoToast(text: string) {
   setTimeout(unsub, 6000)
 }
 
-function toast(text: string, withUndo = false) {
-  if (withUndo) undoToast(text)
+function toast(text: string, since?: number) {
+  if (since != null) undoToast(text, since)
   else useUI.getState().toast(text, 'success')
 }
 
@@ -70,16 +81,20 @@ export function replacePageTemplate(def: TemplateDef) {
   const p = s.project
   const cur = activeSlideOf(s)
   if (!p || !cur) return
-  s.replaceSlide(cur.id, { ...buildTemplateSlide(def, p.format, p.match), name: cur.name, overrides: cur.overrides })
-  toast(`Plantilla cambiada a «${def.name}»`, true)
+  const mark = historyMark()
+  // A name the person chose stays; the old template's own name follows the new template.
+  const name = cur.name && cur.name !== templateById(cur.templateId)?.name ? cur.name : def.name
+  s.replaceSlide(cur.id, { ...buildTemplateSlide(def, p.format, p.match), name, overrides: cur.overrides })
+  toast(`Plantilla cambiada a «${def.name}»`, mark)
 }
 
 export function duplicatePage(id?: string) {
   const s = useEditor.getState()
   const cur = id ?? s.activeSlideId
   if (!cur) return
+  const mark = historyMark()
   s.duplicateSlide(cur)
-  toast('Página duplicada', true)
+  toast('Página duplicada', mark)
 }
 
 export function deletePage(id?: string) {
@@ -91,8 +106,9 @@ export function deletePage(id?: string) {
     useUI.getState().toast('Un proyecto necesita al menos una página', 'info')
     return
   }
+  const mark = historyMark()
   s.deleteSlide(cur)
-  toast('Página eliminada', true)
+  toast('Página eliminada', mark)
 }
 
 export function movePage(dir: -1 | 1) {
@@ -139,9 +155,10 @@ export function deleteSelection() {
   }
   const label = selectionLabel()
   const many = els.length > 1
+  const mark = historyMark()
   s.deleteSelection()
   useUI.getState().set({ editingTextId: null, tacticsEditId: null })
-  toast(many ? `Se han eliminado ${label}` : `Se ha eliminado «${label}»`, true)
+  toast(many ? `Se han eliminado ${label}` : `Se ha eliminado «${label}»`, mark)
 }
 
 export function duplicateSelection() {
@@ -176,9 +193,10 @@ export function toggleLockSelection() {
 export function hideSelection() {
   const s = useEditor.getState()
   const ids = [...s.selection]
+  const mark = historyMark()
   s.updateElements(ids, (e) => void (e.visible = false))
   s.select([])
-  toast('Oculto · puedes mostrarlo desde Capas', true)
+  toast('Oculto · puedes mostrarlo desde Capas', mark)
 }
 
 export type AlignMode = 'l' | 'c' | 'r' | 't' | 'm' | 'b' | 'distH' | 'distV' | 'pc' | 'pm'
@@ -252,27 +270,80 @@ function isPristine(slide: Slide, tpl: TemplateDef, format: CanvasFormat, match:
   return strip(fresh.elements) === strip(slide.elements) && strip(fresh.background) === strip(slide.background)
 }
 
-/** Change the project format: template pages are rebuilt for the new size, free pages are rescaled. */
-export function changeFormat(preset: FormatPreset) {
+/** Proportionally fit a slide's elements into a new canvas size. */
+export function rescaleSlide(slide: Slide, from: { width: number; height: number }, to: { width: number; height: number }): Slide {
+  const sx = to.width / from.width
+  const sy = to.height / from.height
+  const s = Math.min(sx, sy)
+  const elements = slide.elements.map((e) => {
+    // JSON copy: also works when called with an immer draft (structuredClone cannot clone proxies).
+    const c = JSON.parse(JSON.stringify(e)) as SlideElement
+    const full = e.x <= 1 && e.y <= 1 && e.width >= from.width - 2 && e.height >= from.height - 2
+    if (full) {
+      c.x = 0
+      c.y = 0
+      c.width = to.width
+      c.height = to.height
+      return c
+    }
+    const cx = (e.x + e.width / 2) * sx
+    const cy = (e.y + e.height / 2) * sy
+    c.width = e.width * s
+    c.height = e.height * s
+    c.x = cx - c.width / 2
+    c.y = cy - c.height / 2
+    if (c.type === 'text') {
+      c.fontSize *= s
+      c.minFontSize *= s
+      c.letterSpacing *= s
+      if (c.background) c.background = { ...c.background, paddingX: c.background.paddingX * s, paddingY: c.background.paddingY * s, radius: c.background.radius * s }
+    }
+    if (c.type === 'tactics' || c.type === 'stadium3d') c.tactics.playerSize *= s
+    return c
+  })
+  return { ...slide, elements }
+}
+
+// Pages rescaled by a format change remember their layout from before it, so
+// trying another format and coming back gives the page back exactly instead
+// of shrinking it a little more with every switch. Any edit to the page
+// creates a new slide object, which drops the link.
+const scaledFrom = new WeakMap<Slide, { base: Slide; format: CanvasFormat }>()
+
+function rescaleKeepingBase(sl: Slide, from: CanvasFormat, to: CanvasFormat): Slide {
+  const prev = scaledFrom.get(sl)
+  const base = prev?.base ?? sl
+  const baseFormat = prev?.format ?? from
+  if (baseFormat.width === to.width && baseFormat.height === to.height) return base
+  const out = rescaleSlide(base, baseFormat, to)
+  scaledFrom.set(out, { base, format: baseFormat })
+  return out
+}
+
+/**
+ * Change the project format. 'rebuild': untouched template pages are
+ * recomposed for the new size and edited ones are rescaled; 'scale': every
+ * page is rescaled.
+ */
+export function changeFormat(preset: FormatPreset, mode: 'rebuild' | 'scale' = 'rebuild') {
   const s = useEditor.getState()
   const p = s.project
   if (!p || p.format.preset === preset) return
   const to = formatOf(preset)
   const from = p.format
-  // Untouched template pages are recomposed for the new size; pages with
-  // manual edits are rescaled so nothing the person did is lost.
   // (Built from the plain, non-draft slides: rescaling clones them.)
   let rescaled = 0
   const slides: Slide[] = p.slides.map((sl) => {
     const tpl = templateById(sl.templateId)
-    if (tpl && isPristine(sl, tpl, from, p.match)) return { ...buildTemplateSlide(tpl, to, p.match), id: sl.id, name: sl.name, overrides: sl.overrides, accent: sl.accent, intensity: sl.intensity }
-    if (tpl) rescaled++
-    return rescaleSlide(sl, from, to)
+    if (mode === 'rebuild' && tpl && isPristine(sl, tpl, from, p.match)) return { ...buildTemplateSlide(tpl, to, p.match), id: sl.id, name: sl.name, overrides: sl.overrides, accent: sl.accent, intensity: sl.intensity }
+    if (tpl && mode === 'rebuild') rescaled++
+    return rescaleKeepingBase(sl, from, to)
   })
+  const mark = historyMark()
   s.update((d) => {
     d.format = to
     d.slides = slides as typeof d.slides
   })
   useUI.getState().set({ autoFit: true })
-  toast(`Formato cambiado a ${to.width}×${to.height}${rescaled ? ` · ${rescaled === 1 ? 'la página editada se ha escalado' : `${rescaled} páginas editadas se han escalado`} para no perder tus cambios` : ''}`, true)
+  toast(`Formato cambiado a ${to.width}×${to.height}${rescaled ? ` · ${rescaled === 1 ? 'la página editada se ha escalado' : `${rescaled} páginas editadas se han escalado`} para no perder tus cambios` : ''}`, mark)
 }

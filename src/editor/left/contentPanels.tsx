@@ -1,4 +1,4 @@
-import { deletePage } from '../actions'
+import { addBlankPage, deletePage, replacePageTemplate } from '../actions'
 import { useState } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -7,7 +7,7 @@ import { Copy, GripVertical, LayoutTemplate, Plus, Replace, Sparkles, Trash2 } f
 import { useEditor } from '../../store/editor'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
-import { TEMPLATES, buildBlankSlide, buildMatchCarousel, buildTemplateSlide, type TemplateDef } from '../../templates'
+import { TEMPLATES, buildMatchCarousel, buildTemplateSlide, type TemplateDef } from '../../templates'
 import { CATEGORY_LABELS, type TemplateCategory } from '../../templates/types'
 import { useSlideThumb, useTemplateThumb } from '../thumbs'
 import type { EffectElement, MascotElement, Project, Slide } from '../../model/types'
@@ -59,8 +59,6 @@ function TemplateCard({ def, project, onPick, onReplace }: { def: TemplateDef; p
 export function TemplatesPanel() {
   const project = useEditor((s) => s.project)!
   const addSlide = useEditor((s) => s.addSlide)
-  const replaceSlide = useEditor((s) => s.replaceSlide)
-  const activeId = useEditor((s) => s.activeSlideId)
   const [cat, setCat] = useState<TemplateCategory | 'all'>('all')
   const list = TEMPLATES.filter((t) => cat === 'all' || t.category === cat)
   return (
@@ -96,10 +94,7 @@ export function TemplatesPanel() {
             def={def}
             project={project}
             onPick={() => addSlide(buildTemplateSlide(def, project.format, project.match))}
-            onReplace={() => {
-              const cur = project.slides.find((s) => s.id === activeId)
-              if (cur) replaceSlide(cur.id, { ...buildTemplateSlide(def, project.format, project.match), overrides: cur.overrides })
-            }}
+            onReplace={() => replacePageTemplate(def)}
           />
         ))}
       </div>
@@ -186,11 +181,7 @@ export function SlidesPanel() {
           <button
             type="button"
             className="btn text-[12px]"
-            onClick={() => {
-              const s = buildBlankSlide(project.format, `Página ${project.slides.length + 1}`)
-              s.elements = atmosphere(makeCtx(project.format), 'noir')
-              useEditor.getState().addSlide(s)
-            }}
+            onClick={addBlankPage}
           >
             <Plus size={13} /> En blanco
           </button>

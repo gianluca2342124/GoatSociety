@@ -1,7 +1,8 @@
 // Edge cases found while hunting bugs: half-typed colours, tokens inside data
 // fields, the page-number switch and per-page team overrides.
 import { describe, expect, it } from 'vitest'
-import { applyOverrides, isCssColor, resolveColor, resolveText } from './tokens'
+import { applyOverrides, isCssColor, parseColor, resolveColor, resolveText } from './tokens'
+import { slugify } from './ids'
 import { sampleMatch } from './defaults'
 import { DEFAULT_BRAND } from './brand'
 
@@ -14,6 +15,26 @@ describe('colours', () => {
     expect(isCssColor('#2BE477')).toBe(true)
     expect(isCssColor('rgba(0, 0, 0, 0.5)')).toBe(true)
     expect(resolveColor('#2B', { match: sampleMatch(), brand: DEFAULT_BRAND })).toMatch(/^#[0-9A-F]{6}$/i)
+  })
+
+  it('rejects rgb()/hsl() with the wrong number of parts', () => {
+    expect(isCssColor('rgb(255,0)')).toBe(false)
+    expect(isCssColor('rgba(0,0,0,)')).toBe(false)
+    expect(isCssColor('hsl(10)')).toBe(false)
+    expect(isCssColor('rgb(255 0 0 / 50%)')).toBe(true)
+    expect(isCssColor('hsl(120, 100%, 50%)')).toBe(true)
+  })
+
+  it('reads transparent as a colour with no alpha', () => {
+    expect(parseColor('transparent').a).toBe(0)
+  })
+})
+
+describe('file names', () => {
+  it('keeps letters that have no accent to strip', () => {
+    expect(slugify('Śląsk Wrocław')).toBe('slask-wroclaw')
+    expect(slugify('Bodø/Glimt')).toBe('bodo-glimt')
+    expect(slugify('Beşiktaş')).toBe('besiktas')
   })
 })
 

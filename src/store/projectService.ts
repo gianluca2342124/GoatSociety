@@ -12,22 +12,33 @@ import { getAsset, putAssetRecord } from '../db/assets'
 import { buildBundle, bundleAssetToRecord, bundleFileName, migrateProject, parseBundle } from '../db/serialize'
 import { downloadBlob, renderThumbnail } from '../render/exporter'
 import { kvSet } from '../db/db'
+import { askConfirm } from '../ui/confirm'
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let thumbTimer: ReturnType<typeof setTimeout> | null = null
 let pending = false
+// The project object last written to IndexedDB.
+let lastSaved: Project | null = null
 
-async function doSave(p: Project) {
-  const ui = useUI.getState()
-  ui.set({ saveState: 'saving' })
+/** Writes the project; true when it was stored. */
+async function doSave(p: Project): Promise<boolean> {
+  useUI.getState().set({ saveState: 'saving' })
   try {
     await saveProject(p)
-    pending = false
-    useUI.getState().set({ saveState: 'saved' })
+    lastSaved = p
+    // An edit made while this was being written still needs its own save.
+    const cur = useEditor.getState().project
+    pending = !!cur && cur.id === p.id && cur !== p
+    useUI.getState().set({ saveState: pending ? 'saving' : 'saved' })
+    return true
   } catch (e) {
     console.error(e)
     useUI.getState().set({ saveState: 'error' })
-    useUI.getState().toast('No se pudo guardar el proyecto en este navegador. Exporta una copia JSON por seguridad.', 'error')
+    useUI.getState().toast('No se pudo guardar el proyecto en este navegador. Exporta una copia por seguridad.', 'error', {
+      label: 'Exportar copia',
+      run: () => void exportProjectFile(p),
+    })
+    return false
   }
 }
 
@@ -75,14 +86,16 @@ export async function saveNow() {
   const p = useEditor.getState().project
   if (!p) return
   if (saveTimer) clearTimeout(saveTimer)
-  await doSave(p)
+  if (!(await doSave(p))) return
   await updateThumb(p)
   useUI.getState().toast('Proyecto guardado en este equipo', 'success')
 }
 
 export async function openProject(project: Project) {
   useEditor.getState().open(project)
-  useUI.getState().set({ view: 'editor', saveState: 'saved', modal: null, tacticsEditId: null, editingTextId: null, autoFit: true })
+  lastSaved = project
+  pending = false
+  useUI.getState().set({ view: 'editor', saveState: 'saved', modal: null, tacticsEditId: null, tacticsSel: null, tacticsTool: 'select', editingTextId: null, autoFit: true })
   await kvSet('lastProjectId', project.id)
 }
 
@@ -170,12 +183,23 @@ export async function duplicateProject(id: string) {
 }
 
 export async function goHome() {
-  if (pending) {
-    const p = useEditor.getState().project
-    if (p) await doSave(p)
-  }
   const p = useEditor.getState().project
-  if (p) await updateThumb(p)
+  if (saveTimer) clearTimeout(saveTimer)
+  if (thumbTimer) clearTimeout(thumbTimer)
+  saveTimer = thumbTimer = null
+  if (p && (pending || p !== lastSaved) && !(await doSave(p))) {
+    const leave = await askConfirm({
+      title: 'No se han podido guardar los cambios',
+      body: 'Este navegador no deja guardar ahora mismo. Si sales, se perderán los últimos cambios. Exporta una copia desde el aviso antes de salir.',
+      confirmLabel: 'Salir sin guardar',
+      danger: true,
+    })
+    if (!leave) return
+  }
+  // Something newer arrived while saving: keep it too.
+  const cur = useEditor.getState().project
+  if (cur && cur !== p && cur !== lastSaved) await doSave(cur)
+  if (cur) await updateThumb(cur)
   useEditor.getState().close()
   useUI.getState().set({ view: 'home', modal: null })
   await useLibrary.getState().refreshProjects()

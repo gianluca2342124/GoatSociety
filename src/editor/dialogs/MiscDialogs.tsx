@@ -1,72 +1,25 @@
 import { useState } from 'react'
-import type { FormatPreset, Slide, SlideElement } from '../../model/types'
-import { FORMATS, formatOf } from '../../model/formats'
+import type { FormatPreset } from '../../model/types'
+import { FORMATS } from '../../model/formats'
 import { useEditor } from '../../store/editor'
 import { useLibrary } from '../../store/library'
 import { useUI } from '../../store/ui'
 import { Modal, Segmented } from '../../ui/controls'
 import { SHORTCUTS } from '../useShortcuts'
-import { TEMPLATES, buildTemplateSlide, templateById } from '../../templates'
+import { TEMPLATES } from '../../templates'
+import { changeFormat, replacePageTemplate } from '../actions'
 import { CATEGORY_LABELS } from '../../templates/types'
 import { useTemplateThumb } from '../thumbs'
 import type { TemplateDef } from '../../templates'
 
-/** Proportionally fit a slide's elements into a new canvas size. */
-export function rescaleSlide(slide: Slide, from: { width: number; height: number }, to: { width: number; height: number }): Slide {
-  const sx = to.width / from.width
-  const sy = to.height / from.height
-  const s = Math.min(sx, sy)
-  const elements = slide.elements.map((e) => {
-    // JSON copy: also works when called with an immer draft (structuredClone cannot clone proxies).
-    const c = JSON.parse(JSON.stringify(e)) as SlideElement
-    const full = e.x <= 1 && e.y <= 1 && e.width >= from.width - 2 && e.height >= from.height - 2
-    if (full) {
-      c.x = 0
-      c.y = 0
-      c.width = to.width
-      c.height = to.height
-      return c
-    }
-    const cx = (e.x + e.width / 2) * sx
-    const cy = (e.y + e.height / 2) * sy
-    c.width = e.width * s
-    c.height = e.height * s
-    c.x = cx - c.width / 2
-    c.y = cy - c.height / 2
-    if (c.type === 'text') {
-      c.fontSize *= s
-      c.minFontSize *= s
-      c.letterSpacing *= s
-      if (c.background) c.background = { ...c.background, paddingX: c.background.paddingX * s, paddingY: c.background.paddingY * s, radius: c.background.radius * s }
-    }
-    if (c.type === 'tactics' || c.type === 'stadium3d') c.tactics.playerSize *= s
-    return c
-  })
-  return { ...slide, elements }
-}
-
 export function CanvasSizeDialog() {
   const project = useEditor((s) => s.project)!
-  const update = useEditor((s) => s.update)
   const close = () => useUI.getState().set({ modal: null })
   const [preset, setPreset] = useState<FormatPreset>(project.format.preset)
   const [mode, setMode] = useState<'rebuild' | 'scale'>('rebuild')
   const apply = () => {
-    const to = formatOf(preset)
-    const from = project.format
-    update((d) => {
-      d.format = to
-      d.slides = d.slides.map((s) => {
-        const tpl = templateById(s.templateId)
-        if (mode === 'rebuild' && tpl) {
-          const rebuilt = buildTemplateSlide(tpl, to, project.match)
-          return { ...rebuilt, id: s.id, name: s.name, overrides: s.overrides } as typeof s
-        }
-        return rescaleSlide(s as Slide, from, to) as typeof s
-      })
-    })
-    useUI.getState().set({ autoFit: true, modal: null })
-    useUI.getState().toast(`Lienzo cambiado a ${to.width}×${to.height}`, 'success')
+    close()
+    changeFormat(preset, mode)
   }
   return (
     <Modal
@@ -103,7 +56,7 @@ export function CanvasSizeDialog() {
         />
         <p className="text-[12px] leading-relaxed text-muted">
           {mode === 'rebuild'
-            ? 'Las diapositivas creadas desde plantilla se recomponen para el nuevo formato con tus datos del partido (se pierden ajustes manuales de posición). Las diapositivas libres se escalan.'
+            ? 'Las páginas de plantilla que no has tocado se recomponen para el nuevo formato con tus datos del partido. Las que has editado y las páginas libres se escalan para no perder tus cambios.'
             : 'Todos los elementos se escalan y recolocan manteniendo tus ediciones. Puede requerir retoques.'}{' '}
           Puedes deshacer el cambio con Ctrl+Z.
         </p>
@@ -145,11 +98,7 @@ function ReplaceCard({ def, onPick }: { def: TemplateDef; onPick: () => void }) 
 }
 
 export function ReplaceTemplateDialog() {
-  const project = useEditor((s) => s.project)!
-  const activeId = useEditor((s) => s.activeSlideId)
-  const replaceSlide = useEditor((s) => s.replaceSlide)
   const close = () => useUI.getState().set({ modal: null })
-  const cur = project.slides.find((s) => s.id === activeId) ?? project.slides[0]
   return (
     <Modal title="Cambiar la plantilla de esta diapositiva" onClose={close} width={860}>
       <p className="mb-3 text-[12px] text-muted">La diapositiva se reemplaza por la nueva plantilla con los mismos datos del partido. Puedes deshacer con Ctrl+Z.</p>
@@ -159,8 +108,8 @@ export function ReplaceTemplateDialog() {
             key={def.id}
             def={def}
             onPick={() => {
-              replaceSlide(cur.id, { ...buildTemplateSlide(def, project.format, project.match), overrides: cur.overrides })
               close()
+              replacePageTemplate(def)
             }}
           />
         ))}

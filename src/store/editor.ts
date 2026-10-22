@@ -27,6 +27,8 @@ interface EditorState {
   lastKey: string | null
   lastTime: number
   revision: number
+  /** Counts recorded undo steps (never decreases), so callers can tell whether an action added one. */
+  steps: number
   clipboard: SlideElement[] | null
 
   open: (p: Project) => void
@@ -70,14 +72,47 @@ export function activeSlideOf(s: Pick<EditorState, 'project' | 'activeSlideId'>)
 let clipFrom: string | null = null
 let pasteCounts = new Map<string, number>()
 
-/** After undo/redo: show a page that came back (e.g. an undone delete), else stay put if possible. */
+// A pointer gesture in progress (a slider or tactics handle drag): all its
+// changes are one undo step, however slow or paused. A gesture whose end got
+// lost stops counting after a minute.
+let gestureSeq = 0
+let gestureStart = 0
+let gestureOn = false
+let lastGesture = -1
+export function beginGesture() {
+  gestureSeq++
+  gestureStart = Date.now()
+  gestureOn = true
+}
+export function endGesture() {
+  gestureOn = false
+}
+
+// The page that was on screen when each history snapshot was left.
+const activeAt = new WeakMap<Project, string | null>()
+
+/**
+ * After undo/redo, show the page the change touched: a page that came back
+ * (an undone delete), the page that was open before (an undone add), or the
+ * page whose content changed when it isn't the current one.
+ */
 function activeAfterTimeTravel(from: Project, to: Project, current: string | null): string | null {
   const back = to.slides.find((sl) => !from.slides.some((x) => x.id === sl.id))
   if (back) return back.id
-  if (to.slides.some((sl) => sl.id === current)) return current
-  // The current page disappeared (an undone add): go to its neighbour.
-  const i = from.slides.findIndex((sl) => sl.id === current)
-  return to.slides[Math.min(Math.max(0, i - 1), to.slides.length - 1)]?.id ?? null
+  const cur = to.slides.find((sl) => sl.id === current)
+  if (!cur) {
+    // The current page disappeared (an undone add): go back to where the person was.
+    const before = activeAt.get(to)
+    if (before && to.slides.some((sl) => sl.id === before)) return before
+    const i = from.slides.findIndex((sl) => sl.id === current)
+    return to.slides[Math.min(Math.max(0, i - 1), to.slides.length - 1)]?.id ?? null
+  }
+  // Unchanged slides keep their object identity, so a different object means the change is there.
+  if (cur === from.slides.find((sl) => sl.id === current)) {
+    const touched = to.slides.find((sl) => sl !== from.slides.find((x) => x.id === sl.id))
+    if (touched) return touched.id
+  }
+  return current
 }
 
 function draftSlide(d: Draft<Project>, id: string | null): Draft<Slide> | undefined {
@@ -93,6 +128,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   lastKey: null,
   lastTime: 0,
   revision: 0,
+  steps: 0,
   clipboard: null,
 
   open: (p) => set({ project: p, activeSlideId: p.slides[0]?.id ?? null, selection: [], past: [], future: [], lastKey: null, revision: 0 }),
@@ -110,8 +146,11 @@ export const useEditor = create<EditorState>((set, get) => ({
       d.updatedAt = Date.now()
     })
     const now = Date.now()
-    const coalesce = opts.key != null && opts.key === lastKey && (opts.sticky || now - lastTime < COALESCE_MS)
+    const inGesture = gestureOn && now - gestureStart < 60_000
+    const coalesce = opts.key != null && opts.key === lastKey && (opts.sticky || (inGesture ? lastGesture === gestureSeq : now - lastTime < COALESCE_MS))
+    lastGesture = inGesture ? gestureSeq : -1
     const record = opts.history !== false && !coalesce
+    if (record) activeAt.set(project, get().activeSlideId)
     set((s) => ({
       project: next,
       past: record ? [...past, project].slice(-HISTORY_LIMIT) : past,
@@ -119,6 +158,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       lastKey: opts.key ?? null,
       lastTime: now,
       revision: s.revision + 1,
+      steps: record ? s.steps + 1 : s.steps,
     }))
   },
 
@@ -126,6 +166,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const { past, project, future } = get()
     if (!past.length || !project) return
     const prev = past[past.length - 1]
+    activeAt.set(project, get().activeSlideId)
     const activeSlideId = activeAfterTimeTravel(project, prev, get().activeSlideId)
     set((s) => ({
       project: prev,
@@ -142,6 +183,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const { past, project, future } = get()
     if (!future.length || !project) return
     const next = future[0]
+    activeAt.set(project, get().activeSlideId)
     const activeSlideId = activeAfterTimeTravel(project, next, get().activeSlideId)
     set((s) => ({
       project: next,
@@ -308,9 +350,11 @@ export const useEditor = create<EditorState>((set, get) => ({
       const els = s.elements
       const picked = els.filter((e) => sel.includes(e.id))
       const rest = els.filter((e) => !sel.includes(e.id))
-      if (dir === 'top') s.elements = [...rest, ...picked]
-      else if (dir === 'bottom') s.elements = [...picked, ...rest]
-      else {
+      if (dir === 'top' || dir === 'bottom') {
+        const order = dir === 'top' ? [...rest, ...picked] : [...picked, ...rest]
+        // Already there: leave the array alone so no empty undo step is recorded.
+        if (order.some((e, i) => e !== els[i])) s.elements = order
+      } else {
         const idx = els.map((e, i) => (sel.includes(e.id) ? i : -1)).filter((i) => i >= 0)
         if (dir === 'up') {
           for (let k = idx.length - 1; k >= 0; k--) {
@@ -329,9 +373,10 @@ export const useEditor = create<EditorState>((set, get) => ({
       const s = draftSlide(d, get().activeSlideId)
       if (!s) return
       const from = s.elements.findIndex((e) => e.id === id)
-      if (from < 0) return
+      const to = Math.max(0, Math.min(s.elements.length - 1, index))
+      if (from < 0 || from === to) return
       const [el] = s.elements.splice(from, 1)
-      s.elements.splice(Math.max(0, Math.min(s.elements.length, index)), 0, el)
+      s.elements.splice(to, 0, el)
     })
   },
 }))

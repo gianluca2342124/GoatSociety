@@ -1,5 +1,6 @@
 // UI state that only exists in the mobile editor (open sheet, active tool…).
 import { create } from 'zustand'
+import { useUI } from '../store/ui'
 
 export type MobileSheet = null | 'templates' | 'elements' | 'photos' | 'data' | 'style' | 'export' | 'page' | 'newPage' | 'more' | 'layers' | 'props' | 'menu'
 
@@ -33,5 +34,12 @@ export const useMobile = create<MobileState>((set) => ({
   focus: false,
   pasteChip: false,
   set: (p) => set(p),
-  open: (sheet, extra = {}) => set({ sheet, tool: null, ...extra }),
+  open: (sheet, extra = {}) => {
+    // A sheet replaces the text keyboard and the tactics bar: finish those edits so it shows.
+    if (sheet) {
+      const ui = useUI.getState()
+      if (ui.editingTextId || ui.tacticsEditId) ui.set({ editingTextId: null, tacticsEditId: null, tacticsSel: null, tacticsTool: 'select' })
+    }
+    set({ sheet, tool: null, ...extra })
+  },
 }))

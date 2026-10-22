@@ -6,7 +6,7 @@ import { PALETTE_TOKENS, FONT_TOKENS } from '../model/brand'
 import { FONTS } from '../fonts/fonts'
 import { applyOverrides, resolveColor, slideAccent } from '../model/tokens'
 import { useLibrary } from '../store/library'
-import { activeSlideOf, useEditor } from '../store/editor'
+import { activeSlideOf, beginGesture, endGesture, useEditor } from '../store/editor'
 
 export function Section({ title, children, right, defaultOpen = true }: { title: string; children: ReactNode; right?: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -98,6 +98,20 @@ export function NumberField({ value, onChange, label, min, max, step = 1, suffix
   return label ? <Row label={label}>{input}</Row> : input
 }
 
+// One drag of a slider is one undo step, even with pauses while holding it.
+export function sliderGesture() {
+  beginGesture()
+  const end = () => {
+    endGesture()
+    window.removeEventListener('pointerup', end)
+    window.removeEventListener('pointercancel', end)
+    window.removeEventListener('blur', end)
+  }
+  window.addEventListener('pointerup', end)
+  window.addEventListener('pointercancel', end)
+  window.addEventListener('blur', end)
+}
+
 export function Slider({ value, onChange, min = 0, max = 1, step = 0.01, label, format }: { value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; label: string; format?: (v: number) => string }) {
   const pct = ((value - min) / (max - min)) * 100
   return (
@@ -106,7 +120,18 @@ export function Slider({ value, onChange, min = 0, max = 1, step = 0.01, label, 
         <span>{label}</span>
         <span className="tabular-nums text-ivory/80">{format ? format(value) : step >= 1 ? Math.round(value) : value.toFixed(2)}</span>
       </div>
-      <input type="range" className="w-full" aria-label={label} min={min} max={max} step={step} value={value} style={{ ['--fill' as string]: `${Math.max(0, Math.min(100, pct))}%` }} onChange={(e) => onChange(Number(e.target.value))} />
+      <input
+        type="range"
+        className="w-full"
+        aria-label={label}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        style={{ ['--fill' as string]: `${Math.max(0, Math.min(100, pct))}%` }}
+        onPointerDown={sliderGesture}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
     </div>
   )
 }
