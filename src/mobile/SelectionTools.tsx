@@ -58,6 +58,7 @@ import { alignSelection, deleteSelection, duplicateSelection, setMultiSelect, to
 import { useMobile } from './store'
 import { ToolButton } from './ui'
 import { addAsset } from '../db/assets'
+import { CONTENT_SHADE } from '../render/painters/basic'
 
 type Tool = { id: string; label: string; icon: typeof Type; run?: () => void }
 
@@ -348,6 +349,13 @@ function ToolPanel({ el, tool }: { el: SlideElement; tool: string }) {
             <RangeRow label="Vertical" min={0} max={1} step={0.01} value={el.focusY} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => patch(el, { focusY: v, fit: 'cover' })} />
           </Panel>
         )
+      case 'shade':
+        return (
+          <Panel title="Sombra bajo el contenido">
+            <RangeRow label="Sombra" min={0} max={1} step={0.01} value={el.autoShade ?? CONTENT_SHADE} format={(v) => (v ? `${Math.round(v * 100)}%` : 'Sin sombra')} onChange={(v) => patch(el, { autoShade: v })} />
+            <p className="mt-1 text-[11px] leading-snug text-dim">Oscurece la foto solo donde tiene encima textos, resultados, números o escudos.</p>
+          </Panel>
+        )
       case 'fade':
         return (
           <Panel title="Fundido inferior">
@@ -536,6 +544,7 @@ function toolsFor(el: SlideElement, replaceModel: () => void): Tool[] {
         { id: 'fit', label: 'Ajuste', icon: Crop },
         { id: 'frame', label: 'Encuadre', icon: Crosshair },
         { id: 'fade', label: 'Fundido', icon: Contrast },
+        { id: 'shade', label: 'Sombra', icon: Droplet },
         opacity,
         ...(el.assetId ? [{ id: 'remove', label: 'Quitar foto', icon: ImageOff, run: () => patch(el, { assetId: null } as never) }] : []),
         layer,

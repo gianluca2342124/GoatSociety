@@ -5,7 +5,7 @@ import type { Slide, SlideElement } from '../../model/types'
 import { withAlpha } from '../../model/tokens'
 import type { RenderCtx } from '../context'
 import { blurredCopy, deviceScale, fillStyle, makeCanvas, setShadow, type Ctx } from '../paint/canvas'
-import { drawImageFit, paintEffect, paintGlass, paintIcon, paintImage, paintShape, paintText } from './basic'
+import { drawImageFit, paintEffect, paintGlass, paintIcon, paintImage, paintShape, paintText, CONTENT_SHADE, paintContentShade } from './basic'
 import { paintCrest } from './crest'
 import { paintFormRow, paintProgressRing, paintStatBars, paintStatNumber, paintTable } from './stats'
 import { paintMatchList, paintPlayerList, paintResultsList } from './lists'
@@ -165,6 +165,16 @@ export function paintBackground(ctx: Ctx, slide: Slide, rc: RenderCtx, W: number
         ctx.drawImage(b, -e, -e, W + e * 2, H + e * 2)
       } else drawImageFit(ctx, img, W, H, bg.imageFit)
       ctx.restore()
+      // Background photos get the same shade under the content as photo elements.
+      const strength = bg.autoShade ?? CONTENT_SHADE
+      if (strength > 0) {
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(0, 0, W, H)
+        ctx.clip()
+        paintContentShade(ctx, rc, ctx.getTransform(), slide.elements, { x: 0, y: 0, w: W, h: H }, strength)
+        ctx.restore()
+      }
     }
   }
 }

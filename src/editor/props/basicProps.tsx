@@ -1,3 +1,4 @@
+import { CONTENT_SHADE } from '../../render/painters/basic'
 import type {
   BrandMarkElement,
   CrestElement,
@@ -180,6 +181,8 @@ export function ImageProps({ el }: { el: ImageElement }) {
       )}
       <Slider label="Radio de esquinas" min={0} max={400} step={1} value={el.cornerRadius} onChange={(v) => set({ cornerRadius: v })} />
       <Slider label="Fundido inferior" value={el.fadeBottom} onChange={(v) => set({ fadeBottom: v })} />
+      <Slider label="Sombra bajo el contenido" value={el.autoShade ?? CONTENT_SHADE} format={(v) => (v ? `${Math.round(v * 100)}%` : 'Sin sombra')} onChange={(v) => set({ autoShade: v })} />
+      <p className="-mt-1 text-[11px] leading-snug text-dim">Oscurece la foto solo donde tiene encima textos, resultados, números o escudos, para que se lean siempre.</p>
       <Toggle label="Voltear horizontalmente" checked={el.flipX} onChange={(v) => set({ flipX: v })} />
       <Toggle label="Blanco y negro" checked={el.grayscale} onChange={(v) => set({ grayscale: v })} />
       <Toggle label="Tinte de color" checked={!!el.tint} onChange={(v) => set({ tint: v ? { color: '$secondary', opacity: 0.45, blend: 'source-over' } : undefined })} />

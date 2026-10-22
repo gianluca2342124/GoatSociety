@@ -1,7 +1,7 @@
-import type { EffectElement, GlassElement, IconElement, ImageElement, ShapeElement, TextElement } from '../../model/types'
+import type { EffectElement, GlassElement, IconElement, ImageElement, ShapeElement, SlideElement, TextElement } from '../../model/types'
 import { mix, withAlpha } from '../../model/tokens'
 import type { RenderCtx } from '../context'
-import { blurredCopy, canvasFilterSupported, deviceScale, ellipsePath, fillStyle, makeCanvas, polygonPath, roundRect, type Ctx } from '../paint/canvas'
+import { blurredCopy, canvasFilterSupported, deviceScale, ellipsePath, fillStyle, makeCanvas, polygonPath, roundRect, setShadow, type Ctx } from '../paint/canvas'
 import { cloudTexture, grainTexture, seeded } from '../paint/noise'
 import { drawLayout } from '../text/draw'
 import { fitText, layoutText, type TextStyle } from '../text/layout'
@@ -283,6 +283,7 @@ export function paintImage(ctx: Ctx, el: ImageElement, rc: RenderCtx) {
   }
   if (!needsOffscreen) {
     draw(ctx)
+    shadeUnderContent(ctx, el, rc)
     return
   }
   const s = deviceScale(ctx)
@@ -291,6 +292,102 @@ export function paintImage(ctx: Ctx, el: ImageElement, rc: RenderCtx) {
   octx.scale(s, s)
   draw(octx)
   ctx.drawImage(off, 0, 0, w, h)
+  shadeUnderContent(ctx, el, rc)
+}
+
+// ── Automatic shade under content placed over photos ───────────────────────
+
+/** Default strength of the shade under scores, crests and texts placed over a photo. */
+export const CONTENT_SHADE = 0.7
+
+type Box = { x: number; y: number; w: number; h: number }
+
+const SHADE_IGNORE = new Set(['effect', 'glass'])
+/** These only count as content when small; full-page ones are layers of the photo itself. */
+const SHADE_IF_SMALL = new Set(['image', 'shape', 'tactics', 'stadium3d', 'model3d', 'mascot'])
+
+function rotatedBox(el: SlideElement, lx: number, ly: number, lw: number, lh: number): Box {
+  const r = (el.rotation * Math.PI) / 180
+  const c = Math.cos(r)
+  const s = Math.sin(r)
+  const pts = [
+    [lx, ly],
+    [lx + lw, ly],
+    [lx + lw, ly + lh],
+    [lx, ly + lh],
+  ].map(([x, y]) => [el.x + x * c - y * s, el.y + x * s + y * c])
+  const xs = pts.map((p) => p[0])
+  const ys = pts.map((p) => p[1])
+  const x = Math.min(...xs)
+  const y = Math.min(...ys)
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
+}
+
+/** Where an element really draws: a text's laid-out lines, not its whole box. */
+function contentBox(el: SlideElement, rc: RenderCtx): Box | null {
+  if (el.type === 'text') {
+    const { layout, padX, padY, w, h } = layoutFor(el, rc)
+    if (!layout.maxLineWidth) return null
+    const lw = Math.min(w, layout.maxLineWidth)
+    const lh = Math.min(h, layout.height)
+    const lx = padX + (el.align === 'center' ? (w - lw) / 2 : el.align === 'right' ? w - lw : 0)
+    const ly = padY + (el.verticalAlign === 'middle' ? (h - lh) / 2 : el.verticalAlign === 'bottom' ? h - lh : 0)
+    return rotatedBox(el, lx, ly, lw, lh)
+  }
+  return rotatedBox(el, 0, 0, el.width, el.height)
+}
+
+/**
+ * Darken a photo exactly where content sits on top of it, with a soft black
+ * shade, so scores, numbers, crests and texts always read. `slideToDevice`
+ * maps slide coordinates to the canvas; the caller has clipped to the photo.
+ */
+export function paintContentShade(ctx: Ctx, rc: RenderCtx, slideToDevice: DOMMatrix, above: SlideElement[], area: Box, strength: number) {
+  if (strength <= 0) return
+  const pageArea = rc.project.format.width * rc.project.format.height
+  const boxes: Box[] = []
+  for (const el of above) {
+    if (!el.visible || el.opacity < 0.05 || !rc.shown(el) || SHADE_IGNORE.has(el.type)) continue
+    if (SHADE_IF_SMALL.has(el.type) && el.width * el.height > pageArea * 0.35) continue
+    const b = contentBox(el, rc)
+    if (!b || b.x > area.x + area.w || b.x + b.w < area.x || b.y > area.y + area.h || b.y + b.h < area.y) continue
+    boxes.push(b)
+  }
+  if (!boxes.length) return
+  // Wide, soft falloff: it should read as a fade in the photo, never as a box.
+  const avg = boxes.reduce((a, b) => a + Math.min(b.w, b.h), 0) / boxes.length
+  const blur = Math.max(80, Math.min(240, avg * 0.9))
+  // Offset trick: the shapes are drawn far away and only their blurred shadow lands here.
+  const FAR = 100000
+  ctx.save()
+  ctx.setTransform(slideToDevice)
+  ctx.beginPath()
+  for (const b of boxes) {
+    const pad = Math.max(24, Math.min(110, Math.min(b.w, b.h) * 0.3))
+    ctx.rect(b.x - pad - FAR, b.y - pad, b.w + pad * 2, b.h + pad * 2)
+  }
+  setShadow(ctx, `rgba(0,0,0,${Math.min(1, strength)})`, blur, FAR, 0)
+  ctx.fillStyle = '#000'
+  ctx.fill()
+  ctx.restore()
+}
+
+/** The shade for a photo element, from the elements stacked above it. */
+function shadeUnderContent(ctx: Ctx, el: ImageElement, rc: RenderCtx) {
+  const strength = el.autoShade ?? CONTENT_SHADE
+  const i = strength > 0 ? rc.slide.elements.findIndex((e) => e.id === el.id) : -1
+  if (i < 0) return
+  ctx.save()
+  if (el.cornerRadius > 0) roundRect(ctx, 0, 0, el.width, el.height, el.cornerRadius)
+  else {
+    ctx.beginPath()
+    ctx.rect(0, 0, el.width, el.height)
+  }
+  ctx.clip()
+  // The painter runs in the element's own space: map slide coordinates through it.
+  const local = new DOMMatrix().translate(el.x, el.y).rotate(el.rotation)
+  paintContentShade(ctx, rc, ctx.getTransform().multiply(local.inverse()), rc.slide.elements.slice(i + 1), rotatedBox(el, 0, 0, el.width, el.height), strength)
+  ctx.restore()
 }
 
 // ── Icons (lucide geometry) ────────────────────────────────────────────────

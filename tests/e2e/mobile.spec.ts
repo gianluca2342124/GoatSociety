@@ -173,6 +173,10 @@ test('mobile editor: create, edit, pages, elements, photos, preview, export', as
   await page.getByTestId('m-photo-input').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: makePng(320, [40, 120, 200]) })
   await expect.poll(() => state<boolean>(page, `return !!slide.elements.find(e => e.type === 'image' && e.name === 'Foto').assetId`)).toBe(true)
   expect(await selectedNames(page)).toEqual(['Foto'])
+  // The photo darkens itself under the content on top; the «Sombra» tool adjusts it.
+  await page.getByTestId('tool-shade').tap()
+  await page.getByTestId('tool-panel').getByLabel('Sombra').fill('0.4')
+  expect(await state<number>(page, `return slide.elements.find(e => e.name === 'Foto').autoShade`)).toBeCloseTo(0.4, 2)
   await tapEmpty(page)
 
   // Crest replacement from the canvas updates the match (every page).

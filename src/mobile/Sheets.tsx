@@ -48,6 +48,7 @@ import { AppearanceSection, FillEditor, TransformSection } from '../editor/props
 import { exportProjectFile, goHome } from '../store/projectService'
 import { exportSlideBlob, downloadBlob } from '../render/exporter'
 import { photoMessage, saveToPhotos } from '../editor/saveToPhotos'
+import { CONTENT_SHADE } from '../render/painters/basic'
 import {
   activeIndex,
   addBlankPage,
@@ -70,6 +71,7 @@ import {
 import { useMobile } from './store'
 import { ActionRow, Chips, SectionLabel, Sheet } from './ui'
 import { ELEMENT_LABELS } from '../model/elements'
+import { Slider } from '../ui/controls'
 
 const close = () => useMobile.getState().set({ sheet: null })
 
@@ -318,6 +320,24 @@ export function StyleSheet() {
                 Quitar foto
               </button>
             </div>
+            {slide.background.imageAssetId && (
+              <div className="m-panel mt-2">
+                <Slider
+                  label="Sombra bajo el contenido"
+                  value={slide.background.autoShade ?? CONTENT_SHADE}
+                  format={(v) => (v ? `${Math.round(v * 100)}%` : 'Sin sombra')}
+                  onChange={(v) =>
+                    update(
+                      (d) => {
+                        const s = d.slides.find((x) => x.id === slide.id)
+                        if (s) s.background.autoShade = v
+                      },
+                      { key: `bgshade-${slide.id}` },
+                    )
+                  }
+                />
+              </div>
+            )}
             <SectionLabel>Formato del proyecto</SectionLabel>
             <div className="grid grid-cols-2 gap-2">
               {FORMAT_ORDER.map((p) => (

@@ -134,6 +134,11 @@ export interface ImageElement extends BaseElement {
   tint?: { color: ColorValue; opacity: number; blend: BlendMode }
   /** Fade the bottom of the image into transparency (0 = off). */
   fadeBottom: number
+  /**
+   * Soft black shade drawn over the photo only where other elements sit on
+   * top of it (scores, numbers, crests, texts…). 0 = off; unset = default.
+   */
+  autoShade?: number
 }
 
 // ── Team crest ─────────────────────────────────────────────────────────────
@@ -648,6 +653,8 @@ export interface SlideBackground {
   imageOpacity: number
   imageBlur: number
   transparent: boolean
+  /** Same automatic shade as photo elements, for the background photo. */
+  autoShade?: number
 }
 
 // ── Match data ─────────────────────────────────────────────────────────────

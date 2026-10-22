@@ -36,6 +36,7 @@ import { Stadium3DProps, TacticsProps } from './props/tacticsProps'
 import { Section, Slider, TextField, Toggle } from '../ui/controls'
 import { buildTemplateSlide, templateById } from '../templates'
 import { SlideStyleSection } from './StylePanel'
+import { CONTENT_SHADE } from '../render/painters/basic'
 import { alignSelection, deleteSelection as deleteWithUndo, duplicateSelection as duplicateWithToast, type AlignMode } from './actions'
 
 export function ElementSpecific({ el }: { el: SlideElement }) {
@@ -253,6 +254,7 @@ function SlidePanel() {
           <>
             <Slider label="Opacidad de la imagen" value={slide.background.imageOpacity} onChange={(v) => setBg({ imageOpacity: v })} />
             <Slider label="Desenfoque de la imagen" min={0} max={60} step={1} value={slide.background.imageBlur} onChange={(v) => setBg({ imageBlur: v })} />
+            <Slider label="Sombra bajo el contenido" value={slide.background.autoShade ?? CONTENT_SHADE} format={(v) => (v ? `${Math.round(v * 100)}%` : 'Sin sombra')} onChange={(v) => setBg({ autoShade: v })} />
           </>
         )}
       </Section>
