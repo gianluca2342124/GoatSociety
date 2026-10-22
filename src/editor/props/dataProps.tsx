@@ -538,7 +538,7 @@ export function ScoreboardProps({ el }: { el: ScoreboardElement }) {
         </Row>
         <Toggle label="Escudos" checked={el.showCrests} onChange={(v) => set({ showCrests: v })} />
         <Toggle label="Nombres" checked={el.showNames} onChange={(v) => set({ showNames: v })} />
-        <Toggle label="Estado (Final, Descanso…)" checked={el.showNote} onChange={(v) => set({ showNote: v })} />
+        {el.layout !== 'compact' && <Toggle label="Estado (Final, Descanso…)" checked={el.showNote} onChange={(v) => set({ showNote: v })} />}
         <Toggle label="Ganador en color de acento" checked={el.highlightWinner} onChange={(v) => set({ highlightWinner: v })} />
         <Slider label="Tamaño del resultado" min={60} max={420} step={1} value={el.scoreSize} onChange={(v) => set({ scoreSize: v })} />
         <FontSelect label="Fuente del resultado" value={el.scoreFont} onChange={(v) => set({ scoreFont: v })} />

@@ -257,16 +257,14 @@ export function paintScoreboard(ctx: Ctx, el: ScoreboardElement, rc: RenderCtx) 
   const home = rc.match.home
   const away = rc.match.away
   if (el.layout === 'compact') {
-    // Pill: HOME 2 - 1 AWAY
-    const fs = Math.min(h * 0.5, el.scoreSize * 0.4)
-    const txt = `${sc.home} - ${sc.away}`
+    // Pill: [crest] HOME 2 - 1 AWAY [crest]
     roundRect(ctx, 0, 0, w, h, h / 2)
     ctx.fillStyle = withAlpha(textC, 0.08)
     ctx.fill()
     ctx.strokeStyle = withAlpha(textC, 0.25)
     ctx.lineWidth = 2
     ctx.stroke()
-    const cs = h * 0.62
+    const cs = el.showCrests ? h * 0.62 : 0
     if (el.showCrests) {
       ctx.save()
       ctx.translate(h * 0.3, (h - cs) / 2)
@@ -277,15 +275,52 @@ export function paintScoreboard(ctx: Ctx, el: ScoreboardElement, rc: RenderCtx) 
       paintCrestBox(ctx, away, cs, cs, rc)
       ctx.restore()
     }
-    drawLabel(ctx, txt, w / 2, h / 2, { family: scoreFont, size: fs * 1.25, color: textC, align: 'center', maxWidth: w - (el.showCrests ? cs * 2 + h : h) })
+    const inner = w - (cs ? cs * 2 + h * 0.9 : h * 0.6)
+    let fs = Math.min(h * 0.62, el.scoreSize * 0.5)
+    const nameS = fs * 0.62
+    const parts = () => {
+      const sw = labelWidth(`${sc.home} - ${sc.away}`, { family: scoreFont, size: fs })
+      const nw = el.showNames ? labelWidth(home.abbr, { family: nameFont, size: nameS, weight: 700, uppercase: true }) + labelWidth(away.abbr, { family: nameFont, size: nameS, weight: 700, uppercase: true }) + fs * 0.9 : 0
+      return { sw, nw }
+    }
+    let m = parts()
+    if (m.sw + m.nw > inner) {
+      fs *= inner / (m.sw + m.nw)
+      m = parts()
+    }
+    const ns = fs * 0.62
+    const dashW = labelWidth(' - ', { family: scoreFont, size: fs })
+    const homeW = labelWidth(sc.home, { family: scoreFont, size: fs })
+    const awayW = labelWidth(sc.away, { family: scoreFont, size: fs })
+    const homeNameW = el.showNames ? labelWidth(home.abbr, { family: nameFont, size: ns, weight: 700, uppercase: true }) : 0
+    let x = w / 2 - (m.sw + m.nw) / 2
+    const cy = h / 2
+    if (el.showNames) {
+      drawLabel(ctx, home.abbr, x, cy, { family: nameFont, size: ns, weight: 700, color: mutedC, align: 'left', uppercase: true })
+      x += homeNameW + fs * 0.45
+    }
+    drawLabel(ctx, sc.home, x, cy, { family: scoreFont, size: fs, color: colorOf('home'), align: 'left' })
+    drawLabel(ctx, '-', x + homeW + dashW / 2, cy, { family: scoreFont, size: fs * 0.7, color: mutedC, align: 'center' })
+    drawLabel(ctx, sc.away, x + homeW + dashW, cy, { family: scoreFont, size: fs, color: colorOf('away'), align: 'left' })
+    if (el.showNames) drawLabel(ctx, away.abbr, x + homeW + dashW + awayW + fs * 0.45, cy, { family: nameFont, size: ns, weight: 700, color: mutedC, align: 'left', uppercase: true })
     return
   }
   if (el.layout === 'stacked') {
+    const crestS = el.showCrests ? Math.min(h * 0.24, w * 0.2) : 0
     const nameS = Math.min(56, h * 0.13)
     const noteS = el.showNote && sc.note ? Math.min(40, h * 0.1) : 0
-    const avail = h - (el.showNames ? nameS * 1.8 : 0) - (noteS ? noteS * 1.8 : 0)
+    const avail = h - (crestS ? crestS * 1.15 : 0) - (el.showNames ? nameS * 1.8 : 0) - (noteS ? noteS * 1.8 : 0)
     const ss = Math.max(20, Math.min(el.scoreSize, avail / capK))
     let y = 0
+    if (crestS) {
+      for (const [t, cx] of [[home, w * 0.25], [away, w * 0.75]] as const) {
+        ctx.save()
+        ctx.translate(cx - crestS / 2, 0)
+        paintCrestBox(ctx, t, crestS, crestS, rc)
+        ctx.restore()
+      }
+      y += crestS * 1.15
+    }
     if (el.showNames) {
       drawLabel(ctx, home.shortName || home.name, w * 0.25, y, { family: nameFont, size: nameS, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: w * 0.46 })
       drawLabel(ctx, away.shortName || away.name, w * 0.75, y, { family: nameFont, size: nameS, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: w * 0.46 })
@@ -297,13 +332,26 @@ export function paintScoreboard(ctx: Ctx, el: ScoreboardElement, rc: RenderCtx) 
     if (noteS) drawLabel(ctx, sc.note, w / 2, y + ss * capK + noteS * 0.9, { family: nameFont, size: noteS, weight: 600, color: mutedC, align: 'center', baseline: 'top', uppercase: true, letterSpacing: noteS * 0.04, maxWidth: w })
     return
   }
-  // Row: crest  2 - 1  crest (names under crests, note under the score)
+  // Row: crest  2 - 1  crest. Names go under the crests (or under each score
+  // when there are no crests); the status sits under the score.
   const noteS = el.showNote && sc.note ? Math.min(40, h * 0.12) : 0
   const nameS = el.showNames ? Math.min(46, h * 0.13) : 0
+  const namesBelowScore = nameS > 0 && !el.showCrests
   const cs = el.showCrests ? Math.min(h - (nameS ? nameS * 1.9 : 0), w * 0.24) : 0
-  const ss = Math.max(20, Math.min(el.scoreSize, (h - (noteS ? noteS * 1.9 : 0)) / capK, (w - cs * 2) / 2.6 / 0.62))
+  const gap = Math.max(12, w * 0.02)
+  const below = (noteS ? noteS * 1.9 : 0) + (namesBelowScore ? nameS * 1.9 : 0)
+  // The score must fit between the crests, digits included («10 - 2»).
+  const scoreRoom = (ss: number) => w / 2 - ss * 0.32 - cs - gap
+  let ss = Math.max(20, Math.min(el.scoreSize, (h - below) / capK))
+  const widest = () => Math.max(labelWidth(sc.home, { family: scoreFont, size: ss }), labelWidth(sc.away, { family: scoreFont, size: ss }))
+  for (let i = 0; i < 6 && widest() > scoreRoom(ss) && ss > 20; i++) ss = Math.max(20, ss * Math.min(0.95, scoreRoom(ss) / widest()))
   const cap = ss * capK
-  const top = (h - cap - (noteS ? noteS * 1.9 : 0)) / 2
+  const top = (h - cap - below) / 2
+  const mid = w / 2
+  const homeW = labelWidth(sc.home, { family: scoreFont, size: ss })
+  const awayW = labelWidth(sc.away, { family: scoreFont, size: ss })
+  const homeLeft = mid - ss * 0.32 - homeW
+  const awayRight = mid + ss * 0.32 + awayW
   if (el.showCrests) {
     const cy = nameS ? (h - nameS * 1.9 - cs) / 2 : (h - cs) / 2
     ctx.save()
@@ -315,14 +363,27 @@ export function paintScoreboard(ctx: Ctx, el: ScoreboardElement, rc: RenderCtx) 
     paintCrestBox(ctx, away, cs, cs, rc)
     ctx.restore()
     if (nameS) {
-      drawLabel(ctx, home.shortName || home.name, cs / 2, cy + cs + nameS * 0.6, { family: nameFont, size: nameS, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: cs * 1.4 })
-      drawLabel(ctx, away.shortName || away.name, w - cs / 2, cy + cs + nameS * 0.6, { family: nameFont, size: nameS, weight: 700, color: textC, align: 'center', baseline: 'top', uppercase: true, maxWidth: cs * 1.4 })
+      // Under the crest, never running under the score and never past the edges.
+      const ny = cy + cs + nameS * 0.6
+      const opts = { family: nameFont, size: nameS, weight: 700, color: textC, baseline: 'top' as const, uppercase: true }
+      const hn = home.shortName || home.name
+      const an = away.shortName || away.name
+      if (labelWidth(hn, opts) <= cs) drawLabel(ctx, hn, cs / 2, ny, { ...opts, align: 'center' })
+      else drawLabel(ctx, hn, 0, ny, { ...opts, align: 'left', maxWidth: Math.max(cs, homeLeft - gap) })
+      if (labelWidth(an, opts) <= cs) drawLabel(ctx, an, w - cs / 2, ny, { ...opts, align: 'center' })
+      else drawLabel(ctx, an, w, ny, { ...opts, align: 'right', maxWidth: Math.max(cs, w - awayRight - gap) })
     }
   }
-  const mid = w / 2
-  const sideW = (w - cs * 2) / 2
-  drawLabel(ctx, sc.home, mid - ss * 0.32, top, { family: scoreFont, size: ss, color: colorOf('home'), align: 'right', baseline: 'top', maxWidth: sideW * 0.8 })
+  drawLabel(ctx, sc.home, mid - ss * 0.32, top, { family: scoreFont, size: ss, color: colorOf('home'), align: 'right', baseline: 'top' })
   drawLabel(ctx, '-', mid, top + cap / 2, { family: scoreFont, size: ss * 0.45, color: mutedC, align: 'center' })
-  drawLabel(ctx, sc.away, mid + ss * 0.32, top, { family: scoreFont, size: ss, color: colorOf('away'), align: 'left', baseline: 'top', maxWidth: sideW * 0.8 })
-  if (noteS) drawLabel(ctx, sc.note, mid, top + cap + noteS * 0.9, { family: nameFont, size: noteS, weight: 600, color: mutedC, align: 'center', baseline: 'top', uppercase: true, letterSpacing: noteS * 0.04, maxWidth: w - cs * 2 })
+  drawLabel(ctx, sc.away, mid + ss * 0.32, top, { family: scoreFont, size: ss, color: colorOf('away'), align: 'left', baseline: 'top' })
+  let y = top + cap
+  if (namesBelowScore) {
+    const opts = { family: nameFont, size: nameS, weight: 700, color: textC, baseline: 'top' as const, uppercase: true, maxWidth: w * 0.46 }
+    // Each name owns its half of the width, so long names never meet in the middle.
+    drawLabel(ctx, home.shortName || home.name, w * 0.25, y + nameS * 0.6, { ...opts, align: 'center' })
+    drawLabel(ctx, away.shortName || away.name, w * 0.75, y + nameS * 0.6, { ...opts, align: 'center' })
+    y += nameS * 1.9
+  }
+  if (noteS) drawLabel(ctx, sc.note, mid, y + noteS * 0.9, { family: nameFont, size: noteS, weight: 600, color: mutedC, align: 'center', baseline: 'top', uppercase: true, letterSpacing: noteS * 0.04, maxWidth: w - cs * 2 })
 }
