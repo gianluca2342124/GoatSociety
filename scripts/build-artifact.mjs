@@ -12,14 +12,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
-const out = path.join(root, 'dist-artifact')
+// ARTIFACT_DIR builds somewhere else (e.g. while the last build is still being tested).
+const out = path.resolve(root, process.env.ARTIFACT_DIR ?? 'dist-artifact')
 
-execSync('npx vite build --mode artifact', { cwd: root, stdio: 'inherit' })
+execSync(`npx vite build --mode artifact --outDir ${JSON.stringify(out)} --emptyOutDir`, { cwd: root, stdio: 'inherit' })
 
 const index = fs.readFileSync(path.join(out, 'index.html'), 'utf8')
 const jsRef = /<script type="module"[^>]*src="\.\/([^"]+\.js)"[^>]*><\/script>/.exec(index)
 const cssRef = /<link rel="stylesheet"[^>]*href="\.\/([^"]+\.css)"[^>]*>/.exec(index)
-if (!jsRef || !cssRef) throw new Error('Could not find the bundle in dist-artifact/index.html')
+if (!jsRef || !cssRef) throw new Error(`Could not find the bundle in ${out}/index.html`)
 
 let js = fs.readFileSync(path.join(out, jsRef[1]), 'utf8')
 let css = fs.readFileSync(path.join(out, cssRef[1]), 'utf8')
