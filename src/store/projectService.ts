@@ -227,9 +227,10 @@ export async function goHome() {
   if (p && (pending || p !== lastSaved) && !(await doSave(p))) {
     const leave = await askConfirm({
       title: 'No se han podido guardar los cambios',
-      body: 'Este navegador no deja guardar ahora mismo. Si sales, se perderán los últimos cambios. Exporta una copia desde el aviso antes de salir.',
+      body: 'Este navegador no deja guardar ahora mismo. Si sales, se perderán los últimos cambios. Exporta una copia antes de salir.',
       confirmLabel: 'Salir sin guardar',
       danger: true,
+      extra: { label: 'Exportar copia', run: () => void exportProjectFile(p) },
     })
     if (!leave) return
   }

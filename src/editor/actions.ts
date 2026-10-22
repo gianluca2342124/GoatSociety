@@ -76,14 +76,20 @@ export function addTemplatePage(def: TemplateDef) {
   toast(`Página «${def.name}» añadida`)
 }
 
+/** The page still has a name the app gave it (its template's, a blank page's, a copy's…). */
+function isDefaultName(slide: Slide): boolean {
+  const base = slide.name.replace(/ \(copia\)$/, '')
+  return !base || base === templateById(slide.templateId)?.name || /^(Página en blanco|Página \d+|Diapositiva( \d+)?)$/.test(base)
+}
+
 export function replacePageTemplate(def: TemplateDef) {
   const s = useEditor.getState()
   const p = s.project
   const cur = activeSlideOf(s)
   if (!p || !cur) return
   const mark = historyMark()
-  // A name the person chose stays; the old template's own name follows the new template.
-  const name = cur.name && cur.name !== templateById(cur.templateId)?.name ? cur.name : def.name
+  // A name the person chose stays; the app's own names follow the new template.
+  const name = isDefaultName(cur) ? def.name : cur.name
   s.replaceSlide(cur.id, { ...buildTemplateSlide(def, p.format, p.match), name, overrides: cur.overrides })
   toast(`Plantilla cambiada a «${def.name}»`, mark)
 }

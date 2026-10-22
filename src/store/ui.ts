@@ -90,8 +90,9 @@ export const useUI = create<UIState>((set) => ({
   set: (p) => set(p),
   toast: (text, kind = 'info', action, ms) => {
     const id = ++toastId
-    // One undo-style toast at a time keeps the screen calm.
-    set((s) => ({ toasts: [...s.toasts.filter((t) => !(action && t.action)), { id, kind, text, action }].slice(-3) }))
+    // One undo-style toast at a time keeps the screen calm (an error with an
+    // action, such as a failed save, never pushes out a «Deshacer»).
+    set((s) => ({ toasts: [...s.toasts.filter((t) => !(action && t.action && (t.kind === 'error') === (kind === 'error'))), { id, kind, text, action }].slice(-3) }))
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), ms ?? (action ? 5200 : kind === 'error' ? 6000 : 3200))
     return id
   },

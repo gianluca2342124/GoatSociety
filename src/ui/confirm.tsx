@@ -9,6 +9,8 @@ interface ConfirmRequest {
   body: string
   confirmLabel: string
   danger?: boolean
+  /** A third button that runs without closing (e.g. «Exportar copia» before leaving). */
+  extra?: { label: string; run: () => void }
   resolve: (ok: boolean) => void
 }
 
@@ -33,10 +35,16 @@ export function ConfirmHost() {
       onClose={() => answer(false)}
       footer={
         <>
-          <button type="button" className="btn btn-ghost min-h-10" onClick={() => answer(false)} data-testid="confirm-cancel">
+          {req.extra && (
+            <button type="button" className="btn btn-gold min-h-10 sm:mr-auto" onClick={req.extra.run} data-testid="confirm-extra">
+              {req.extra.label}
+            </button>
+          )}
+          {/* With a destructive answer, Enter keeps the safe choice. */}
+          <button type="button" className="btn btn-ghost min-h-10" onClick={() => answer(false)} data-testid="confirm-cancel" autoFocus={!!req.danger}>
             Cancelar
           </button>
-          <button type="button" className={`btn min-h-10 ${req.danger ? 'border-loss/60 bg-loss/15 text-loss' : 'btn-gold'}`} onClick={() => answer(true)} data-testid="confirm-ok" autoFocus>
+          <button type="button" className={`btn min-h-10 ${req.danger ? 'border-loss/60 bg-loss/15 text-loss' : 'btn-gold'}`} onClick={() => answer(true)} data-testid="confirm-ok" autoFocus={!req.danger}>
             {req.confirmLabel}
           </button>
         </>
