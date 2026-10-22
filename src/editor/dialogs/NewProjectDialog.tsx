@@ -46,7 +46,11 @@ export function NewProjectDialog() {
   const [homeT, setHomeT] = useState<TeamLibraryEntry | null>(teams.find((t) => t.name === 'PSG') ?? null)
   const [awayT, setAwayT] = useState<TeamLibraryEntry | null>(teams.find((t) => t.name === 'Barcelona') ?? null)
   const [competition, setCompetition] = useState('Champions League')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  // Local calendar day (toISOString would give yesterday after local midnight in Europe).
+  const [date, setDate] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
   const [time, setTime] = useState('21:00')
   const [venue, setVenue] = useState('')
   const [sample, setSample] = useState(true)
@@ -72,7 +76,10 @@ export function NewProjectDialog() {
     base.date = date
     base.time = time
     base.venue = venue
-    base.headline = `${base.home.shortName} vs [[${base.away.shortName}]]`
+    // Linked to the team names, so renaming a team later updates the headline too.
+    base.headline = '{home.short} vs [[{away.short}]]'
+    // The sample pick names the away side of the sample data: point it at the chosen team.
+    if (sample) base.predictions = base.predictions.map((p) => ({ ...p, pick: p.pick.replace('Barcelona', base.away.shortName) }))
     base.subheadline = 'Análisis y claves del partido'
     if (!sample) {
       base.stats = ['Goles por partido', 'Posesión', 'Tiros a puerta', 'xG por partido', 'Goles encajados'].map((l, i) => stat(l, null, null, i === 1 ? '%' : '', i === 1 ? 0 : 1, i === 4))

@@ -45,6 +45,6 @@ export function makeRenderCtx(project: Project, slide: Slide, brand: BrandKit, m
     error3d: (el) => get3DError(el, project, slide, brand, scale3d),
     color: (v) => resolveColor(v, cctx),
     font: (v) => resolveFont(v, brand),
-    text: (s) => resolveText(s, { match, brand, page, pages }),
+    text: (s) => resolveText(s, { match, brand, page, pages, pageNumbers: project.pageNumbers }),
   }
 }

@@ -46,9 +46,24 @@ export const PAINTERS: Record<SlideElement['type'], Painter> = {
 }
 
 function callPainter(ctx: Ctx, el: SlideElement, rc: RenderCtx) {
+  // Count the painter's save() calls so a throw halfway can't leave its
+  // transform or clip applied to every element painted after it.
+  let depth = 0
+  const own = ctx as unknown as { save: () => void; restore: () => void }
+  const save = ctx.save
+  const restore = ctx.restore
+  own.save = () => {
+    depth++
+    save.call(ctx)
+  }
+  own.restore = () => {
+    depth--
+    restore.call(ctx)
+  }
   try {
     PAINTERS[el.type](ctx, el as never, rc)
   } catch (e) {
+    for (; depth > 0; depth--) restore.call(ctx)
     // A broken element must never break the whole slide.
     if (rc.mode === 'editor') {
       ctx.save()
@@ -58,6 +73,9 @@ function callPainter(ctx: Ctx, el: SlideElement, rc: RenderCtx) {
       ctx.restore()
     }
     console.error('Painter error', el.type, e)
+  } finally {
+    delete (own as { save?: unknown }).save
+    delete (own as { restore?: unknown }).restore
   }
 }
 

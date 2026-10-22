@@ -1,3 +1,4 @@
+import { stripMarkup } from '../text/layout'
 // GOAT EDITORIAL charts: rankings list and three-way probability bar.
 // Flat, thick, proportional — one accent, everything else neutral.
 import type { BadgeElement, ProbabilityElement, RankingElement, RankingRow, ScoreboardElement } from '../../model/types'
@@ -174,13 +175,13 @@ const BADGE_ICON: Record<BadgeElement['icon'], string | null> = { none: null, ch
 export function paintBadge(ctx: Ctx, el: BadgeElement, rc: RenderCtx) {
   const { width: w, height: h } = el
   const color = rc.color(el.color)
-  const label = rc.text(el.text)
+  const label = stripMarkup(rc.text(el.text)).trim()
   const fam = rc.font(el.font)
   const boxed = el.style !== 'text'
   let fs = Math.min(el.fontSize, h * (boxed ? 0.46 : 0.8))
   const icon = BADGE_ICON[el.icon]
   // Nothing to say (e.g. an empty {score.note}): draw nothing rather than an empty pill.
-  if (!label.trim() && !icon) return
+  if (!label && !icon) return
   const measure = (size: number) => {
     const tw = labelWidth(label, { family: fam, size, weight: 700, uppercase: true, letterSpacing: size * 0.04 })
     const iconS = icon ? size * 1.05 : 0

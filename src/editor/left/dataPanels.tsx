@@ -10,7 +10,7 @@ import { AssetPicker } from '../props/common'
 import { ScoreFields } from '../props/dataProps'
 import { PanelTitle } from './contentPanels'
 import { FORMATIONS } from '../../tactics/formations'
-import { resolveColor, visibleOnDark } from '../../model/tokens'
+import { abbrOf, resolveColor, visibleOnDark } from '../../model/tokens'
 import { uid } from '../../model/ids'
 
 function SampleBanner() {
@@ -99,9 +99,9 @@ export function MatchPanel() {
         />
       </div>
       <Section title="Enfrentamiento">
-        {field('homeName', 'Equipo local', () => m.home.name, (v) => setM((d) => void (d.home.name = v), 'm-home'))}
+        {field('homeName', 'Equipo local', () => m.home.name, (v) => setM((d) => void ((d.home.name = v), (d.home.abbr = abbrOf(v))), 'm-home'))}
         {field('homeShort', 'Local (nombre corto)', () => m.home.shortName, (v) => setM((d) => void (d.home.shortName = v), 'm-homeshort'))}
-        {field('awayName', 'Equipo visitante', () => m.away.name, (v) => setM((d) => void (d.away.name = v), 'm-away'))}
+        {field('awayName', 'Equipo visitante', () => m.away.name, (v) => setM((d) => void ((d.away.name = v), (d.away.abbr = abbrOf(v))), 'm-away'))}
         {field('awayShort', 'Visitante (nombre corto)', () => m.away.shortName, (v) => setM((d) => void (d.away.shortName = v), 'm-awayshort'))}
         <button type="button" className="btn w-full text-[12px]" onClick={() => useUI.getState().set({ leftTab: 'teams' })}>
           Escudos, colores y jugadores →

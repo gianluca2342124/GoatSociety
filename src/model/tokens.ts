@@ -5,6 +5,8 @@ export interface TokenContext {
   brand: BrandKit
   page: number
   pages: number
+  /** Project switch «Numeración de páginas»: false empties every page-number token. */
+  pageNumbers?: boolean
 }
 
 // ── Colors ──────────────────────────────────────────────────────────────────
@@ -27,9 +29,43 @@ const FIXED: Record<string, string> = {
   $onAccent: '#050505',
 }
 
+const colorCache = new Map<string, boolean>()
+let colorProbe: CanvasRenderingContext2D | null | undefined
+
+/**
+ * True for a colour the canvas accepts. A half-typed hex such as «#2B» would
+ * otherwise reach CanvasGradient.addColorStop, which throws and breaks the
+ * drawing of the whole page.
+ */
+export function isCssColor(v: string): boolean {
+  if (/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return true
+  if (v.startsWith('#')) return false
+  if (/^(?:rgb|hsl)a?\(\s*[-\d.%\s,/]+\)$/i.test(v)) return true
+  const known = colorCache.get(v)
+  if (known !== undefined) return known
+  if (colorProbe === undefined) {
+    try {
+      colorProbe = typeof document !== 'undefined' && typeof navigator !== 'undefined' && !/jsdom/i.test(navigator.userAgent) ? document.createElement('canvas').getContext('2d') : null
+    } catch {
+      colorProbe = null
+    }
+  }
+  let ok = true
+  if (colorProbe) {
+    colorProbe.fillStyle = '#010203'
+    colorProbe.fillStyle = v
+    ok = colorProbe.fillStyle !== '#010203'
+  }
+  colorCache.set(v, ok)
+  return ok
+}
+
+/** Shown while a colour value is not valid yet (e.g. «#2B» halfway through typing). */
+const INVALID_COLOR = '#8A8A8A'
+
 export function resolveColor(value: ColorValue | undefined, ctx: ColorContext): string {
   if (!value) return 'rgba(0,0,0,0)'
-  if (value[0] !== '$') return value
+  if (value[0] !== '$') return isCssColor(value) ? value : INVALID_COLOR
   const p = ctx.brand.palette
   const fixed = FIXED[value]
   if (fixed) return fixed
@@ -152,12 +188,18 @@ export function visibleOnDark(color: string, minLum = 0.06): string {
 
 // ── Match overrides ─────────────────────────────────────────────────────────
 
+/** Three-letter crest abbreviation derived from a team name. */
+export function abbrOf(name: string): string {
+  return name.replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 3).toUpperCase()
+}
+
 export function applyOverrides(match: MatchData, o: MatchOverrides | undefined): MatchData {
   if (!o || Object.keys(o).length === 0) return match
   return {
     ...match,
-    home: { ...match.home, name: o.homeName ?? match.home.name, shortName: o.homeShort ?? match.home.shortName },
-    away: { ...match.away, name: o.awayName ?? match.away.name, shortName: o.awayShort ?? match.away.shortName },
+    // Overriding a team's name on one page also renames it in the short forms (and the crest letters).
+    home: { ...match.home, name: o.homeName ?? match.home.name, shortName: o.homeShort ?? o.homeName ?? match.home.shortName, abbr: o.homeName ? abbrOf(o.homeName) : match.home.abbr },
+    away: { ...match.away, name: o.awayName ?? match.away.name, shortName: o.awayShort ?? o.awayName ?? match.away.shortName, abbr: o.awayName ? abbrOf(o.awayName) : match.away.abbr },
     competition: o.competition ?? match.competition,
     stage: o.stage ?? match.stage,
     date: o.date ?? match.date,
@@ -312,16 +354,16 @@ export function tokenValue(key: string, ctx: TokenContext): string | undefined {
     case 'disclaimer':
       return brand.disclaimer
     case 'page':
-      return pad(ctx.page)
+      return ctx.pageNumbers === false ? '' : pad(ctx.page)
     case 'pages':
-      return pad(ctx.pages)
+      return ctx.pageNumbers === false ? '' : pad(ctx.pages)
     // "1/7" — empty on single posts so a lone page never reads "1/1".
     case 'pageof':
-      return ctx.pages > 1 ? `${ctx.page}/${ctx.pages}` : ''
+      return ctx.pageNumbers !== false && ctx.pages > 1 ? `${ctx.page}/${ctx.pages}` : ''
     case 'num':
-      return String(ctx.page)
+      return ctx.pageNumbers === false ? '' : String(ctx.page)
     case 'total':
-      return String(ctx.pages)
+      return ctx.pageNumbers === false ? '' : String(ctx.pages)
     case 'score':
       return `${match.score?.home || '0'} - ${match.score?.away || '0'}`
     case 'score.home':
@@ -340,12 +382,14 @@ export function tokenValue(key: string, ctx: TokenContext): string | undefined {
   }
 }
 
-export function resolveText(text: string, ctx: TokenContext): string {
+export function resolveText(text: string, ctx: TokenContext, depth = 0): string {
   if (!text || text.indexOf('{') === -1) return text
-  return text.replace(/\{([a-zA-Z0-9.]+)\}/g, (all, key: string) => {
+  const out = text.replace(/\{([a-zA-Z0-9.]+)\}/g, (all, key: string) => {
     const v = tokenValue(key, ctx)
     return v === undefined ? all : v
   })
+  // A data field can hold tokens too (a headline such as «{home.short} vs [[{away.short}]]»).
+  return depth < 2 && out !== text && /\{[a-zA-Z0-9.]+\}/.test(out) ? resolveText(out, ctx, depth + 1) : out
 }
 
 /** True when the text references shared match data. */
