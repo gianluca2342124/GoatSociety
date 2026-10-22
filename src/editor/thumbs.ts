@@ -111,5 +111,6 @@ export function useTemplateThumb(def: TemplateDef, project: Project, brand: Bran
 }
 
 function matchCore(m: MatchData) {
-  return { h: m.home.name, a: m.away.name, hc: m.home.primary, ac: m.away.primary, hk: m.home.crestAssetId, ak: m.away.crestAssetId, c: m.competition, hl: m.headline, d: m.date }
+  const t = (x: MatchData['home']) => [x.name, x.shortName, x.abbr, x.primary, x.secondary, x.crestAssetId, x.crestStyle]
+  return { h: t(m.home), a: t(m.away), c: m.competition, st: m.stage, hl: m.headline, sh: m.subheadline, d: m.date, tm: m.time, v: m.venue, sc: m.score }
 }

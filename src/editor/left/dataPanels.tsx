@@ -56,7 +56,7 @@ export function MatchPanel() {
     }
     return (
       <div className="relative">
-        <Row label={label} hint={overridden ? (scope === 'slide' ? 'sobrescrito aquí' : 'esta diapositiva lo sobrescribe') : undefined}>
+        <Row label={label} hint={overridden && scope !== 'slide' ? 'esta diapositiva lo sobrescribe' : undefined}>
           {opts.type ? (
             <input type={opts.type} className="field" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} />
           ) : opts.multiline ? (

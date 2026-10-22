@@ -85,6 +85,17 @@ export function TextProps({ el }: { el: TextElement }) {
       <Section title="Color">
         <FillEditor fill={el.fill} onChange={(f) => set({ fill: f })} allowNone={false} />
         <ColorField label="Acento [[ ]]" value={el.accentColor} onChange={(c) => set({ accentColor: c })} />
+        <Row label="Acabado">
+          <Segmented
+            value={el.effect ?? 'none'}
+            onChange={(v) => set({ effect: v })}
+            options={[
+              { value: 'none', label: 'Liso' },
+              { value: 'metallic', label: 'Metálico' },
+              { value: 'gradient', label: 'Degradado' },
+            ]}
+          />
+        </Row>
         <Toggle label="Contorno" checked={!!el.stroke && el.stroke.width > 0} onChange={(v) => set({ stroke: v ? { color: '#000000', width: 3 } : undefined })} />
         {el.stroke && el.stroke.width > 0 && (
           <div className="grid grid-cols-2 gap-2">

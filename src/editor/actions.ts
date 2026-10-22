@@ -118,9 +118,10 @@ export function deleteSelection() {
     return
   }
   const label = selectionLabel()
+  const many = els.length > 1
   s.deleteSelection()
   useUI.getState().set({ editingTextId: null, tacticsEditId: null })
-  toast(`${label} eliminado`, true)
+  toast(many ? `Se han eliminado ${label}` : `Se ha eliminado «${label}»`, true)
 }
 
 export function duplicateSelection() {
@@ -132,8 +133,9 @@ export function duplicateSelection() {
 export function copySelection() {
   if (!useEditor.getState().selection.length) return
   const label = selectionLabel()
+  const many = useEditor.getState().selection.length > 1
   useEditor.getState().copySelection()
-  toast(`${label} copiado · pégalo en cualquier página`)
+  toast(many ? `Se han copiado ${label} · pégalos en cualquier página` : `Se ha copiado «${label}» · pégalo en cualquier página`)
 }
 
 export function pasteClipboard() {

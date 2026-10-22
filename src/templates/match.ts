@@ -69,7 +69,12 @@ export const footTop = (t: TCtx, lines = 1, size = 46) => t.contentBottom - (siz
 
 /** Team name centered under a crest (keeps the cover linked to the match data). */
 function crestName(t: TCtx, side: 'home' | 'away', x: number, y: number, w: number, size: number) {
-  return label(t, side === 'home' ? '{home.short}' : '{away.short}', { x: x - w * 0.15, y, w: w * 1.3, h: size * t.s * 1.25 }, size, {
+  // Under the crest, inside the margins and never across the centre line.
+  let x0 = Math.max(t.left, x - w * 0.15)
+  let x1 = Math.min(t.left + t.cw, x + w * 1.15)
+  if (side === 'home') x1 = Math.min(x1, t.cx - px(t, 20))
+  else x0 = Math.max(x0, t.cx + px(t, 20))
+  return label(t, side === 'home' ? '{home.short}' : '{away.short}', { x: x0, y, w: x1 - x0, h: size * t.s * 1.25 }, size, {
     name: side === 'home' ? 'Nombre local' : 'Nombre visitante',
     align: 'center',
     fontWeight: 700,

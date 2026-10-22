@@ -44,7 +44,7 @@ export function TextSheet() {
         </button>
       </div>
       <p className="mt-1.5 text-[11px] leading-snug text-dim">
-        Solo cambia este texto.{el.type === 'text' ? ' Pon una palabra entre [[corchetes]] para destacarla en color.' : ''}
+        Solo cambia este texto.{edit.hasLive ? ' Lo que va entre llaves, como {pageof}, se rellena solo.' : ''}{el.type === 'text' ? ' Pon una palabra entre [[corchetes]] para destacarla en color.' : ''}
         {edit.fieldLabel && (
           <>
             {' '}

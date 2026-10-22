@@ -90,6 +90,21 @@ interface Token {
   space: boolean
 }
 
+/** True when an [[ is still open at the end of the paragraph. */
+function accentOpenAtEnd(paragraph: string): boolean {
+  let open = false
+  for (let i = 0; i < paragraph.length - 1; i++) {
+    if (paragraph[i] === '[' && paragraph[i + 1] === '[') {
+      open = true
+      i++
+    } else if (paragraph[i] === ']' && paragraph[i + 1] === ']') {
+      open = false
+      i++
+    }
+  }
+  return open
+}
+
 /** Parse [[accent]] markup into word/space tokens. */
 export function tokenize(paragraph: string): Token[] {
   const out: Token[] = []
@@ -141,7 +156,11 @@ export function layoutText(raw: string, style: TextStyle, maxWidth: number): Tex
   const lines: Line[] = []
   let overflow = false
 
-  for (const paragraph of text.split('\n')) {
+  let carry = false
+  for (const raw of text.split('\n')) {
+    // An [[accent]] left open on one line continues on the next.
+    const paragraph = carry ? `[[${raw}` : raw
+    carry = accentOpenAtEnd(paragraph)
     // Group consecutive non-space tokens into words (a word can mix accent/non-accent runs).
     const tokens = tokenize(paragraph)
     const words: Token[][] = []

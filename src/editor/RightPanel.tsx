@@ -36,7 +36,7 @@ import { Stadium3DProps, TacticsProps } from './props/tacticsProps'
 import { Section, Slider, TextField, Toggle } from '../ui/controls'
 import { buildTemplateSlide, templateById } from '../templates'
 import { SlideStyleSection } from './StylePanel'
-import { alignSelection, deleteSelection as deleteWithUndo, type AlignMode } from './actions'
+import { alignSelection, deleteSelection as deleteWithUndo, duplicateSelection as duplicateWithToast, type AlignMode } from './actions'
 
 export function ElementSpecific({ el }: { el: SlideElement }) {
   switch (el.type) {
@@ -177,7 +177,7 @@ function MultiPanel({ els }: { els: SlideElement[] }) {
           }
         />
         <div className="grid grid-cols-2 gap-1.5">
-          <button type="button" className="btn" onClick={() => useEditor.getState().duplicateSelection()}>
+          <button type="button" className="btn" onClick={duplicateWithToast}>
             <Copy size={14} /> Duplicar
           </button>
           <button type="button" className="btn btn-danger" onClick={deleteWithUndo}>

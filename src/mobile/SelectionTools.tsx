@@ -77,16 +77,28 @@ const editable = (el: SlideElement) => el.type === 'text' || el.type === 'badge'
 
 export function SelectionPill({ containerH, containerW }: { containerH: number; containerW: number }) {
   const list = useSelectedList()
-  const { zoom, pan, editingTextId, tacticsEditId } = useUI()
+  const { zoom, pan, editingTextId, tacticsEditId, canvasBusy } = useUI()
   const sheet = useMobile((s) => s.sheet)
-  if (!list.length || editingTextId || tacticsEditId || sheet) return null
+  if (!list.length || editingTextId || tacticsEditId || sheet || canvasBusy) return null
   const el = list.length === 1 ? list[0] : null
-  const bx = Math.min(...list.map((e) => e.x))
-  const by = Math.min(...list.map((e) => e.y))
+  // Elements rotate around their top-left corner: use the drawn corners.
+  const pts = list.flatMap((e) => {
+    const r = (e.rotation * Math.PI) / 180
+    const c = Math.cos(r)
+    const sn = Math.sin(r)
+    return [
+      [0, 0],
+      [e.width, 0],
+      [e.width, e.height],
+      [0, e.height],
+    ].map(([dx, dy]) => [e.x + dx * c - dy * sn, e.y + dx * sn + dy * c])
+  })
+  const bx = Math.min(...pts.map((q) => q[0]))
+  const by = Math.min(...pts.map((q) => q[1]))
   const x = pan.x + bx * zoom
   const y = pan.y + by * zoom
-  const w = (Math.max(...list.map((e) => e.x + e.width)) - bx) * zoom
-  const h = (Math.max(...list.map((e) => e.y + e.height)) - by) * zoom
+  const w = (Math.max(...pts.map((q) => q[0])) - bx) * zoom
+  const h = (Math.max(...pts.map((q) => q[1])) - by) * zoom
   const pillW = el && editable(el) ? 230 : el ? 180 : 210
   const pillH = 44
   let top = y - pillH - 46
@@ -267,8 +279,8 @@ function ToolPanel({ el, tool }: { el: SlideElement; tool: string }) {
           <Panel title="Tamaño">
             <RangeRow
               label="Tamaño"
-              min={16}
-              max={360}
+              min={Math.min(16, Math.floor(el.fontSize))}
+              max={Math.max(360, Math.ceil(el.fontSize * 1.5))}
               value={el.fontSize}
               onChange={(v) =>
                 patch(el, (d) => {

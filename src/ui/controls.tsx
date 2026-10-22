@@ -4,9 +4,9 @@ import { HexColorPicker } from 'react-colorful'
 import { ChevronDown, X } from 'lucide-react'
 import { PALETTE_TOKENS, FONT_TOKENS } from '../model/brand'
 import { FONTS } from '../fonts/fonts'
-import { resolveColor } from '../model/tokens'
+import { applyOverrides, resolveColor, slideAccent } from '../model/tokens'
 import { useLibrary } from '../store/library'
-import { useEditor } from '../store/editor'
+import { activeSlideOf, useEditor } from '../store/editor'
 
 export function Section({ title, children, right, defaultOpen = true }: { title: string; children: ReactNode; right?: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -181,8 +181,10 @@ export function FontSelect({ value, onChange, label = 'Fuente' }: { value: strin
 /** Color input supporting brand tokens ($primary, $home…) and any hex value. */
 export function ColorField({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const brand = useLibrary((s) => s.brand)
-  const match = useEditor((s) => s.project?.match)
-  const resolved = match ? resolveColor(value, { match, brand }) : value.startsWith('$') ? brand.palette.primary : value
+  const project = useEditor((s) => s.project)
+  const slide = useEditor((s) => activeSlideOf(s))
+  const match = project ? (slide ? applyOverrides(project.match, slide.overrides) : project.match) : undefined
+  const resolved = match ? resolveColor(value, { match, brand, accent: slide ? slideAccent(project, slide) : undefined }) : value.startsWith('$') ? brand.palette.primary : value
   const [open, setOpen] = useState(false)
   const btn = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
