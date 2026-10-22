@@ -81,9 +81,10 @@ export function useShortcuts() {
         if (s) ed.select(s.elements.filter((x) => !x.locked && x.visible).map((x) => x.id))
         return
       }
-      if (mod && (e.key === ']' || e.key === '[')) {
+      const bracket = e.code === 'BracketRight' || e.key === ']' || e.key === '}' ? ']' : e.code === 'BracketLeft' || e.key === '[' || e.key === '{' ? '[' : null
+      if (mod && bracket) {
         e.preventDefault()
-        ed.reorderSelection(e.key === ']' ? (e.shiftKey ? 'top' : 'up') : e.shiftKey ? 'bottom' : 'down')
+        ed.reorderSelection(bracket === ']' ? (e.shiftKey ? 'top' : 'up') : e.shiftKey ? 'bottom' : 'down')
         return
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -119,7 +120,7 @@ export function useShortcuts() {
             el.x += dx
             el.y += dy
           },
-          { key: 'nudge' },
+          { key: `nudge-${ed.selection.join()}` },
         )
         return
       }

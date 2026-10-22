@@ -45,6 +45,8 @@ interface UIState {
   editingTextId: string | null
   /** Phone: taps add/remove elements to the selection instead of replacing it. */
   multiSelect: boolean
+  /** An element is being dragged or transformed on the canvas. */
+  canvasBusy: boolean
   tacticsEditId: string | null
   tacticsTool: 'select' | AnnotationKind
   /** Selected player/annotation id inside the tactics element being edited. */
@@ -76,6 +78,7 @@ export const useUI = create<UIState>((set) => ({
   newProjectMode: 'carousel',
   editingTextId: null,
   multiSelect: false,
+  canvasBusy: false,
   tacticsEditId: null,
   tacticsTool: 'select',
   tacticsSel: null,

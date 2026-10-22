@@ -19,12 +19,15 @@ interface GuideLine {
 }
 
 const RATIO_TYPES = new Set(['crest', 'mascot', 'image', 'icon', 'brandMark', 'progressRing', 'model3d'])
+const CORNER_ANCHORS = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+const ALL_ANCHORS = ['top-left', 'top-center', 'top-right', 'middle-right', 'middle-left', 'bottom-left', 'bottom-center', 'bottom-right']
 
 function ElementNode({
   el,
   rc,
   onSelect,
   onTap,
+  onClickEl,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -36,6 +39,7 @@ function ElementNode({
   rc: RenderCtx
   onSelect: (e: KonvaEventObject<MouseEvent | TouchEvent>, el: SlideElement) => void
   onTap: (el: SlideElement) => void
+  onClickEl: (e: KonvaEventObject<MouseEvent>, el: SlideElement) => void
   onDragStart: (e: KonvaEventObject<DragEvent>, el: SlideElement) => void
   onDragMove: (e: KonvaEventObject<DragEvent>, el: SlideElement) => void
   onDragEnd: (e: KonvaEventObject<DragEvent>, el: SlideElement) => void
@@ -71,6 +75,7 @@ function ElementNode({
       onMouseDown={(e) => onSelect(e, el)}
       onTouchStart={(e) => onSelect(e, el)}
       onTap={() => onTap(el)}
+      onClick={(e) => onClickEl(e, el)}
       onDragStart={(e) => onDragStart(e, el)}
       onDragMove={(e) => onDragMove(e, el)}
       onDragEnd={(e) => onDragEnd(e, el)}
@@ -167,13 +172,14 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
   }, [])
 
   // Fit to screen
+  const canvasBusy = useUI((s) => s.canvasBusy)
   useEffect(() => {
-    if (!autoFit || size.w < 50) return
+    if (!autoFit || size.w < 50 || canvasBusy) return
     // Phones give the page almost all the space.
     const pad = mobile ? 24 : 96
     const z = Math.max(0.05, Math.min((size.w - pad) / W, (size.h - pad) / H))
     useUI.getState().set({ zoom: z, pan: { x: (size.w - W * z) / 2, y: (size.h - H * z) / 2 } })
-  }, [autoFit, size.w, size.h, W, H, mobile])
+  }, [autoFit, size.w, size.h, W, H, mobile, canvasBusy])
 
   const rc = useMemo(() => {
     void assetVersion
@@ -189,9 +195,15 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
       .filter((id) => id !== editingTextId && id !== tacticsEditId)
       .map((id) => stage.findOne(`#${id}`))
       .filter((n): n is Konva.Node => !!n && n.listening())
-    tr.nodes(nodes)
+    // Re-attaching resets the frame of a multi-selection (its rotation), which made
+    // group rotation pile up on every store update: only re-attach on a real change.
+    const current = tr.nodes()
+    const same = current.length === nodes.length && nodes.every((n, i) => n === current[i])
+    if (!same) tr.nodes(nodes)
+    else if (!tr.isTransforming()) tr.forceUpdate()
     const els = slide.elements.filter((e) => selection.includes(e.id))
-    tr.keepRatio(els.length > 0 && els.every((e) => RATIO_TYPES.has(e.type)))
+    // Groups scale proportionally from the corners, like single crests and images.
+    tr.keepRatio(nodes.length > 1 || (els.length > 0 && els.every((e) => RATIO_TYPES.has(e.type))))
     // With no nodes the transformer must disappear now: a deferred redraw after a
     // delete/undo can otherwise leave the old frame painted on the canvas.
     tr.visible(nodes.length > 0)
@@ -223,11 +235,27 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
 
   const onTap = useCallback(
     (el: SlideElement) => {
-      if (useUI.getState().multiSelect && pressedSelected.current === el.id) toggleSelect(el.id)
+      const sel = useEditor.getState().selection
+      if (useUI.getState().multiSelect) {
+        if (pressedSelected.current === el.id) toggleSelect(el.id)
+      } else if (sel.length > 1 && sel.includes(el.id)) select([el.id])
       pressedSelected.current = null
     },
-    [toggleSelect],
+    [toggleSelect, select],
   )
+
+  // A plain click (no drag) on one element of a multi-selection selects just that element.
+  const onClickEl = useCallback(
+    (e: KonvaEventObject<MouseEvent>, el: SlideElement) => {
+      if (e.evt.button !== 0 || e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey || useUI.getState().multiSelect) return
+      const sel = useEditor.getState().selection
+      if (sel.length > 1 && sel.includes(el.id)) select([el.id])
+    },
+    [select],
+  )
+
+  // Each resize/rotate gesture is one undo step, however slow.
+  const gesture = useRef(0)
 
   // Konva's transformer drags every selected node together (it starts a drag on
   // each of them), so the element under the pointer leads and the others follow.
@@ -245,10 +273,12 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
       if (!sel.includes(el.id)) select([el.id])
       dragLead.current = el.id
       dragStart.current = new Map()
+      useUI.getState().set({ canvasBusy: true })
       const stage = stageRef.current!
       for (const id of ids) {
         const n = stage.findOne(`#${id}`)
-        if (n) dragStart.current.set(id, { x: n.x(), y: n.y() })
+        // Locked or hidden members never move.
+        if (n && n.draggable() && n.isVisible()) dragStart.current.set(id, { x: n.x(), y: n.y() })
       }
     },
     [select, spaceDown],
@@ -294,6 +324,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
     // Every node of a group drag ends; save once, when the leader does.
     if (dragLead.current !== el.id) return
     dragLead.current = null
+    useUI.getState().set({ canvasBusy: false })
     setGuides([])
     const stage = stageRef.current!
     const moved = [...dragStart.current.keys()]
@@ -320,8 +351,12 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
       const sy = node.scaleY()
       node.scaleX(1)
       node.scaleY(1)
+      // A stretched group with mixed rotations can leave a skew the model can't store.
+      node.skewX(0)
+      node.skewY(0)
       const anchor = trRef.current?.getActiveAnchor() ?? ''
-      const corner = anchor.includes('-') && !anchor.startsWith('rotater')
+      // Only the four corners scale the type; side handles just reshape the box.
+      const corner = /^(top|bottom)-(left|right)$/.test(anchor)
       update(
         (d) => {
           const s = d.slides.find((x) => x.id === slide.id)
@@ -339,7 +374,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
             t.letterSpacing = t.letterSpacing * k
           }
         },
-        { key: 'transform' },
+        { key: `transform-${gesture.current}`, sticky: true },
       )
     },
     [update, slide.id],
@@ -350,8 +385,32 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
     else if (el.type === 'tactics') useUI.getState().set({ tacticsEditId: el.id, tacticsSel: null })
   }, [])
 
+  /** Drawn (rotated) bounding box of an element, in page units. */
+  const boxOf = (el: SlideElement) => {
+    const node = stageRef.current?.findOne(`#${el.id}`)
+    const content = contentRef.current
+    if (node && content) return node.getClientRect({ relativeTo: content as unknown as Konva.Container, skipShadow: true })
+    return { x: el.x, y: el.y, width: el.width, height: el.height }
+  }
+  /** Topmost element whose drawn box contains a screen point. */
+  const elementAt = (clientX: number, clientY: number, includeLocked: boolean): string | null => {
+    const rect = containerRef.current?.getBoundingClientRect()
+    const s = activeSlideOf(useEditor.getState())
+    if (!rect || !s) return null
+    const x = (clientX - rect.left - pan.x) / zoom
+    const y = (clientY - rect.top - pan.y) / zoom
+    for (const el of [...s.elements].reverse()) {
+      if (!el.visible || !rc.shown(el) || (el.locked && !includeLocked)) continue
+      if (el.type === 'effect' && el.width >= W * 0.95) continue
+      const b = boxOf(el)
+      if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) return el.id
+    }
+    return null
+  }
+
   // Stage-level interactions: deselect, pan, zoom
   const onStageMouseDown = (e: KonvaEventObject<MouseEvent>) => {
+    if (e.evt.button === 2) return
     const isPan = spaceDown || e.evt.button === 1
     if (isPan) {
       panning.current = { x: e.evt.clientX, y: e.evt.clientY, px: pan.x, py: pan.y }
@@ -391,7 +450,13 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
       if (x1 - x0 < 4 && y1 - y0 < 4) return
       const s = activeSlideOf(useEditor.getState())
       if (!s) return
-      const hits = s.elements.filter((el) => el.visible && rc.shown(el) && !el.locked && el.x < x1 && el.x + el.width > x0 && el.y < y1 && el.y + el.height > y0).map((el) => el.id)
+      const hits = s.elements
+        .filter((el) => el.visible && rc.shown(el) && !el.locked)
+        .filter((el) => {
+          const b = boxOf(el)
+          return b.x < x1 && b.x + b.width > x0 && b.y < y1 && b.y + b.height > y0
+        })
+        .map((el) => el.id)
       const cur = useEditor.getState().selection
       useEditor.getState().select(m.add ? [...new Set([...cur, ...hits])] : hits)
     }
@@ -514,7 +579,9 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
           e.evt.preventDefault()
           let n: Konva.Node | null = e.target
           while (n && n.name() !== 'element') n = n.getParent()
-          if (n && !useEditor.getState().selection.includes(n.id())) select([n.id()])
+          // Locked elements don't receive pointer events: find the topmost one under the cursor.
+          const id = n?.id() ?? elementAt(e.evt.clientX, e.evt.clientY, true)
+          if (id && !useEditor.getState().selection.includes(id)) select([id])
           const rect = containerRef.current!.getBoundingClientRect()
           setMenu({ x: e.evt.clientX - rect.left, y: e.evt.clientY - rect.top })
         }}
@@ -543,6 +610,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
                   hidden={el.id === editingTextId}
                   onSelect={onSelect}
                   onTap={onTap}
+                  onClickEl={onClickEl}
                   onDragStart={onDragStart}
                   onDragMove={onDragMove}
                   onDragEnd={onDragEnd}
@@ -583,7 +651,12 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
             rotationSnapTolerance={4}
             anchorSize={mobile ? 18 : 9}
             anchorCornerRadius={mobile ? 9 : 2}
-            enabledAnchors={mobile ? ['top-left', 'top-right', 'bottom-left', 'bottom-right'] : undefined}
+            enabledAnchors={mobile || selection.length > 1 ? CORNER_ANCHORS : ALL_ANCHORS}
+            onTransformStart={() => {
+              gesture.current++
+              useUI.getState().set({ canvasBusy: true })
+            }}
+            onTransformEnd={() => useUI.getState().set({ canvasBusy: false })}
             anchorStroke="#CBAA62"
             anchorFill="#0B0C0F"
             borderStroke="#CBAA62"
@@ -592,12 +665,13 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
             padding={0}
             ignoreStroke
             flipEnabled={false}
-            boundBoxFunc={(oldBox, newBox) => (Math.abs(newBox.width) < 8 || Math.abs(newBox.height) < 8 ? oldBox : newBox)}
+            // Refuse only a side that shrinks below 8 px, so lines and separators can still grow.
+            boundBoxFunc={(o, n) => ((Math.abs(n.width) < 8 && Math.abs(n.width) < Math.abs(o.width)) || (Math.abs(n.height) < 8 && Math.abs(n.height) < Math.abs(o.height)) ? o : n)}
           />
         </Layer>
       </Stage>
       {!mobile && editingEl && editingEl.type === 'text' && <TextEditOverlay el={editingEl} zoom={zoom} pan={pan} />}
-      {!mobile && menu && <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
+      {!mobile && menu && <ContextMenu x={Math.max(4, Math.min(menu.x, size.w - 212))} y={menu.y + 228 > size.h ? Math.max(4, menu.y - 228) : menu.y} onClose={() => setMenu(null)} />}
     </div>
   )
 }

@@ -14,6 +14,8 @@ export interface UpdateOptions {
   key?: string
   /** Skip history entirely (e.g. transient UI-only state). */
   history?: boolean
+  /** Merge with the previous change of the same key however long the pause (one continuous gesture). */
+  sticky?: boolean
 }
 
 interface EditorState {
@@ -64,6 +66,10 @@ export function activeSlideOf(s: Pick<EditorState, 'project' | 'activeSlideId'>)
   return s.project.slides.find((sl) => sl.id === s.activeSlideId) ?? s.project.slides[0] ?? null
 }
 
+// Where the clipboard was copied from, and how many times it was pasted on each page.
+let clipFrom: string | null = null
+let pasteCounts = new Map<string, number>()
+
 /** After undo/redo: show a page that came back (e.g. an undone delete), else stay put if possible. */
 function activeAfterTimeTravel(from: Project, to: Project, current: string | null): string | null {
   const back = to.slides.find((sl) => !from.slides.some((x) => x.id === sl.id))
@@ -104,7 +110,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       d.updatedAt = Date.now()
     })
     const now = Date.now()
-    const coalesce = opts.key != null && opts.key === lastKey && now - lastTime < COALESCE_MS
+    const coalesce = opts.key != null && opts.key === lastKey && (opts.sticky || now - lastTime < COALESCE_MS)
     const record = opts.history !== false && !coalesce
     set((s) => ({
       project: next,
@@ -274,16 +280,23 @@ export const useEditor = create<EditorState>((set, get) => ({
     const sel = get().selection
     if (!slide || !sel.length) return
     set({ clipboard: structuredClone(slide.elements.filter((e) => sel.includes(e.id))) })
+    clipFrom = slide.id
+    pasteCounts = new Map()
   },
 
   paste: () => {
     const clip = get().clipboard
     if (!clip?.length) return
-    const copies = clip.map((e) => cloneElement(e, 30))
+    // Same page: step each paste down-right so copies don't hide each other.
+    // Another page: the first paste keeps the original position.
+    const target = activeSlideOf(get())?.id ?? ''
+    const n = pasteCounts.get(target) ?? 0
+    pasteCounts.set(target, n + 1)
+    const copies = clip.map((e) => cloneElement(e, 30 * (n + (target === clipFrom ? 1 : 0))))
     get().update((d) => {
       draftSlide(d, get().activeSlideId)?.elements.push(...(copies as Draft<SlideElement>[]))
     })
-    set({ selection: copies.map((c) => c.id), clipboard: copies })
+    set({ selection: copies.map((c) => c.id) })
   },
 
   reorderSelection: (dir) => {
