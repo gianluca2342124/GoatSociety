@@ -33,8 +33,11 @@ export function isMemoryOnly() {
   return memoryOnly
 }
 
-function open() {
+function open(onLost?: () => void) {
   return openDB<GoatDB>('goat-society-studio', 1, {
+    // The browser closed the connection (storage cleared, the app's storage
+    // process restarted in the background…): the next call opens a new one.
+    terminated: onLost,
     upgrade(d) {
       d.createObjectStore('projects', { keyPath: 'id' })
       const meta = d.createObjectStore('projectMeta', { keyPath: 'id' })
@@ -72,22 +75,100 @@ async function installMemoryIndexedDB() {
   for (const [name, value] of Object.entries(globals)) Object.defineProperty(globalThis, name, { value, configurable: true, writable: true })
 }
 
+/** How long to wait for the browser's storage before giving up on it. */
+const OPEN_TIMEOUT = 5000
+
+// idb remembers the IndexedDB classes it meets first, so once it has opened the
+// browser's database the in-memory one can no longer replace it.
+let persistentUsed = false
+
+/**
+ * Checks the browser's storage with the raw API, before idb ever sees it: it
+ * must answer in time (some WebViews leave the request pending forever) and
+ * accept a write (a full or blocked storage opens fine and then refuses
+ * every save).
+ */
+function checkStorage(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let done = false
+    const finish = (err?: unknown) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      if (err) reject(err)
+      else resolve()
+    }
+    const timer = setTimeout(() => finish(new Error('IndexedDB no responde')), OPEN_TIMEOUT)
+    let req: IDBOpenDBRequest
+    try {
+      if (typeof indexedDB === 'undefined') throw new Error('IndexedDB no disponible')
+      req = indexedDB.open('goat-society-studio-check', 1)
+    } catch (e) {
+      finish(e)
+      return
+    }
+    req.onupgradeneeded = () => req.result.createObjectStore('kv')
+    req.onerror = () => finish(req.error ?? new Error('IndexedDB'))
+    req.onsuccess = () => {
+      const d = req.result
+      if (done) return d.close()
+      try {
+        const tx = d.transaction('kv', 'readwrite')
+        tx.objectStore('kv').put(Date.now(), 'write')
+        tx.oncomplete = () => (d.close(), finish())
+        tx.onerror = tx.onabort = () => (d.close(), finish(tx.error ?? new Error('IndexedDB')))
+      } catch (e) {
+        d.close()
+        finish(e)
+      }
+    }
+  })
+}
+
+async function openPersistent(): Promise<IDBPDatabase<GoatDB>> {
+  await checkStorage()
+  persistentUsed = true
+  return open(() => {
+    dbPromise = null
+  })
+}
+
 export function db(): Promise<IDBPDatabase<GoatDB>> {
   if (!dbPromise) {
-    dbPromise = (async () => {
+    const opening = (async () => {
+      if (memoryOnly) return open()
       try {
-        if (typeof indexedDB === 'undefined') throw new Error('IndexedDB no disponible')
-        return await open()
-      } catch {
-        // Private windows, blocked site data or embedded previews: keep the
-        // studio usable with an in-memory database for this session.
+        return await openPersistent()
+      } catch (e) {
+        // A connection that worked and then went away can't be swapped for memory (see above).
+        if (persistentUsed) throw e
+        // Private windows, blocked or full site data, embedded previews: keep
+        // the studio usable with an in-memory database for this session.
         await installMemoryIndexedDB()
         memoryOnly = true
         return open()
       }
     })()
+    dbPromise = opening
+    // A failed open is not remembered: the next call tries again.
+    opening.catch(() => {
+      if (dbPromise === opening) dbPromise = null
+    })
   }
   return dbPromise
+}
+
+/** Give up on the browser's storage for this session and keep working in memory. */
+export async function fallBackToMemory() {
+  if (memoryOnly) return
+  if (persistentUsed) throw new Error('El almacenamiento de este navegador ha fallado. Recarga la página.')
+  const prev = dbPromise
+  dbPromise = null
+  prev?.then((d) => d.close(), () => undefined)
+  await installMemoryIndexedDB()
+  memoryOnly = true
+  dbPromise = open()
+  await dbPromise
 }
 
 /** For tests: drop the cached connection. */

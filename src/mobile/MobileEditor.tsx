@@ -9,11 +9,11 @@
 //
 // Selecting an element swaps the strip + nav for that element's tools.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ChevronLeft, ClipboardPaste, Download, Image as ImageIcon, LayoutTemplate, Minimize2, MoreHorizontal, Palette, Play, Plus, Redo2, Shapes, Table2, Undo2, X } from 'lucide-react'
+import { ChevronLeft, ClipboardPaste, CloudOff, Download, Image as ImageIcon, LayoutTemplate, Minimize2, MoreHorizontal, Palette, Play, Plus, Redo2, Shapes, Table2, Undo2, X } from 'lucide-react'
 import { activeSlideOf, useEditor } from '../store/editor'
 import { useLibrary } from '../store/library'
 import { useUI } from '../store/ui'
-import { goHome } from '../store/projectService'
+import { goHome, memoryWarning } from '../store/projectService'
 import { EditorCanvas } from '../editor/canvas/EditorCanvas'
 import { useSlideThumb } from '../editor/thumbs'
 import { TacticsToolbar } from '../editor/props/tacticsProps'
@@ -50,9 +50,10 @@ function TopBar() {
   const canUndo = useEditor((s) => s.past.length > 0)
   const canRedo = useEditor((s) => s.future.length > 0)
   const pageIndex = useEditor((s) => Math.max(0, s.project?.slides.findIndex((x) => x.id === s.activeSlideId) ?? 0))
+  const memoryOnly = useUI((s) => s.memoryOnly)
   const iconBtn = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ivory active:bg-white/10 disabled:opacity-30'
   return (
-    <header className="flex h-[52px] shrink-0 items-center gap-0.5 border-b border-line bg-ink-2 px-1.5 pt-[env(safe-area-inset-top)]" data-testid="m-topbar">
+    <header className="flex h-[calc(52px+var(--in-top))] shrink-0 items-center gap-0.5 border-b border-line bg-ink-2 px-1.5 pt-[var(--in-top)]" data-testid="m-topbar">
       <button type="button" className={iconBtn} aria-label="Mis proyectos" onClick={() => void goHome()}>
         <ChevronLeft size={22} />
       </button>
@@ -62,9 +63,15 @@ function TopBar() {
       <button type="button" className={`${iconBtn} max-[379px]:hidden`} aria-label="Rehacer" disabled={!canRedo} onClick={() => useEditor.getState().redo()}>
         <Redo2 size={19} />
       </button>
-      <div className="min-w-0 flex-1 truncate px-1 text-center text-[12px] text-muted tabular-nums" aria-hidden>
-        {project.slides.length > 1 ? `${pageIndex + 1} / ${project.slides.length}` : ''}
-      </div>
+      {memoryOnly ? (
+        <button type="button" className="flex min-w-0 flex-1 items-center justify-center gap-1 truncate px-1 text-[11px] font-semibold text-gold" onClick={memoryWarning} data-testid="m-memory-only">
+          <CloudOff size={13} className="shrink-0" /> <span className="truncate">Sin guardar</span>
+        </button>
+      ) : (
+        <div className="min-w-0 flex-1 truncate px-1 text-center text-[12px] text-muted tabular-nums" aria-hidden>
+          {project.slides.length > 1 ? `${pageIndex + 1} / ${project.slides.length}` : ''}
+        </div>
+      )}
       <button type="button" className={iconBtn} aria-label="Vista previa" onClick={() => useUI.getState().set({ modal: 'preview' })} data-testid="m-preview">
         <Play size={18} />
       </button>
@@ -130,7 +137,7 @@ const NAV: { sheet: MobileSheet; label: string; icon: typeof Shapes }[] = [
 
 function BottomNav() {
   return (
-    <nav className="flex h-[62px] shrink-0 items-stretch border-t border-line bg-panel pb-[env(safe-area-inset-bottom)]" aria-label="Herramientas" data-testid="m-nav">
+    <nav className="flex h-[calc(62px+var(--in-bottom))] shrink-0 items-stretch border-t border-line bg-panel pb-[var(--in-bottom)]" aria-label="Herramientas" data-testid="m-nav">
       {NAV.map((n) => (
         <button
           key={n.sheet}
@@ -181,7 +188,7 @@ function SheetHost() {
 
 function TacticsBar() {
   return (
-    <div className="shrink-0 border-t border-gold/40 bg-panel px-3 pt-2 pb-[calc(8px+env(safe-area-inset-bottom))]" data-testid="m-tactics-bar">
+    <div className="shrink-0 border-t border-gold/40 bg-panel px-3 pt-2 pb-[calc(8px+var(--in-bottom))]" data-testid="m-tactics-bar">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[12px] font-semibold tracking-wide text-gold uppercase">Edición táctica · arrastra jugadores y flechas</span>
         <button type="button" className="h-10 rounded-full bg-gold px-4 text-[13px] font-bold text-ink" onClick={() => useUI.getState().set({ tacticsEditId: null, tacticsSel: null, tacticsTool: 'select' })}>
@@ -269,7 +276,7 @@ export function MobileEditor() {
     )
 
   return (
-    <div className="m-editor flex flex-col overflow-hidden bg-ink" style={{ height: 'var(--app-h, 100dvh)' }} data-testid="mobile-editor">
+    <div className="m-editor flex flex-col overflow-hidden bg-ink" style={{ height: 'var(--app-h, 100dvh)', paddingLeft: 'var(--in-left)', paddingRight: 'var(--in-right)' }} data-testid="mobile-editor">
       {!focus && <TopBar />}
         {multi && !editingText && (
           <div className="mx-3 mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-gold/40 bg-[#1b1d22] py-2 pr-2 pl-4" role="status" data-testid="m-multi-banner">
@@ -296,7 +303,7 @@ export function MobileEditor() {
           </div>
         )}
         {focus && !selected && !multi && (
-          <button type="button" className="absolute top-[calc(12px+env(safe-area-inset-top))] right-3 z-20 flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-[#1b1d22]/90 px-3.5 text-[13px] font-semibold shadow-xl" onClick={() => useMobile.getState().set({ focus: false })} data-testid="m-exit-focus">
+          <button type="button" className="absolute top-[calc(12px+var(--in-top))] right-3 z-20 flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-[#1b1d22]/90 px-3.5 text-[13px] font-semibold shadow-xl" onClick={() => useMobile.getState().set({ focus: false })} data-testid="m-exit-focus">
             <Minimize2 size={15} /> Salir del enfoque
           </button>
         )}

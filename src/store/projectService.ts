@@ -8,6 +8,7 @@ import { newProject } from '../model/defaults'
 import { uid } from '../model/ids'
 import { buildMatchCarousel, buildTemplateSlide, templateById } from '../templates'
 import { deleteProject, loadProject, saveProject, setProjectThumbnail } from '../db/projects'
+import { isMemoryOnly, resetDbConnection } from '../db/db'
 import { getAsset, putAssetRecord } from '../db/assets'
 import { buildBundle, bundleAssetToRecord, bundleFileName, migrateProject, parseBundle } from '../db/serialize'
 import { downloadBlob, renderThumbnail } from '../render/exporter'
@@ -24,7 +25,14 @@ let lastSaved: Project | null = null
 async function doSave(p: Project): Promise<boolean> {
   useUI.getState().set({ saveState: 'saving' })
   try {
-    await saveProject(p)
+    try {
+      await saveProject(p)
+    } catch {
+      // The connection may have been closed under us (storage restarted in the background): reopen once.
+      resetDbConnection()
+      await saveProject(p)
+    }
+    if (isMemoryOnly() && !useUI.getState().memoryOnly) useUI.getState().set({ memoryOnly: true })
     lastSaved = p
     // An edit made while this was being written still needs its own save.
     const cur = useEditor.getState().project
@@ -55,7 +63,19 @@ async function updateThumb(p: Project) {
 /** Debounced autosave whenever the open project changes. */
 export function startAutosave() {
   let last = useEditor.getState().project
-  return useEditor.subscribe((s) => {
+  // Switching apps on a phone can freeze or close the page before the
+  // debounce fires: write right away when the page is hidden.
+  const flush = () => {
+    if (!pending) return
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = null
+    const p = useEditor.getState().project
+    if (p) void doSave(p)
+  }
+  const onVisibility = () => document.visibilityState === 'hidden' && flush()
+  document.addEventListener('visibilitychange', onVisibility)
+  window.addEventListener('pagehide', flush)
+  const stop = useEditor.subscribe((s) => {
     if (!s.project || s.project === last) {
       last = s.project
       return
@@ -76,6 +96,11 @@ export function startAutosave() {
       if (p) void updateThumb(p)
     }, 3500)
   })
+  return () => {
+    stop()
+    document.removeEventListener('visibilitychange', onVisibility)
+    window.removeEventListener('pagehide', flush)
+  }
 }
 
 export function hasPendingSave() {
@@ -88,7 +113,19 @@ export async function saveNow() {
   if (saveTimer) clearTimeout(saveTimer)
   if (!(await doSave(p))) return
   await updateThumb(p)
-  useUI.getState().toast('Proyecto guardado en este equipo', 'success')
+  if (isMemoryOnly()) memoryWarning()
+  else useUI.getState().toast('Proyecto guardado en este equipo', 'success')
+}
+
+/** In-memory session: say so, and offer the only way to keep the work. */
+export function memoryWarning() {
+  const p = useEditor.getState().project
+  useUI.getState().toast(
+    'Este navegador no guarda datos: el proyecto solo existe hasta que cierres. Exporta una copia .goat.json para conservarlo.',
+    'error',
+    p ? { label: 'Exportar copia', run: () => void exportProjectFile(p) } : undefined,
+    10000,
+  )
 }
 
 export async function openProject(project: Project) {
@@ -202,5 +239,9 @@ export async function goHome() {
   if (cur) await updateThumb(cur)
   useEditor.getState().close()
   useUI.getState().set({ view: 'home', modal: null })
-  await useLibrary.getState().refreshProjects()
+  try {
+    await useLibrary.getState().refreshProjects()
+  } catch (e) {
+    console.error(e)
+  }
 }

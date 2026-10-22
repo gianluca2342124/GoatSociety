@@ -20,10 +20,15 @@ let downloads: Promise<DownloadsCapability | null> | null = null
 /** The viewer's downloads capability, or null outside an artifact (or when the viewer can't save files). */
 export function hostDownloads(): Promise<DownloadsCapability | null> {
   if (!inArtifact) return Promise.resolve(null)
+  // A refusal is not remembered: the next save asks the viewer again.
   downloads ??= host()!
     .use!('downloads')
     .then((d) => (d as DownloadsCapability | null) ?? null)
     .catch(() => null)
+    .then((d) => {
+      if (!d) downloads = null
+      return d
+    })
   return downloads
 }
 

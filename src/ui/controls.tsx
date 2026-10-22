@@ -279,7 +279,7 @@ export function Modal({ title, onClose, children, width = 560, footer }: { title
   }, [onClose])
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={onClose} role="presentation">
-      <div role="dialog" aria-modal="true" aria-label={title} className="animate-in flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-line-2 bg-panel pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-2xl sm:pb-0" style={{ maxWidth: width }} onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="animate-in flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-line-2 bg-panel pb-[var(--edge-bottom)] shadow-2xl sm:rounded-2xl sm:pb-0" style={{ maxWidth: width }} onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-cond text-lg font-bold tracking-wide uppercase">{title}</h2>
           <button type="button" className="icon-btn" aria-label="Cerrar" onClick={onClose}>

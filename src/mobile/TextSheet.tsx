@@ -28,7 +28,7 @@ export function TextSheet() {
     useMobile.getState().open('data')
   }
   return (
-    <section className="shrink-0 border-t border-line-2 bg-panel px-3 pt-3 pb-[calc(10px+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.5)]" aria-label="Editar texto" data-testid="m-text-sheet">
+    <section className="shrink-0 border-t border-line-2 bg-panel px-3 pt-3 pb-[calc(10px+var(--in-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.5)]" aria-label="Editar texto" data-testid="m-text-sheet">
       <div className="flex items-start gap-2">
         <textarea
           ref={ref}

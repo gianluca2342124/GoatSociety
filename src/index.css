@@ -25,6 +25,13 @@
 @layer base {
 :root {
   color-scheme: dark;
+  /* Safe areas (measured by useSafeAreas; these are the plain-browser defaults). */
+  --in-top: env(safe-area-inset-top, 0px);
+  --in-right: env(safe-area-inset-right, 0px);
+  --in-bottom: env(safe-area-inset-bottom, 0px);
+  --in-left: env(safe-area-inset-left, 0px);
+  --edge-top: env(safe-area-inset-top, 0px);
+  --edge-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 html,
@@ -354,7 +361,7 @@ input[type='range']::-moz-range-thumb {
   }
 
   [data-testid='tool-panel'] {
-    max-height: 42vh;
+    max-height: calc(var(--app-h, 100dvh) * 0.3);
     overflow-y: auto;
   }
 }

@@ -94,7 +94,7 @@ function MobilePreview() {
       </div>
       {chrome && (
         <>
-          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[calc(10px+env(safe-area-inset-top))]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[calc(10px+var(--edge-top))]">
             <span className="rounded-full bg-black/55 px-3 py-1.5 text-[13px] font-semibold text-white tabular-nums">
               {i + 1} / {n}
             </span>
@@ -102,7 +102,7 @@ function MobilePreview() {
               <X size={20} />
             </button>
           </div>
-          <div className="flex justify-center gap-1.5 pt-3 pb-[calc(14px+env(safe-area-inset-bottom))]">
+          <div className="flex justify-center gap-1.5 pt-3 pb-[calc(14px+var(--edge-bottom))]">
             {project.slides.map((s, k) => (
               <button key={s.id} type="button" aria-label={`Ir a la página ${k + 1}`} onClick={() => setI(k)} className="flex h-9 items-center px-1">
                 <span className={`block h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-white' : 'w-1.5 bg-white/35'}`} />

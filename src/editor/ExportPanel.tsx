@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle, Check, Download, FileArchive, ImageDown } from 'lucide-react'
 import { useEditor } from '../store/editor'
 import { useLibrary } from '../store/library'
 import { useUI } from '../store/ui'
 import { Segmented, Slider, Spinner, Toggle } from '../ui/controls'
-import { inArtifact } from '../host'
+import { hostDownloads, inArtifact } from '../host'
 import { downloadBlob, downloadFiles, exportCarouselZip, exportSlideFiles, exportWarnings, type ExportFormat } from '../render/exporter'
 import { openPhotoGallery, PHOTO_HINT, photoMessage, photoMethod, saveToPhotos } from './saveToPhotos'
 import { useSlideThumb } from './thumbs'
@@ -52,7 +52,11 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
   const [saving, setSaving] = useState(false)
   // Phones (and touch tablets) get «Guardar en Fotos» as the main action.
   const phone = compact || (typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
-  const method = photoMethod()
+  const [method, setMethod] = useState(photoMethod)
+  // Inside claude.ai the viewer may still refuse to save files: then the hint describes the manual route.
+  useEffect(() => {
+    if (method === 'viewer') void hostDownloads().then((d) => !d && setMethod('gallery'))
+  }, [method])
   const [busyPhotos, setBusyPhotos] = useState(false)
   const indices = scope === 'current' ? [current] : scope === 'all' ? project.slides.map((_, i) => i) : project.slides.flatMap((sl, i) => (picked.includes(sl.id) ? [i] : []))
   const many = indices.length > 1
@@ -62,6 +66,15 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
   const finish = () => {
     for (const w of new Set(exportWarnings)) toast(w, 'error')
     onDone()
+  }
+
+  /** After a partial save, keep only the pages still missing picked, so a retry doesn't save the others twice. */
+  const keepRemaining = (saved: number): string => {
+    if (saved <= 0 || saved >= indices.length) return ''
+    const rest = indices.slice(saved).map((i) => project.slides[i].id)
+    setScope('pick')
+    setPicked(rest)
+    return ` Quedan ${rest.length}: vuelve a pulsar para guardarlas.`
   }
 
   const download = async () => {
@@ -82,7 +95,8 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
         if (saved < files.length) {
           // Keep the panel open with the same choices so the rest can be retried.
           const done = saved ? `Se guardaron ${saved} de ${files.length} imágenes. ` : ''
-          return toast(error ? `${done}${error}` : saved ? `${done}El resto se canceló.` : 'Descarga cancelada', error ? 'error' : 'info')
+          const rest = keepRemaining(saved)
+          return toast(error ? `${done}${error}${rest}` : saved ? `${done}El resto se canceló.${rest}` : 'Descarga cancelada', error ? 'error' : 'info')
         }
         toast(saved === 1 ? `Descargada ${files[0].name}` : `${saved} imágenes descargadas`, 'success')
       }
@@ -112,7 +126,8 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
       setSaving(true)
       const r = await saveToPhotos(files)
       const msg = photoMessage(r, files.length)
-      if (msg) toast(msg.text, msg.kind)
+      const rest = r.method !== 'gallery' ? keepRemaining(r.saved) : ''
+      if (msg) toast(msg.text + rest, msg.kind)
       if (r.method !== 'gallery' && r.saved === files.length && !r.error) finish()
     } catch (e) {
       console.error(e)

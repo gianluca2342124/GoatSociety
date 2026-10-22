@@ -52,9 +52,11 @@ interface UIState {
   /** Selected player/annotation id inside the tactics element being edited. */
   tacticsSel: string | null
   saveState: 'idle' | 'saving' | 'saved' | 'error'
+  /** The browser won't keep data: projects only live until the page closes. */
+  memoryOnly: boolean
   toasts: Toast[]
   set: (p: Partial<Omit<UIState, 'set' | 'toast' | 'dismiss'>>) => void
-  toast: (text: string, kind?: Toast['kind'], action?: Toast['action']) => number
+  toast: (text: string, kind?: Toast['kind'], action?: Toast['action'], ms?: number) => number
   dismiss: (id: number) => void
 }
 
@@ -83,13 +85,14 @@ export const useUI = create<UIState>((set) => ({
   tacticsTool: 'select',
   tacticsSel: null,
   saveState: 'idle',
+  memoryOnly: false,
   toasts: [],
   set: (p) => set(p),
-  toast: (text, kind = 'info', action) => {
+  toast: (text, kind = 'info', action, ms) => {
     const id = ++toastId
     // One undo-style toast at a time keeps the screen calm.
     set((s) => ({ toasts: [...s.toasts.filter((t) => !(action && t.action)), { id, kind, text, action }].slice(-3) }))
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), action ? 5200 : kind === 'error' ? 6000 : 3200)
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), ms ?? (action ? 5200 : kind === 'error' ? 6000 : 3200))
     return id
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

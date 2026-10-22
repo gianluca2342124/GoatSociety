@@ -19,7 +19,7 @@ export function Sheet({ title, onClose, children, height = 'half', right, testId
           <X size={18} />
         </button>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(16px+env(safe-area-inset-bottom))]">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(16px+var(--in-bottom))]">{children}</div>
     </section>
   )
 }

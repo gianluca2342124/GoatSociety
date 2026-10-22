@@ -664,7 +664,7 @@ function GroupBar({ list }: { list: SlideElement[] }) {
           <RangeRow label="Opacidad" min={0} max={1} step={0.01} value={opacity} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => useEditor.getState().updateElements(ids, (e) => void (e.opacity = v), { key: 'm-group-opacity' })} />
         </Panel>
       )}
-      <nav className="flex h-[70px] items-center gap-1 overflow-x-auto border-t border-line bg-panel px-2 pb-[env(safe-area-inset-bottom)]" aria-label="Herramientas del grupo" data-testid="context-bar">
+      <nav className="flex h-[calc(70px+var(--in-bottom))] items-center gap-1 overflow-x-auto border-t border-line bg-panel px-2 pb-[var(--in-bottom)]" aria-label="Herramientas del grupo" data-testid="context-bar">
         {tools.map((t) => (
           <ToolButton key={t.id} icon={t.icon} label={t.label} active={tool === t.id} testId={`tool-${t.id}`} onClick={() => (t.run ? t.run() : useMobile.getState().set({ tool: tool === t.id ? null : t.id }))} />
         ))}
@@ -706,7 +706,7 @@ export function ContextBar() {
   return (
     <div className="shrink-0">
       {tool && <ToolPanel el={el} tool={tool} />}
-      <nav className="flex h-[70px] items-center gap-1 overflow-x-auto border-t border-line bg-panel px-2 pb-[env(safe-area-inset-bottom)]" aria-label="Herramientas del elemento" data-testid="context-bar">
+      <nav className="flex h-[calc(70px+var(--in-bottom))] items-center gap-1 overflow-x-auto border-t border-line bg-panel px-2 pb-[var(--in-bottom)]" aria-label="Herramientas del elemento" data-testid="context-bar">
         {tools.map((t) => (
           <ToolButton
             key={t.id}

@@ -9,7 +9,7 @@ export function PhotoGallery() {
   if (!images) return null
   return createPortal(
     <div className="fixed inset-0 z-[85] flex flex-col bg-black" role="dialog" aria-modal="true" aria-label="Guardar en Fotos" data-testid="photo-gallery">
-      <header className="flex items-start gap-3 border-b border-white/10 px-4 pt-[calc(12px+env(safe-area-inset-top))] pb-3">
+      <header className="flex items-start gap-3 border-b border-white/10 px-4 pt-[calc(12px+var(--edge-top))] pb-3">
         <div className="min-w-0 flex-1">
           <h2 className="font-cond text-[19px] font-bold tracking-wide uppercase">Guardar en Fotos</h2>
           <p className="mt-0.5 text-[13px] leading-snug text-ivory/80">
@@ -20,7 +20,7 @@ export function PhotoGallery() {
           <X size={20} />
         </button>
       </header>
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(16px+var(--edge-bottom))]">
         {images.map((img, i) => (
           <figure key={img.name} className="space-y-1.5">
             <img src={img.url} alt={`Página ${i + 1}`} className="photo-saveable mx-auto block w-full max-w-[520px] rounded-lg" />

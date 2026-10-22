@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { Check, CloudOff, Download, FilePlus2, FolderOpen, Frame, Keyboard, Loader2, Palette, PanelRight, Play, Redo2, Save, Undo2, Upload } from 'lucide-react'
 import { useEditor } from '../store/editor'
 import { useUI } from '../store/ui'
-import { exportProjectFile, goHome, importProjectFile, saveNow } from '../store/projectService'
+import { exportProjectFile, goHome, importProjectFile, memoryWarning, saveNow } from '../store/projectService'
 import { GoatGlyph } from '../ui/GoatGlyph'
 import { FORMATS } from '../model/formats'
 
@@ -12,6 +12,7 @@ export function TopBar() {
   const canRedo = useEditor((s) => s.future.length > 0)
   const update = useEditor((s) => s.update)
   const saveState = useUI((s) => s.saveState)
+  const memoryOnly = useUI((s) => s.memoryOnly)
   const rightOpen = useUI((s) => s.rightOpen)
   const fileRef = useRef<HTMLInputElement>(null)
   return (
@@ -60,7 +61,12 @@ export function TopBar() {
             <Loader2 size={12} className="spin" /> Guardando…
           </>
         )}
-        {saveState === 'saved' && (
+        {saveState === 'saved' && memoryOnly && (
+          <button type="button" className="flex items-center gap-1 font-semibold text-gold" title="Este navegador no guarda datos: exporta una copia .goat.json antes de cerrar" onClick={memoryWarning}>
+            <CloudOff size={12} /> Solo en esta sesión
+          </button>
+        )}
+        {saveState === 'saved' && !memoryOnly && (
           <>
             <Check size={12} className="text-win" /> Guardado
           </>

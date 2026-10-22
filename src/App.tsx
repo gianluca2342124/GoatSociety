@@ -4,7 +4,7 @@ import { useUI } from './store/ui'
 import { useIsMobile } from './ui/useMedia'
 import { ConfirmHost } from './ui/confirm'
 import { PhotoGallery } from './ui/PhotoGallery'
-import { isMemoryOnly } from './db/db'
+import { fallBackToMemory, isMemoryOnly } from './db/db'
 import { useLibrary } from './store/library'
 import { useEditor } from './store/editor'
 import { preloadAllFonts } from './fonts/fonts'
@@ -14,6 +14,7 @@ import { hasPendingSave, startAutosave } from './store/projectService'
 import { Home } from './home/Home'
 import { Editor } from './editor/Editor'
 import { GoatCanvas } from './ui/GoatGlyph'
+import { useSafeAreas } from './ui/safeArea'
 
 function Toasts() {
   const all = useUI((s) => s.toasts)
@@ -23,7 +24,7 @@ function Toasts() {
   // Phones: one toast at a time, under the top bar, never over the tools.
   const toasts = mobile ? all.slice(-1) : all
   return (
-    <div className={`toast-stack pointer-events-none fixed z-[90] flex flex-col gap-2 ${mobile ? `inset-x-3 ${multi ? 'top-[calc(124px+env(safe-area-inset-top))]' : 'top-[calc(58px+env(safe-area-inset-top))]'} items-center` : 'right-4 bottom-4'}`} aria-live="polite">
+    <div className={`toast-stack pointer-events-none fixed z-[90] flex flex-col gap-2 ${mobile ? `inset-x-3 ${multi ? 'top-[calc(124px+var(--edge-top))]' : 'top-[calc(58px+var(--edge-top))]'} items-center` : 'right-4 bottom-4'}`} aria-live="polite">
       {toasts.map((t) => (
         <div key={t.id} className="animate-in pointer-events-auto flex max-w-[380px] items-start gap-2 rounded-xl border border-line-2 bg-panel-2/95 px-3.5 py-2.5 text-[13px] shadow-2xl backdrop-blur" role={t.kind === 'error' ? 'alert' : 'status'} data-testid="toast">
           {t.kind === 'success' ? <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-win" /> : t.kind === 'error' ? <AlertCircle size={16} className="mt-0.5 shrink-0 text-loss" /> : <Info size={16} className="mt-0.5 shrink-0 text-gold" />}
@@ -58,14 +59,22 @@ export function App() {
   const hasProject = useEditor((s) => !!s.project)
   const [fontsReady, setFontsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  useSafeAreas()
 
   useEffect(() => {
     const stop = startAutosave()
-    useLibrary
-      .getState()
-      .init()
+    const init = useLibrary.getState().init
+    init()
+      // Storage that opened but fails while starting up (full, revoked…): carry on in memory.
+      .catch(async (e) => {
+        if (isMemoryOnly()) throw e
+        await fallBackToMemory()
+        await init()
+      })
       .then(() => {
-        if (isMemoryOnly()) useUI.getState().toast('Este navegador no deja guardar datos aquí: puedes trabajar y descargar, pero los proyectos se perderán al cerrar. Exporta una copia .goat.json para conservarlos.', 'info')
+        if (!isMemoryOnly()) return
+        useUI.getState().set({ memoryOnly: true })
+        useUI.getState().toast('Este navegador no deja guardar datos aquí: puedes trabajar y descargar, pero los proyectos se perderán al cerrar. Exporta una copia .goat.json para conservarlos.', 'info', undefined, 6000)
       })
       .catch((e) => setError(`No se pudo abrir el almacenamiento local (IndexedDB). ${e instanceof Error ? e.message : ''} Comprueba que el navegador no esté en modo privado estricto.`))
     preloadAllFonts()
