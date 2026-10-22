@@ -177,7 +177,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
     if (!autoFit || size.w < 50 || canvasBusy) return
     // Phones give the page almost all the space.
     const pad = mobile ? 24 : 96
-    const z = Math.max(0.05, Math.min((size.w - pad) / W, (size.h - pad) / H))
+    const z = Math.max(0.01, Math.min((size.w - pad) / W, (size.h - pad) / H))
     useUI.getState().set({ zoom: z, pan: { x: (size.w - W * z) / 2, y: (size.h - H * z) / 2 } })
   }, [autoFit, size.w, size.h, W, H, mobile, canvasBusy])
 
@@ -185,6 +185,13 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
     void assetVersion
     return makeRenderCtx(project, slide, brand, 'editor')
   }, [project, slide, brand, assetVersion])
+
+  // An undo/redo or page change can remove the element being edited: drop the stale edit state.
+  useEffect(() => {
+    const ui = useUI.getState()
+    const has = (id: string | null) => !id || slide.elements.some((e) => e.id === id)
+    if (!has(ui.editingTextId) || !has(ui.tacticsEditId)) ui.set({ editingTextId: has(ui.editingTextId) ? ui.editingTextId : null, tacticsEditId: has(ui.tacticsEditId) ? ui.tacticsEditId : null, tacticsSel: null })
+  }, [slide])
 
   // Attach transformer to selected nodes
   useEffect(() => {
@@ -223,6 +230,8 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
       const shift = 'shiftKey' in e.evt && (e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey)
       const multi = useUI.getState().multiSelect
       if (tacticsEditId && tacticsEditId !== el.id) useUI.getState().set({ tacticsEditId: null, tacticsSel: null })
+      // Phones: touching another element finishes the text being edited.
+      if (mobile && useUI.getState().editingTextId && useUI.getState().editingTextId !== el.id) useUI.getState().set({ editingTextId: null })
       const selected = useEditor.getState().selection.includes(el.id)
       pressedSelected.current = multi && selected ? el.id : null
       if (multi) {
@@ -230,7 +239,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
       } else if (shift) toggleSelect(el.id)
       else if (!selected) select([el.id])
     },
-    [select, toggleSelect, tacticsEditId, spaceDown],
+    [select, toggleSelect, tacticsEditId, spaceDown, mobile],
   )
 
   const onTap = useCallback(
@@ -593,6 +602,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
           // In multi-selection a stray tap on empty space must not drop the group being built.
           if ((t === stageRef.current || t.name() === 'background' || t.name() === 'pasteboard') && !useUI.getState().multiSelect) {
             select([])
+            if (useUI.getState().editingTextId) useUI.getState().set({ editingTextId: null })
             if (tacticsEditId) useUI.getState().set({ tacticsEditId: null, tacticsSel: null })
           }
         }}>
@@ -607,7 +617,7 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
                   key={el.id}
                   el={el}
                   rc={rc}
-                  hidden={el.id === editingTextId}
+                  hidden={!mobile && el.id === editingTextId}
                   onSelect={onSelect}
                   onTap={onTap}
                   onClickEl={onClickEl}

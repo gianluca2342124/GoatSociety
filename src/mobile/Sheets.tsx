@@ -168,17 +168,26 @@ export function PhotosSheet() {
   const assets = useLibrary((s) => s.assets).filter((a) => a.kind !== 'model3d')
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
-  const title = mode === 'replace' ? 'Reemplazar foto' : mode === 'background' ? 'Foto de fondo' : mode === 'crest-home' || mode === 'crest-away' ? 'Cambiar escudo' : 'Fotos'
+  const title = mode === 'replace' ? 'Reemplazar foto' : mode === 'background' ? 'Foto de fondo' : mode.startsWith('crest') ? 'Cambiar escudo' : 'Fotos'
 
   const apply = (assetId: string) => {
     const s = useEditor.getState()
     const p = s.project
     const slide = activeSlideOf(s)
     if (!p || !slide) return
+    const target = useMobile.getState().photoTarget
+    const targetEl = target ? slide.elements.find((e) => e.id === target) : undefined
     if (mode === 'replace') {
-      const id = s.selection[0]
-      if (id) s.updateElement(id, { assetId } as Partial<ImageElement>)
+      if (targetEl?.type !== 'image') {
+        useUI.getState().toast('Selecciona primero la foto que quieres cambiar', 'info')
+        return
+      }
+      s.updateElement(targetEl.id, { assetId } as Partial<ImageElement>)
       useUI.getState().toast('Foto reemplazada', 'success')
+    } else if (mode === 'crest-custom') {
+      if (targetEl?.type !== 'crest') return
+      s.updateElement(targetEl.id, { customAssetId: assetId, side: 'custom' } as never)
+      useUI.getState().toast('Escudo cambiado', 'success')
     } else if (mode === 'background') {
       s.update((d) => {
         const sl = d.slides.find((x) => x.id === slide.id)
@@ -210,9 +219,10 @@ export function PhotosSheet() {
     setBusy(true)
     try {
       const kind = mode === 'background' ? 'background' : mode.startsWith('crest') ? 'crest' : 'player'
-      let last = ''
-      for (const f of Array.from(files)) last = (await useLibrary.getState().uploadAsset(f, kind)).id
-      if (last) apply(last)
+      const ids: string[] = []
+      for (const f of Array.from(files)) ids.push((await useLibrary.getState().uploadAsset(f, kind)).id)
+      if (ids.length) apply(ids[0])
+      if (ids.length > 1) useUI.getState().toast(`Se ha usado la primera foto; las otras ${ids.length - 1} están en «Tu biblioteca»`, 'info')
     } catch (e) {
       useUI.getState().toast(e instanceof Error ? e.message : 'No se pudo subir la imagen', 'error')
     } finally {
@@ -245,7 +255,7 @@ export function PhotosSheet() {
 // ── Data ───────────────────────────────────────────────────────────────────
 
 export function DataSheet() {
-  const [tab, setTab] = useState<'match' | 'teams' | 'stats'>('match')
+  const [tab, setTab] = useState<'match' | 'teams' | 'stats'>(() => useMobile.getState().dataTab)
   return (
     <Sheet title="Datos del partido" onClose={close} height="tall" testId="sheet-data">
       <Chips

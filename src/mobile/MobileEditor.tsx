@@ -59,7 +59,7 @@ function TopBar() {
       <button type="button" className={iconBtn} aria-label="Deshacer" disabled={!canUndo} onClick={() => useEditor.getState().undo()} data-testid="m-undo">
         <Undo2 size={19} />
       </button>
-      <button type="button" className={iconBtn} aria-label="Rehacer" disabled={!canRedo} onClick={() => useEditor.getState().redo()}>
+      <button type="button" className={`${iconBtn} max-[379px]:hidden`} aria-label="Rehacer" disabled={!canRedo} onClick={() => useEditor.getState().redo()}>
         <Redo2 size={19} />
       </button>
       <div className="min-w-0 flex-1 truncate px-1 text-center text-[12px] text-muted tabular-nums" aria-hidden>
@@ -184,12 +184,32 @@ function TacticsBar() {
     <div className="shrink-0 border-t border-gold/40 bg-panel px-3 pt-2 pb-[calc(8px+env(safe-area-inset-bottom))]" data-testid="m-tactics-bar">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[12px] font-semibold tracking-wide text-gold uppercase">Edición táctica · arrastra jugadores y flechas</span>
-        <button type="button" className="h-8 rounded-full bg-gold px-3 text-[12px] font-bold text-ink" onClick={() => useUI.getState().set({ tacticsEditId: null, tacticsSel: null, tacticsTool: 'select' })}>
+        <button type="button" className="h-10 rounded-full bg-gold px-4 text-[13px] font-bold text-ink" onClick={() => useUI.getState().set({ tacticsEditId: null, tacticsSel: null, tacticsTool: 'select' })}>
           Listo
         </button>
       </div>
       <TacticsToolbar />
+      <TacticsDelete />
     </div>
+  )
+}
+
+function TacticsDelete() {
+  const sel = useUI((s) => s.tacticsSel)
+  const id = useUI((s) => s.tacticsEditId)
+  if (!sel || !id) return null
+  const remove = () => {
+    useEditor.getState().updateElement(id, (d) => {
+      if (d.type !== 'tactics' && d.type !== 'stadium3d') return
+      d.tactics.annotations = d.tactics.annotations.filter((a) => a.id !== sel)
+      d.tactics.players = d.tactics.players.filter((p) => p.id !== sel)
+    })
+    useUI.getState().set({ tacticsSel: null })
+  }
+  return (
+    <button type="button" className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-loss/12 text-[13px] font-semibold text-loss active:scale-[0.99]" onClick={remove} data-testid="m-tactics-delete">
+      Borrar lo seleccionado
+    </button>
   )
 }
 
@@ -217,18 +237,24 @@ export function MobileEditor() {
   }, [])
 
   // Always keep the page fitted on phones; close the tool panel when the selection changes.
-  useEffect(() => useUI.getState().set({ autoFit: true }), [sheet, selected, focus, editingTextId])
+  useEffect(() => useUI.getState().set({ autoFit: true }), [sheet, selected, focus, editingTextId, multi])
+  // Multi-selection belongs to one page.
+  const activeSlideId = useEditor((s) => s.activeSlideId)
+  useEffect(() => {
+    if (useUI.getState().multiSelect) setMultiSelect(false)
+  }, [activeSlideId])
   useEffect(() => useMobile.getState().set({ tool: null }), [count])
   // Leaving the editor resets the mobile UI.
   useEffect(
     () => () => {
-      useMobile.getState().set({ sheet: null, tool: null, focus: false })
+      useMobile.getState().set({ sheet: null, tool: null, focus: false, pasteChip: false })
       useUI.getState().set({ multiSelect: false })
     },
     [],
   )
 
-  const editingText = !!editingTextId
+  const editingExists = useEditor((s) => !!editingTextId && !!activeSlideOf(s)?.elements.some((e) => e.id === editingTextId))
+  const editingText = editingExists
   let bottom: React.ReactNode
   if (editingText) bottom = <TextSheet />
   else if (tacticsEditId) bottom = <TacticsBar />
@@ -245,6 +271,17 @@ export function MobileEditor() {
   return (
     <div className="m-editor flex flex-col overflow-hidden bg-ink" style={{ height: 'var(--app-h, 100dvh)' }} data-testid="mobile-editor">
       {!focus && <TopBar />}
+        {multi && !editingText && (
+          <div className="mx-3 mt-2 flex shrink-0 items-center gap-2 rounded-2xl border border-gold/40 bg-[#1b1d22] py-2 pr-2 pl-4" role="status" data-testid="m-multi-banner">
+            <span className="min-w-0 flex-1 text-[13px] leading-tight">
+              <b className="text-gold tabular-nums">{count}</b> seleccionado{count === 1 ? '' : 's'}
+              <span className="block text-[11px] text-muted">Toca para añadir o quitar. Arrastra para mover todo.</span>
+            </span>
+            <button type="button" className="h-9 shrink-0 rounded-full bg-gold px-4 text-[13px] font-bold text-ink active:scale-95" onClick={() => setMultiSelect(false)} data-testid="m-multi-done">
+              Listo
+            </button>
+          </div>
+        )}
       <div ref={canvasBox} className="relative min-h-0 flex-1">
         {hasSlide && <EditorCanvas mobile />}
         <SelectionPill containerW={box.w} containerH={box.h} />
@@ -258,18 +295,7 @@ export function MobileEditor() {
             </button>
           </div>
         )}
-        {multi && !editingText && (
-          <div className="absolute inset-x-3 top-3 z-20 flex items-center gap-2 rounded-2xl border border-gold/40 bg-[#1b1d22]/95 py-2 pr-2 pl-4 shadow-xl backdrop-blur" role="status" data-testid="m-multi-banner">
-            <span className="min-w-0 flex-1 text-[13px] leading-tight">
-              <b className="text-gold tabular-nums">{count}</b> seleccionado{count === 1 ? '' : 's'}
-              <span className="block text-[11px] text-muted">Toca para añadir o quitar. Arrastra para mover todo.</span>
-            </span>
-            <button type="button" className="h-9 shrink-0 rounded-full bg-gold px-4 text-[13px] font-bold text-ink active:scale-95" onClick={() => setMultiSelect(false)} data-testid="m-multi-done">
-              Listo
-            </button>
-          </div>
-        )}
-        {focus && (
+        {focus && !selected && !multi && (
           <button type="button" className="absolute top-[calc(12px+env(safe-area-inset-top))] right-3 z-20 flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-[#1b1d22]/90 px-3.5 text-[13px] font-semibold shadow-xl" onClick={() => useMobile.getState().set({ focus: false })} data-testid="m-exit-focus">
             <Minimize2 size={15} /> Salir del enfoque
           </button>

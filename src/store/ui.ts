@@ -54,7 +54,7 @@ interface UIState {
   saveState: 'idle' | 'saving' | 'saved' | 'error'
   toasts: Toast[]
   set: (p: Partial<Omit<UIState, 'set' | 'toast' | 'dismiss'>>) => void
-  toast: (text: string, kind?: Toast['kind'], action?: Toast['action']) => void
+  toast: (text: string, kind?: Toast['kind'], action?: Toast['action']) => number
   dismiss: (id: number) => void
 }
 
@@ -90,6 +90,7 @@ export const useUI = create<UIState>((set) => ({
     // One undo-style toast at a time keeps the screen calm.
     set((s) => ({ toasts: [...s.toasts.filter((t) => !(action && t.action)), { id, kind, text, action }].slice(-3) }))
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), action ? 5200 : kind === 'error' ? 6000 : 3200)
+    return id
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }))

@@ -37,7 +37,7 @@ import { Section, Slider, TextField, Toggle } from '../ui/controls'
 import { buildTemplateSlide, templateById } from '../templates'
 import { SlideStyleSection } from './StylePanel'
 import { CONTENT_SHADE } from '../render/painters/basic'
-import { alignSelection, deleteSelection as deleteWithUndo, duplicateSelection as duplicateWithToast, type AlignMode } from './actions'
+import { alignSelection, deleteSelection as deleteWithUndo, duplicateSelection as duplicateWithToast, undoToast, type AlignMode } from './actions'
 
 export function ElementSpecific({ el }: { el: SlideElement }) {
   switch (el.type) {
@@ -237,7 +237,7 @@ function SlidePanel() {
               title="Reconstruye el diseño original con los datos actuales del partido"
               onClick={() => {
                 replaceSlide(slide.id, { ...buildTemplateSlide(tpl, project.format, project.match), name: slide.name, overrides: slide.overrides })
-                useUI.getState().toast('Diseño original restaurado', 'success', { label: 'Deshacer', run: () => useEditor.getState().undo() })
+                undoToast('Diseño original restaurado')
               }}
             >
               <RefreshCw size={13} /> Restaurar
@@ -308,8 +308,8 @@ function LayerRow({ el, selected, intensityHidden }: { el: SlideElement; selecte
         else useEditor.getState().select([el.id])
       }}
     >
-      <span className="cursor-grab text-dim" {...attributes} {...listeners} aria-label="Arrastrar para reordenar">
-        <GripVertical size={13} />
+      <span className="-my-1 -ml-1 flex h-9 w-8 shrink-0 cursor-grab items-center justify-center text-dim" style={{ touchAction: 'none' }} {...attributes} {...listeners} aria-label="Arrastrar para reordenar">
+        <GripVertical size={15} />
       </span>
       {editing ? (
         <input autoFocus className="field flex-1 px-1.5 py-0.5 text-[12px]" aria-label="Renombrar capa" value={el.name} onChange={(e) => updateElement(el.id, { name: e.target.value }, { key: `name-${el.id}` })} onBlur={() => setEditing(false)} onKeyDown={(e) => e.key === 'Enter' && setEditing(false)} />

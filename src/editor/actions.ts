@@ -9,10 +9,30 @@ import { formatOf } from '../model/formats'
 import type { CanvasFormat, FormatPreset, MatchData, Slide } from '../model/types'
 import { rescaleSlide } from './dialogs/MiscDialogs'
 
-const undoAction = { label: 'Deshacer', run: () => useEditor.getState().undo() }
+/**
+ * Success toast with a «Deshacer» bound to the change just made: as soon as
+ * anything else changes, the toast goes away, so it can never undo a newer edit.
+ */
+export function undoToast(text: string) {
+  const at = useEditor.getState().past.length
+  const id = useUI.getState().toast(text, 'success', {
+    label: 'Deshacer',
+    run: () => {
+      if (useEditor.getState().past.length === at) useEditor.getState().undo()
+    },
+  })
+  const unsub = useEditor.subscribe((s) => {
+    if (s.past.length !== at) {
+      useUI.getState().dismiss(id)
+      unsub()
+    }
+  })
+  setTimeout(unsub, 6000)
+}
 
 function toast(text: string, withUndo = false) {
-  useUI.getState().toast(text, 'success', withUndo ? undoAction : undefined)
+  if (withUndo) undoToast(text)
+  else useUI.getState().toast(text, 'success')
 }
 
 function project() {
@@ -32,7 +52,7 @@ export function addBlankPage() {
   const p = project()
   if (!p) return
   const at = activeIndex() + 1
-  const slide = buildBlankSlide(p.format, `Página ${p.slides.length + 1}`)
+  const slide = buildBlankSlide(p.format, 'Página en blanco')
   useEditor.getState().addSlide(slide, at)
   toast('Página en blanco añadida')
 }

@@ -95,6 +95,17 @@ export function TacticsOverlay({ el, zoom }: { el: TacticsElement; zoom: number 
         }}
         onMouseUp={finishDraw}
         onMouseLeave={() => draft && finishDraw()}
+        onTouchStart={(e) => {
+          e.cancelBubble = true
+          const p = local()
+          if (p) setDraft({ a: p, b: p })
+        }}
+        onTouchMove={() => {
+          if (!draft) return
+          const p = local()
+          if (p) setDraft({ a: draft.a, b: p })
+        }}
+        onTouchEnd={finishDraw}
       />
       {draft && tool !== 'select' && (
         <Line points={[draft.a.x, draft.a.y, draft.b.x, draft.b.y]} stroke="#CBAA62" strokeWidth={3 / zoom} dash={tool === 'pass' ? [10 / zoom, 8 / zoom] : undefined} listening={false} />
@@ -118,6 +129,10 @@ export function TacticsOverlay({ el, zoom }: { el: TacticsElement; zoom: number 
               draggable={tool === 'select'}
               listening={tool === 'select'}
               onMouseDown={(e: KonvaEventObject<MouseEvent>) => {
+                e.cancelBubble = true
+                useUI.getState().set({ tacticsSel: a.id })
+              }}
+              onTouchStart={(e: KonvaEventObject<TouchEvent>) => {
                 e.cancelBubble = true
                 useUI.getState().set({ tacticsSel: a.id })
               }}
@@ -153,6 +168,10 @@ export function TacticsOverlay({ el, zoom }: { el: TacticsElement; zoom: number 
               draggable={tool === 'select'}
               listening={tool === 'select'}
               onMouseDown={(e: KonvaEventObject<MouseEvent>) => {
+                e.cancelBubble = true
+                useUI.getState().set({ tacticsSel: p.id })
+              }}
+              onTouchStart={(e: KonvaEventObject<TouchEvent>) => {
                 e.cancelBubble = true
                 useUI.getState().set({ tacticsSel: p.id })
               }}

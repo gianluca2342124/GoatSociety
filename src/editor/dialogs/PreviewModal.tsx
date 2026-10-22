@@ -48,6 +48,8 @@ function MobilePreview() {
 
   const go = (d: number) => setI((v) => Math.min(n - 1, Math.max(0, v + d)))
   const onTouchStart = (e: React.TouchEvent) => {
+    // Taps on the arrows and dots are buttons, not swipes or «hide controls» taps.
+    if ((e.target as Element).closest('button')) return
     const t = e.touches[0]
     start.current = { x: t.clientX, y: t.clientY, t: Date.now() }
   }
@@ -102,7 +104,9 @@ function MobilePreview() {
           </div>
           <div className="flex justify-center gap-1.5 pt-3 pb-[calc(14px+env(safe-area-inset-bottom))]">
             {project.slides.map((s, k) => (
-              <button key={s.id} type="button" aria-label={`Ir a la página ${k + 1}`} onClick={() => setI(k)} className={`h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-white' : 'w-1.5 bg-white/35'}`} />
+              <button key={s.id} type="button" aria-label={`Ir a la página ${k + 1}`} onClick={() => setI(k)} className="flex h-9 items-center px-1">
+                <span className={`block h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-white' : 'w-1.5 bg-white/35'}`} />
+              </button>
             ))}
           </div>
         </>

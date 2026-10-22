@@ -1,3 +1,4 @@
+import { undoToast } from './actions'
 import { Sparkles, Wand2 } from 'lucide-react'
 import type { ColorValue, Intensity } from '../model/types'
 import { ACCENTS, INTENSITIES } from '../model/brand'
@@ -98,7 +99,7 @@ export function SlideStyleSection() {
               d.slides = d.slides.map((s) => applyEditorial(s as typeof slide)) as never
               d.style = { ...(d.style ?? {}), intensity: 'editorial' }
             })
-            useUI.getState().toast('GOAT EDITORIAL aplicado a todo el proyecto', 'success', { label: 'Deshacer', run: () => useEditor.getState().undo() })
+            undoToast('GOAT EDITORIAL aplicado a todo el proyecto')
           }}
         >
           <Sparkles size={13} /> Todo el proyecto

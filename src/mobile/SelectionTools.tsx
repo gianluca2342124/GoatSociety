@@ -80,7 +80,7 @@ export function SelectionPill({ containerH, containerW }: { containerH: number; 
   const list = useSelectedList()
   const { zoom, pan, editingTextId, tacticsEditId, canvasBusy } = useUI()
   const sheet = useMobile((s) => s.sheet)
-  if (!list.length || editingTextId || tacticsEditId || sheet || canvasBusy) return null
+  if (!list.length || editingTextId || tacticsEditId || sheet || canvasBusy || containerH < 140) return null
   const el = list.length === 1 ? list[0] : null
   // Elements rotate around their top-left corner: use the drawn corners.
   const pts = list.flatMap((e) => {
@@ -139,7 +139,7 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
     <div className="border-t border-line bg-panel px-4 pt-3 pb-2" data-testid="tool-panel">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[12px] font-semibold tracking-wide text-muted uppercase">{title}</span>
-        <button type="button" className="flex h-8 items-center gap-1 rounded-full bg-gold px-3 text-[12px] font-bold text-ink" onClick={() => useMobile.getState().set({ tool: null })}>
+        <button type="button" className="flex h-10 items-center gap-1 rounded-full bg-gold px-4 text-[13px] font-bold text-ink" onClick={() => useMobile.getState().set({ tool: null })}>
           <Check size={14} strokeWidth={3} /> Listo
         </button>
       </div>
@@ -435,13 +435,15 @@ function ToolPanel({ el, tool }: { el: SlideElement; tool: string }) {
     return (
       <Panel title="Equipo del escudo">
         <Seg
-          value={el.side === 'custom' ? 'home' : el.side}
+          value={el.side}
           onChange={(v) => patch(el, { side: v } as never)}
           options={[
             { value: 'home', label: 'Local' },
             { value: 'away', label: 'Visitante' },
+            { value: 'custom', label: 'Otro' },
           ]}
         />
+        {el.side === 'custom' && <p className="mt-2 text-[11px] leading-snug text-dim">«Otro» usa su propia imagen: cámbiala con «Cambiar escudo». No afecta a los equipos del partido.</p>}
       </Panel>
     )
   if (el.type === 'prediction') {
@@ -516,15 +518,27 @@ function ScorePanel() {
 
 // ── Contextual bottom bar ──────────────────────────────────────────────────
 
-function openPhotos(mode: 'replace' | 'crest-home' | 'crest-away') {
-  useMobile.getState().open('photos', { photoMode: mode })
+function openPhotos(mode: 'replace' | 'crest-home' | 'crest-away' | 'crest-custom') {
+  // The target is fixed now, so tapping the canvas while the sheet is open can't redirect the photo.
+  useMobile.getState().open('photos', { photoMode: mode, photoTarget: useEditor.getState().selection[0] ?? null })
+}
+
+/** The Datos tab that holds an element's data. */
+function dataTabFor(type: SlideElement['type']): 'match' | 'teams' | 'stats' {
+  if (type === 'playerList' || type === 'formRow') return 'teams'
+  if (type === 'statBars' || type === 'prediction' || type === 'matchList' || type === 'resultsList' || type === 'probability' || type === 'ranking' || type === 'table') return 'stats'
+  return 'match'
 }
 
 function toolsFor(el: SlideElement, replaceModel: () => void): Tool[] {
   const more: Tool = { id: 'props', label: 'Ajustes', icon: SlidersHorizontal, run: () => useMobile.getState().open('props') }
   const opacity: Tool = { id: 'opacity', label: 'Opacidad', icon: SunDim }
   const layer: Tool = { id: 'layer', label: 'Capa', icon: Layers }
-  const data: Tool = { id: 'data', label: 'Datos', icon: Database, run: () => useMobile.getState().open('data') }
+  // Numbers stored on the element itself are edited in its settings, not in Datos.
+  const data: Tool =
+    el.type === 'statNumber' || el.type === 'progressRing'
+      ? { id: 'data', label: 'Editar', icon: Pencil, run: () => useMobile.getState().open('props') }
+      : { id: 'data', label: 'Datos', icon: Database, run: () => useMobile.getState().open('data', { dataTab: dataTabFor(el.type) }) }
   switch (el.type) {
     case 'text':
       return [
@@ -553,7 +567,7 @@ function toolsFor(el: SlideElement, replaceModel: () => void): Tool[] {
     case 'crest':
       return [
         { id: 'team', label: 'Equipo', icon: Users },
-        { id: 'crest', label: 'Cambiar escudo', icon: Shield, run: () => openPhotos(el.side === 'away' ? 'crest-away' : 'crest-home') },
+        { id: 'crest', label: 'Cambiar escudo', icon: Shield, run: () => openPhotos(el.side === 'custom' ? 'crest-custom' : el.side === 'away' ? 'crest-away' : 'crest-home') },
         opacity,
         layer,
         more,
@@ -670,6 +684,16 @@ export function ContextBar() {
   const onModel = async (file: File | undefined) => {
     if (!file) return
     try {
+      // A .glb starts with «glTF»; a .gltf is JSON. Anything else would only render an error.
+      const head = new Uint8Array(await file.slice(0, 4).arrayBuffer())
+      const isGlb = String.fromCharCode(...head) === 'glTF'
+      if (!isGlb) {
+        try {
+          JSON.parse(await file.text())
+        } catch {
+          throw new Error('Ese archivo no es un modelo 3D válido (.glb o .gltf)')
+        }
+      }
       const meta = await addAsset(file, { kind: 'model3d' })
       await useLibrary.getState().refreshAssets()
       patch(el, { assetId: meta.id } as never)
