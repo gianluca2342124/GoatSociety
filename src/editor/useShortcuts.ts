@@ -15,6 +15,16 @@ function typing(e: KeyboardEvent): boolean {
   return t.tagName === 'INPUT' && TEXT_TYPES.has((t as HTMLInputElement).type)
 }
 
+// Fields whose plain keys are their own (typeahead, clearing a date part, Backspace…).
+const FIELD_TYPES = new Set(['date', 'time', 'datetime-local', 'month', 'week', 'color'])
+
+/** Focus is in a select or a date/time/colour field: only Ctrl/⌘ shortcuts reach the editor. */
+function fieldKeys(e: KeyboardEvent): boolean {
+  if (e.ctrlKey || e.metaKey) return false
+  const t = e.target as HTMLElement | null
+  return t?.tagName === 'SELECT' || (t?.tagName === 'INPUT' && FIELD_TYPES.has((t as HTMLInputElement).type))
+}
+
 /** Focus is on a widget that uses the arrow and page keys itself (slider, select, colour picker…). */
 export function ownsArrows(target: EventTarget | null): boolean {
   const t = target as HTMLElement | null
@@ -49,7 +59,7 @@ export function useShortcuts() {
       const ui = useUI.getState()
       if (ui.modal && e.key !== 'Escape') return
       // Already handled by the focused widget (e.g. arrows on the colour picker).
-      if (e.defaultPrevented || typing(e)) return
+      if (e.defaultPrevented || typing(e) || fieldKeys(e)) return
       const ed = useEditor.getState()
       const mod = e.metaKey || e.ctrlKey
       const k = e.key.toLowerCase()

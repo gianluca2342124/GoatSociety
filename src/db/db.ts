@@ -27,6 +27,9 @@ interface GoatDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<GoatDB>> | null = null
 let memoryOnly = false
+// idb remembers the IndexedDB classes it meets first, so once it has opened the
+// browser's database the in-memory one can no longer replace it.
+let persistentUsed = false
 
 /** True when the browser refused IndexedDB and work is only kept in memory for this session. */
 export function isMemoryOnly() {
@@ -39,6 +42,8 @@ function open(onLost?: () => void) {
     // process restarted in the background…): the next call opens a new one.
     terminated: onLost,
     upgrade(d) {
+      // idb has now met the browser's classes (see persistentUsed).
+      if (!memoryOnly) persistentUsed = true
       d.createObjectStore('projects', { keyPath: 'id' })
       const meta = d.createObjectStore('projectMeta', { keyPath: 'id' })
       meta.createIndex('updatedAt', 'updatedAt')
@@ -77,10 +82,6 @@ async function installMemoryIndexedDB() {
 
 /** How long to wait for the browser's storage before giving up on it. */
 const OPEN_TIMEOUT = 5000
-
-// idb remembers the IndexedDB classes it meets first, so once it has opened the
-// browser's database the in-memory one can no longer replace it.
-let persistentUsed = false
 
 /**
  * Checks the browser's storage with the raw API, before idb ever sees it: it
@@ -127,10 +128,12 @@ function checkStorage(): Promise<void> {
 
 async function openPersistent(): Promise<IDBPDatabase<GoatDB>> {
   await checkStorage()
-  persistentUsed = true
-  return open(() => {
+  const d = await open(() => {
     dbPromise = null
   })
+  // Only an open that succeeded has shown idb the browser's classes.
+  persistentUsed = true
+  return d
 }
 
 export function db(): Promise<IDBPDatabase<GoatDB>> {

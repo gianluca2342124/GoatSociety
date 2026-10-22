@@ -115,6 +115,12 @@ describe('svg sanitizer', () => {
     expect(out).not.toContain('evil')
     expect(out).not.toContain('@import')
   })
+
+  it('decodes CSS escapes before filtering and strips attributes from <style>', () => {
+    const out = sanitizeSvg('<svg viewBox="0 0 10 10"><style onload="x()">.a{fill:\\75rl(https://evil.example/a)}</style><path class="a" d="M0 0h5v5z"/></svg>')!
+    expect(out).not.toContain('evil')
+    expect(out).not.toContain('onload')
+  })
 })
 
 describe('older projects', () => {

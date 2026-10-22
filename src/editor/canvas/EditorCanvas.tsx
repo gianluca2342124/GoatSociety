@@ -497,9 +497,12 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.code !== 'Space' || useUI.getState().modal) return
-      // Space keeps working on buttons, switches, tabs and fields.
       const t = e.target as HTMLElement | null
-      if (t?.closest?.('input,textarea,select,button,a,[contenteditable=true],[role=button],[role=switch],[role=tab],[role=checkbox],[role=menuitem]')) return
+      // Fields keep their Space; so do buttons, switches and tabs reached with the keyboard.
+      // A button that merely kept focus after a click must not run again: Space pans.
+      if (t?.closest?.('input,textarea,select,[contenteditable=true]')) return
+      const control = t?.closest?.('button,a,[role=button],[role=switch],[role=tab],[role=checkbox],[role=menuitem]')
+      if (control?.matches(':focus-visible')) return
       setSpaceDown(true)
       e.preventDefault()
     }

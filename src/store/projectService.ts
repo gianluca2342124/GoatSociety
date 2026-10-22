@@ -21,22 +21,49 @@ let pending = false
 // The project object last written to IndexedDB.
 let lastSaved: Project | null = null
 
-/** Writes the project; true when it was stored. */
-async function doSave(p: Project): Promise<boolean> {
+// Writes run one at a time, so a slow or retried write never lands after a newer one.
+let queue: Promise<unknown> = Promise.resolve()
+
+/** Saves the project (its newest version when its turn comes); true when it was stored. */
+function doSave(p: Project): Promise<boolean> {
+  const run = queue.then(() => writeProject(p))
+  queue = run.catch(() => undefined)
+  return run
+}
+
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    saveTimer = null
+    const p = useEditor.getState().project
+    if (p) void doSave(p)
+  }, 650)
+}
+
+async function writeProject(p: Project): Promise<boolean> {
+  const latest = () => {
+    const cur = useEditor.getState().project
+    return cur && cur.id === p.id ? cur : p
+  }
+  let target = latest()
   useUI.getState().set({ saveState: 'saving' })
   try {
-    try {
-      await saveProject(p)
-    } catch {
-      // The connection may have been closed under us (storage restarted in the background): reopen once.
-      resetDbConnection()
-      await saveProject(p)
+    if (target !== lastSaved) {
+      try {
+        await saveProject(target)
+      } catch {
+        // The connection may have been closed under us (storage restarted in the background): reopen once.
+        resetDbConnection()
+        target = latest()
+        await saveProject(target)
+      }
     }
     if (isMemoryOnly() && !useUI.getState().memoryOnly) useUI.getState().set({ memoryOnly: true })
-    lastSaved = p
+    lastSaved = target
     // An edit made while this was being written still needs its own save.
     const cur = useEditor.getState().project
-    pending = !!cur && cur.id === p.id && cur !== p
+    pending = !!cur && cur.id === target.id && cur !== target
+    if (pending && !saveTimer) scheduleSave()
     useUI.getState().set({ saveState: pending ? 'saving' : 'saved' })
     return true
   } catch (e) {
@@ -44,7 +71,7 @@ async function doSave(p: Project): Promise<boolean> {
     useUI.getState().set({ saveState: 'error' })
     useUI.getState().toast('No se pudo guardar el proyecto en este navegador. Exporta una copia por seguridad.', 'error', {
       label: 'Exportar copia',
-      run: () => void exportProjectFile(p),
+      run: () => void exportProjectFile(latest()),
     })
     return false
   }
@@ -85,11 +112,7 @@ export function startAutosave() {
     if (changedProject) return
     pending = true
     useUI.getState().set({ saveState: 'saving' })
-    if (saveTimer) clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => {
-      const p = useEditor.getState().project
-      if (p) void doSave(p)
-    }, 650)
+    scheduleSave()
     if (thumbTimer) clearTimeout(thumbTimer)
     thumbTimer = setTimeout(() => {
       const p = useEditor.getState().project
@@ -224,6 +247,7 @@ export async function goHome() {
   if (saveTimer) clearTimeout(saveTimer)
   if (thumbTimer) clearTimeout(thumbTimer)
   saveTimer = thumbTimer = null
+  let dropped = false
   if (p && (pending || p !== lastSaved) && !(await doSave(p))) {
     const leave = await askConfirm({
       title: 'No se han podido guardar los cambios',
@@ -233,11 +257,16 @@ export async function goHome() {
       extra: { label: 'Exportar copia', run: () => void exportProjectFile(p) },
     })
     if (!leave) return
+    // The person chose to drop these changes: nothing is pending any more.
+    pending = false
+    lastSaved = null
+    dropped = true
+    useUI.getState().set({ saveState: 'idle' })
   }
   // Something newer arrived while saving: keep it too.
   const cur = useEditor.getState().project
-  if (cur && cur !== p && cur !== lastSaved) await doSave(cur)
-  if (cur) await updateThumb(cur)
+  if (!dropped && cur && cur !== lastSaved) await doSave(cur)
+  if (cur && !dropped) await updateThumb(cur)
   useEditor.getState().close()
   useUI.getState().set({ view: 'home', modal: null })
   try {

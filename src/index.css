@@ -31,7 +31,9 @@
   --in-bottom: env(safe-area-inset-bottom, 0px);
   --in-left: env(safe-area-inset-left, 0px);
   --edge-top: env(safe-area-inset-top, 0px);
+  --edge-right: env(safe-area-inset-right, 0px);
   --edge-bottom: env(safe-area-inset-bottom, 0px);
+  --edge-left: env(safe-area-inset-left, 0px);
 }
 
 html,

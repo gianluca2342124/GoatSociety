@@ -94,7 +94,7 @@ function MobilePreview() {
       </div>
       {chrome && (
         <>
-          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[calc(10px+var(--edge-top))]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between pt-[calc(10px+var(--edge-top))] pr-[calc(12px+var(--edge-right))] pl-[calc(12px+var(--edge-left))]">
             <span className="rounded-full bg-black/55 px-3 py-1.5 text-[13px] font-semibold text-white tabular-nums">
               {i + 1} / {n}
             </span>

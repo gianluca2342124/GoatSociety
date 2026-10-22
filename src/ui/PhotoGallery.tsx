@@ -9,7 +9,7 @@ export function PhotoGallery() {
   if (!images) return null
   return createPortal(
     <div className="fixed inset-0 z-[85] flex flex-col bg-black" role="dialog" aria-modal="true" aria-label="Guardar en Fotos" data-testid="photo-gallery">
-      <header className="flex items-start gap-3 border-b border-white/10 px-4 pt-[calc(12px+var(--edge-top))] pb-3">
+      <header className="flex items-start gap-3 border-b border-white/10 pt-[calc(12px+var(--edge-top))] pr-[calc(16px+var(--edge-right))] pb-3 pl-[calc(16px+var(--edge-left))]">
         <div className="min-w-0 flex-1">
           <h2 className="font-cond text-[19px] font-bold tracking-wide uppercase">Guardar en Fotos</h2>
           <p className="mt-0.5 text-[13px] leading-snug text-ivory/80">

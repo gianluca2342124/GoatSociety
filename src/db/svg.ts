@@ -7,7 +7,13 @@ const FORBIDDEN_TAGS = ['script', 'foreignobject', 'iframe', 'object', 'embed', 
  * kept, minus imports, external url() references and script-like values.
  */
 function cleanCss(css: string): string {
+  // Decode CSS escapes first («\75rl(» is «url(»), so they can't slip past the filters.
   return css
+    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_m, hex: string) => {
+      const code = parseInt(hex, 16)
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : ''
+    })
+    .replace(/\\(.)/g, '$1')
     .replace(/@import[^;]*;?/gi, '')
     .replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi, (all, _q: string, ref: string) => (ref.trim().startsWith('#') || /^data:image\//i.test(ref.trim()) ? all : 'none'))
     .replace(/expression\s*\(|javascript:|-moz-binding|behavior\s*:/gi, '')
@@ -27,6 +33,8 @@ export function sanitizeSvg(source: string): string | null {
       }
       if (tag === 'style') {
         child.textContent = cleanCss(child.textContent ?? '')
+        // A stylesheet needs no attributes beyond its type and media.
+        for (const attr of Array.from(child.attributes)) if (!['type', 'media'].includes(attr.name.toLowerCase())) child.removeAttribute(attr.name)
         continue
       }
       walk(child)

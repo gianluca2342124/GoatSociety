@@ -302,7 +302,10 @@ const layers = new Map<string, HTMLCanvasElement>()
 function photoLayer(id: string, w: number, h: number): HTMLCanvasElement {
   let c = layers.get(id)
   if (c && c.width === Math.max(1, Math.ceil(w)) && c.height === Math.max(1, Math.ceil(h))) {
-    c.getContext('2d')!.clearRect(0, 0, c.width, c.height)
+    const cc = c.getContext('2d')!
+    // Clear the whole canvas, not just what the last scale covered.
+    cc.setTransform(1, 0, 0, 1, 0, 0)
+    cc.clearRect(0, 0, c.width, c.height)
   } else c = makeCanvas(w, h)
   layers.delete(id)
   layers.set(id, c)

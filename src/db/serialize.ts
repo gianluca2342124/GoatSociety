@@ -1,6 +1,6 @@
 import type { AssetKind, AssetRecord, BrandKit, Project, SlideElement } from '../model/types'
 import { SCHEMA_VERSION, defaultBackground, sampleAgenda } from '../model/defaults'
-import { uid } from '../model/ids'
+import { slugify, uid } from '../model/ids'
 import { blobToArrayBuffer } from './assets'
 
 export const BUNDLE_FORMAT = 'goat-society-studio/project'
@@ -172,11 +172,6 @@ export function migrateProject(p: Project): Project {
 }
 
 export function bundleFileName(project: Project): string {
-  const safe = project.name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .toLowerCase()
+  const safe = slugify(project.name)
   return `${safe || 'proyecto'}.goat.json`
 }

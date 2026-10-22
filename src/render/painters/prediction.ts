@@ -162,7 +162,8 @@ export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) 
         const cw = w - pad * 2
         const pct = Math.max(0, Math.min(100, pred.confidence))
         // Locked teasers show a qualitative level instead of the exact number.
-        const level = pct >= 70 ? 'ALTA' : pct >= 50 ? 'MEDIA' : 'MODERADA'
+        // Hidden: a fixed level, so not even the confidence shows through.
+        const level = decoy ? 'MEDIA' : pct >= 70 ? 'ALTA' : pct >= 50 ? 'MEDIA' : 'MODERADA'
         drawLabel(c, 'CONFIANZA', pad, box.y + confLabel * 0.5, { family: rc.font('$label'), size: confLabel, weight: 700, color: withAlpha(textC, 0.6), letterSpacing: 3 })
         drawLabel(c, locked ? level : `${Math.round(pct)}%`, w - pad, box.y + confLabel * 0.5, { family: rc.font('$label'), size: confLabel, weight: 800, color: accent, align: 'right', letterSpacing: 2 })
         const by = box.y + confLabel * 1.8
@@ -361,7 +362,7 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
       }
       case 'conf': {
         const pct = Math.max(0, Math.min(100, pred.confidence))
-        const level = pct >= 70 ? 'alta' : pct >= 50 ? 'media' : 'moderada'
+        const level = decoy ? 'media' : pct >= 70 ? 'alta' : pct >= 50 ? 'media' : 'moderada'
         drawLabel(c, locked ? `Confianza ${level}` : `${Math.round(pct)}% de confianza`, cx, b.y, { family: rc.font('$body'), size: confS * k, weight: 600, color: muted, align: 'center', baseline: 'top', maxWidth: w })
         break
       }
