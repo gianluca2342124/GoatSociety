@@ -13,6 +13,7 @@ import type { SlideElement } from '../../model/types'
 import { platformZones, safeArea } from '../../model/formats'
 import { TacticsOverlay } from './TacticsOverlay'
 import { TextEditOverlay } from './TextEditOverlay'
+import { isConfirmOpen } from '../../ui/confirm'
 
 interface GuideLine {
   points: number[]
@@ -495,14 +496,23 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
     }
   }, [])
   useEffect(() => {
+    // Controls that got focus from a click or tap (not from Tab).
+    let pointerAt = 0
+    const clicked = new WeakSet<EventTarget>()
+    const pointer = () => (pointerAt = performance.now())
+    const focusin = (e: FocusEvent) => {
+      if (!e.target) return
+      if (performance.now() - pointerAt < 600) clicked.add(e.target)
+      else clicked.delete(e.target)
+    }
     const down = (e: KeyboardEvent) => {
-      if (e.code !== 'Space' || useUI.getState().modal) return
+      if (e.code !== 'Space' || useUI.getState().modal || isConfirmOpen()) return
       const t = e.target as HTMLElement | null
       // Fields keep their Space; so do buttons, switches and tabs reached with the keyboard.
       // A button that merely kept focus after a click must not run again: Space pans.
       if (t?.closest?.('input,textarea,select,[contenteditable=true]')) return
       const control = t?.closest?.('button,a,[role=button],[role=switch],[role=tab],[role=checkbox],[role=menuitem]')
-      if (control?.matches(':focus-visible')) return
+      if (control && !clicked.has(control)) return
       setSpaceDown(true)
       e.preventDefault()
     }
@@ -510,11 +520,15 @@ export function EditorCanvas({ mobile = false }: { mobile?: boolean } = {}) {
     // The key can be released in another window: never stay stuck in pan mode.
     const reset = () => setSpaceDown(false)
     const hidden = () => document.hidden && reset()
+    window.addEventListener('pointerdown', pointer, true)
+    document.addEventListener('focusin', focusin, true)
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     window.addEventListener('blur', reset)
     document.addEventListener('visibilitychange', hidden)
     return () => {
+      window.removeEventListener('pointerdown', pointer, true)
+      document.removeEventListener('focusin', focusin, true)
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
       window.removeEventListener('blur', reset)

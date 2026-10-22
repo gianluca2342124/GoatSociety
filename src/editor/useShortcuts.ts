@@ -4,6 +4,7 @@ import { activeSlideOf, useEditor } from '../store/editor'
 import { useUI } from '../store/ui'
 import { saveNow } from '../store/projectService'
 import { setZoom } from './ZoomBar'
+import { isConfirmOpen } from '../ui/confirm'
 
 const TEXT_TYPES = new Set(['', 'text', 'search', 'number', 'email', 'url', 'tel', 'password'])
 
@@ -18,9 +19,9 @@ function typing(e: KeyboardEvent): boolean {
 // Fields whose plain keys are their own (typeahead, clearing a date part, Backspace…).
 const FIELD_TYPES = new Set(['date', 'time', 'datetime-local', 'month', 'week', 'color'])
 
-/** Focus is in a select or a date/time/colour field: only Ctrl/⌘ shortcuts reach the editor. */
+/** Focus is in a select or a date/time/colour field: only Ctrl/⌘ shortcuts (bar select/copy/paste) reach the editor. */
 function fieldKeys(e: KeyboardEvent): boolean {
-  if (e.ctrlKey || e.metaKey) return false
+  if ((e.ctrlKey || e.metaKey) && !['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) return false
   const t = e.target as HTMLElement | null
   return t?.tagName === 'SELECT' || (t?.tagName === 'INPUT' && FIELD_TYPES.has((t as HTMLInputElement).type))
 }
@@ -57,7 +58,7 @@ export function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const ui = useUI.getState()
-      if (ui.modal && e.key !== 'Escape') return
+      if (isConfirmOpen() || (ui.modal && e.key !== 'Escape')) return
       // Already handled by the focused widget (e.g. arrows on the colour picker).
       if (e.defaultPrevented || typing(e) || fieldKeys(e)) return
       const ed = useEditor.getState()

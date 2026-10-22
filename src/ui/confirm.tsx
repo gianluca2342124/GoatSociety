@@ -16,6 +16,11 @@ interface ConfirmRequest {
 
 const useConfirm = create<{ req: ConfirmRequest | null }>(() => ({ req: null }))
 
+/** A confirmation is on screen: the editor's keyboard shortcuts stay out of it. */
+export function isConfirmOpen(): boolean {
+  return useConfirm.getState().req !== null
+}
+
 export function askConfirm(opts: Omit<ConfirmRequest, 'resolve'>): Promise<boolean> {
   useConfirm.getState().req?.resolve(false)
   return new Promise((resolve) => useConfirm.setState({ req: { ...opts, resolve } }))
