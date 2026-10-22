@@ -124,7 +124,7 @@ En un teléfono (o una tableta pequeña en vertical) el editor cambia solo a un 
 - **Borrar es seguro**: borrar un elemento o una página, cambiar de plantilla o de formato se hace al instante y aparece **Deshacer** durante unos segundos, sin ventanas de confirmación.
 - **Copiar y pegar entre páginas**: ⋯ → Copiar, cambia de página y toca **Pegar aquí**.
 - **Fotos**: subir desde el móvil rellena el hueco «Foto» de las plantillas con foto; si no hay hueco, la añade a la página.
-- **Sombra bajo el contenido**: cualquier foto que quede detrás (las de las plantillas, las que subas tú y la foto de fondo de la página) se oscurece sola con un desvanecido negro suave **solo donde tiene algo encima**: resultados, números, escudos, textos, etiquetas o gráficos. Si mueves un elemento, la sombra lo sigue. Se ajusta o se quita por foto con la herramienta **Sombra** (o «Sombra bajo el contenido» en Ajustes y en Estilo → Foto de fondo); por defecto, 70 %.
+- **Sombra bajo el contenido**: cualquier foto que quede detrás (las de las plantillas, las que subas tú y la foto de fondo de la página) se oscurece sola con un desvanecido negro suave **solo donde tiene algo encima**: resultados, números, escudos, textos, etiquetas o gráficos. Solo oscurece la propia foto: las sombras de lectura de las plantillas, los fundidos, los bordes de una foto «contener» y los recortes transparentes no se tocan. Si mueves un elemento, la sombra lo sigue mientras lo arrastras. Se ajusta o se quita por foto con la herramienta **Sombra** (o «Sombra bajo el contenido» en Ajustes y en Estilo → Foto de fondo); por defecto, 70 %.
 - **Guardar en Fotos**: en **Descargar** (y en las opciones de cada página) el botón principal guarda las imágenes en la fototeca del móvil, una imagen por página (nunca un ZIP). En iPhone/iPad se abre el menú del sistema: elige **«Guardar imagen»**. En Android se guardan en la galería (carpeta Descargas). Dentro de claude.ai, Claude pide confirmar cada imagen (en la app de Claude para iPhone, elige «Guardar imagen»). Si tu navegador no ofrece nada de eso, o las imágenes no aparecen en Fotos, **«Guárdalas a mano»** las muestra a pantalla completa: mantén pulsada cada una y elige «Añadir a Fotos». Debajo sigue **«Descargar archivo»** (ZIP o imágenes sueltas) para guardarlas en Archivos.
 - **Modo enfoque** (⋯) oculta todo menos el diseño; **Vista previa** muestra las páginas a pantalla completa con deslizamiento lateral (desliza hacia abajo para cerrar).
 - **Página en blanco**: incluye ya la firma GOAT SOCIETY y el número de página.
@@ -166,6 +166,7 @@ En un teléfono (o una tableta pequeña en vertical) el editor cambia solo a un 
 
 - Elemento **Pronóstico** con modos Normal, **Bloqueado** y **Revelado** (misma composición).
 - En modo bloqueado: desenfoque fuerte ajustable, **velo esmerilado**, **resplandor** detrás del candado, estilo de candado, texto teaser, qué ocultar (pronóstico, pronóstico + cuota o todo) y colores.
+- Lo oculto se dibuja siempre con un texto señuelo de forma fija: la imagen exportada es idéntica diga lo que diga el pronóstico, así que ni la longitud ni la forma del desenfoque lo delatan.
 - El texto oculto se sustituye por un señuelo de **forma fija** (no conserva ni las letras ni la longitud del pronóstico real) **antes** de difuminarse, así que la imagen exportada nunca permite leerlo ni adivinarlo.
 - **TE LO DIJE** (plantilla 35): para presumir de un pronóstico que **ya ha salido**. Se rellena a mano después del partido (resultado en Partido → Resultado y el pronóstico acertado en el selector «Pronóstico vinculado»). No promete nada sobre pronósticos futuros.
 - Etiquetas iluminadas listas en **Elementos → Etiquetas**: «Acertado», «Solo en mi comunidad», «Resultado final», «Ganado», «Última hora», «Oficial»…
@@ -228,7 +229,7 @@ Recomendación: usa `.glb` (lleva las texturas dentro). Un `.gltf` con texturas 
 - Nombres secuenciales: `goat-society-psg-barcelona-01.png`, `-02.png`…
 - Se exporta **solo el diseño**: sin guías, sin selección, sin zonas seguras ni interfaz de TikTok/Instagram. La vista a tamaño real, las zonas seguras y la simulación de interfaz existen solo en el editor y en la vista previa.
 
-Formatos de lienzo: **Vertical 3:4 1080×1440 (por defecto)**, Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuadrado 1080×1080 y horizontal 1920×1080. **Tamaño del lienzo** permite cambiar el formato de un proyecto recomponiendo las plantillas o escalando proporcionalmente.
+Formatos de lienzo: **Vertical 3:4 1080×1440 (por defecto)**, Story/TikTok 1080×1920, Instagram vertical 1080×1350, cuadrado 1080×1080 y horizontal 1920×1080. **Tamaño del lienzo** permite cambiar el formato de un proyecto recomponiendo las plantillas o escalando proporcionalmente; las páginas que has editado se escalan para no perder tus cambios, y si vuelves al formato anterior recuperas la página tal cual estaba.
 
 ## 12. Atajos de teclado
 
