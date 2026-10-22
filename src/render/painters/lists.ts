@@ -215,14 +215,9 @@ export function paintResultsList(ctx: Ctx, el: ResultsListElement, rc: RenderCtx
     paintIconGlyph(ctx, icon, bx + bs * 0.22, cy - bs * 0.28, bs * 0.56, r.outcome === 'pending' ? col : '#08090B', 3)
     const tx = bx + bs + rowH * 0.3
     const fs = rowH * 0.24
-    const right = el.showOdds && r.odds ? w * 0.18 : 0
-    drawLabel(ctx, r.match, tx, cy - fs * 0.55, { family: rc.font(el.font), size: fs, weight: 700, color: textC, uppercase: true, letterSpacing: 0.5, maxWidth: w - tx - right - 20 })
+    drawLabel(ctx, r.match, tx, cy - fs * 0.55, { family: rc.font(el.font), size: fs, weight: 700, color: textC, uppercase: true, letterSpacing: 0.5, maxWidth: w - tx - 20 })
     const sub = [r.pick, r.date ? formatDate(r.date, 'short', rc.brand.dateLocale) : ''].filter(Boolean).join('  ·  ')
-    drawLabel(ctx, sub, tx, cy + fs * 0.75, { family: rc.font('$body'), size: fs * 0.66, weight: 500, color: mutedC, maxWidth: w - tx - right - 20 })
-    if (right) {
-      drawLabel(ctx, r.odds, w - rowH * 0.3, cy - fs * 0.15, { family: rc.font('$numbers'), size: fs * 1.25, weight: 800, color: r.outcome === 'won' ? win : textC, align: 'right' })
-      drawLabel(ctx, 'CUOTA', w - rowH * 0.3, cy + fs * 0.85, { family: rc.font('$label'), size: fs * 0.45, weight: 600, color: mutedC, align: 'right', letterSpacing: 2 })
-    }
+    drawLabel(ctx, sub, tx, cy + fs * 0.75, { family: rc.font('$body'), size: fs * 0.66, weight: 500, color: mutedC, maxWidth: w - tx - 20 })
   })
 }
 
@@ -388,11 +383,8 @@ function paintResultsEditorial(ctx: Ctx, el: ResultsListElement, rc: RenderCtx, 
     else drawLabel(ctx, r.outcome === 'void' ? 'NULA' : '—', ms / 2, cy, { family: rc.font('$label'), size: r.outcome === 'void' ? ms * 0.45 : ms, weight: 700, color: mutedC, align: 'center' })
     const tx = ms + rowH * 0.3
     const fs = Math.min(48, rowH * 0.32)
-    const right = el.showOdds && r.odds ? Math.max(w * 0.16, fs * 2.6) : 0
-    drawLabel(ctx, r.match, tx, cy - fs * 0.62, { family: rc.font(el.font), size: fs, weight: 700, color: textC, uppercase: true, maxWidth: w - tx - right - 20 })
+    drawLabel(ctx, r.match, tx, cy - fs * 0.62, { family: rc.font(el.font), size: fs, weight: 700, color: textC, uppercase: true, maxWidth: w - tx - 20 })
     const sub = [r.pick, r.date ? formatDate(r.date, 'short', rc.brand.dateLocale) : ''].filter(Boolean).join('  ·  ')
-    drawLabel(ctx, sub, tx, cy + fs * 0.62, { family: rc.font('$body'), size: Math.max(26, fs * 0.76), weight: 500, color: mutedC, maxWidth: w - tx - right - 20 })
-    // Odds stay neutral: the hit rate is the slide's only large accent figure.
-    if (right) drawLabel(ctx, r.odds, w, cy, { family: rc.font('$numbers'), size: Math.min(60, rowH * 0.42), color: textC, align: 'right', maxWidth: right })
+    drawLabel(ctx, sub, tx, cy + fs * 0.62, { family: rc.font('$body'), size: Math.max(26, fs * 0.76), weight: 500, color: mutedC, maxWidth: w - tx - 20 })
   })
 }

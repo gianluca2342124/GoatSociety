@@ -7,15 +7,14 @@ import { LH, gapV, headZone, mainHead, vk } from './match'
 
 // ════════════════════════════════════════════════════════════════════════════
 // GOAT EDITORIAL · Pronósticos
-// Fondo negro, el pronóstico como titular, la cuota como única cifra en acento.
+// Fondo negro y el pronóstico como titular.
 // Nunca se promete un acierto: siempre aviso legal y lenguaje de opinión.
 //
 // Ritmo de familia (v2, ver match.ts): cromo → titular centrado en
 // t.contentTop → el pronóstico en el centro → CTA y aviso legal al pie.
 // ════════════════════════════════════════════════════════════════════════════
 
-/** Cap height / font size of the bundled fonts (Anton, Barlow Condensed, Inter Tight). */
-const CAP_ANTON = 0.86
+/** Cap height / font size of the bundled fonts (Barlow Condensed, Inter Tight). */
 const CAP_LABEL = 0.7
 const CAP_BODY = 0.73
 
@@ -39,9 +38,8 @@ function predBox(t: TCtx): { x: number; w: number } {
   return { x: t.left, w: t.cw }
 }
 
-/** Natural pick / odds sizes of paintPredictionEditorial for a box `w` wide (mirrors the painter). */
+/** Natural pick size of paintPredictionEditorial for a box `w` wide (mirrors the painter). */
 const pickSize = (w: number) => Math.min(170, w * 0.182)
-const oddsSize = (w: number) => Math.min(230, w * 0.235)
 
 /** Lines the pick will take in the editorial painter. */
 function pickLines(match: MatchData, w: number): number {
@@ -53,12 +51,10 @@ function pickLines(match: MatchData, w: number): number {
 /** Height of paintPredictionEditorial's stacked block at full size (mirrors the painter). */
 function predHeight(w: number, o: { lines: number; stamp?: boolean; conf?: boolean; noteLines?: number }): number {
   const pickS = pickSize(w)
-  const oddsS = oddsSize(w)
   const parts: [number, number][] = []
   if (o.stamp) parts.push([46 * CAP_LABEL, 30])
   parts.push([44 * CAP_LABEL, 34])
   parts.push([pickS * 1.04 * o.lines, 60])
-  parts.push([oddsS * CAP_ANTON + Math.max(16, oddsS * 0.1) + 38 * CAP_LABEL, 46])
   if (o.conf) parts.push([50 * CAP_BODY, 40])
   if (o.noteLines) parts.push([44 * 1.25 * o.noteLines, 0])
   return parts.reduce((a, [h, g], i) => a + h + (i < parts.length - 1 ? g : 0), 0)
@@ -105,16 +101,16 @@ function legal(t: TCtx, y: number, content = '{disclaimer}', lines = 1, p: Parti
   return disclaimer(t, y, { text: content, height: s * 1.25 * lines + 4, align: 'center', ...p })
 }
 
-// ── 13 · El pronóstico como titular, la cuota como cifra en acento ─────────
+// ── 13 · El pronóstico como titular, con la confianza y el argumento ───────
 export const premiumPrediction: TemplateDef = {
   id: 'premium-prediction',
   number: 13,
   name: 'Premium Prediction',
   category: 'predictions',
-  description: 'El pronóstico como titular y la cuota en acento, sin tarjeta.',
+  description: 'El pronóstico como titular, con la confianza y el argumento debajo, sin tarjeta.',
   build: (t, match) => {
     const { x: bx, w: bw } = predBox(t)
-    const pe = predHeight(bw, { lines: t.landscape ? pickLines(match, bw) : 2, conf: true })
+    const pe = predHeight(bw, { lines: t.landscape ? pickLines(match, bw) : 2, conf: true, noteLines: 2 })
     const CS = 140
     const G1 = 110
     const G2 = 90
@@ -131,7 +127,7 @@ export const premiumPrediction: TemplateDef = {
         ...cinematic(t),
         ...chrome(t),
         ...matchRow(t, t.contentTop, cs, z(84), 'Pronóstico'),
-        E.prediction({ name: 'Pronóstico', mode: 'plain', x: bx, y: py, width: bw, height: ph, chrome: 'none', showMatch: false, showNote: false, showConfidence: true, showOdds: true }),
+        E.prediction({ name: 'Pronóstico', mode: 'plain', x: bx, y: py, width: bw, height: ph, chrome: 'none', showMatch: false, showNote: true, showConfidence: true }),
         legal(t, dy),
       ],
     }
@@ -180,7 +176,7 @@ export const lockedPrediction: TemplateDef = {
         ...chrome(t),
         mainHead(t, 'Pronóstico [[bloqueado]]', {}, pairLines(t)),
         ...matchRow(t, L.my, L.cs, px(t, 60)),
-        // Market, pick and odds all hidden: smeared decoys under a heavy blur, so not even
+        // Market and pick both hidden: smeared decoys under a heavy blur, so not even
         // the market or the length of the pick can be read from the blurred shape.
         E.prediction({
           name: 'Pronóstico bloqueado',
@@ -226,7 +222,7 @@ export const predictionReveal: TemplateDef = {
         ...chrome(t),
         mainHead(t, 'Pronóstico [[revelado]]', {}, pairLines(t)),
         ...matchRow(t, L.my, L.cs, px(t, 60)),
-        E.prediction({ name: 'Pronóstico revelado', mode: 'revealed', revealStamp: '', x: bx, y: L.top, width: bw, height: ph, chrome: 'none', showMatch: false, showNote: false, showConfidence: false, showOdds: true }),
+        E.prediction({ name: 'Pronóstico revelado', mode: 'revealed', revealStamp: '', x: bx, y: L.top, width: bw, height: ph, chrome: 'none', showMatch: false, showNote: false, showConfidence: false }),
         cta(t, 'El análisis completo está en mi perfil  [[↗]]', { y: L.cy, h: L.ctaH }, fs(t, px(t, 46)), { align: 'center', verticalAlign: 'middle' }),
         legal(t, L.dy),
       ],
@@ -260,7 +256,7 @@ export const verifiedResults: TemplateDef = {
           ...cinematic(t),
           ...chrome(t),
           hl(t, head, { y: z.y, w: colW, h: z.h }, z.size, { lineHeight: LH }),
-          E.resultsList({ name: 'Resultados', x: lx, y: t.contentTop, width: t.right - lx, height: t.ch, maxItems: 4, variant: 'editorial', showSummary: true, showOdds: true }),
+          E.resultsList({ name: 'Resultados', x: lx, y: t.contentTop, width: t.right - lx, height: t.ch, maxItems: 4, variant: 'editorial', showSummary: true }),
           legal(t, t.contentBottom - dh, note, 3, { width: colW }),
         ],
       }
@@ -274,7 +270,7 @@ export const verifiedResults: TemplateDef = {
         ...chrome(t),
         mainHead(t, head, {}, 1),
         // A square only has room for three legible rows under the hero rate.
-        E.resultsList({ name: 'Resultados', x: t.left, y: ly, width: t.cw, height: dy - px(t, 48) - ly, maxItems: t.ch < 1000 ? 3 : 4, variant: 'editorial', summaryAlign: 'center', showSummary: true, showOdds: true }),
+        E.resultsList({ name: 'Resultados', x: t.left, y: ly, width: t.cw, height: dy - px(t, 48) - ly, maxItems: t.ch < 1000 ? 3 : 4, variant: 'editorial', summaryAlign: 'center', showSummary: true }),
         legal(t, dy, note, 2),
       ],
     }
@@ -342,21 +338,21 @@ export const winProbability: TemplateDef = {
 // ── 35 · Te lo dije: confirmación de un pronóstico que ya acertó ───────────
 // For picks that actually won: the user fills it AFTER the result. Clean ink,
 // one huge centered claim, a solid ACERTADO stamp, the match with its final
-// score and the winning pick with its odds, and the community mini-card.
+// score and the winning pick, and the community mini-card.
 export const toldYou: TemplateDef = {
   id: 'te-lo-dije',
   number: 35,
   name: 'Te lo dije',
   category: 'predictions',
   description:
-    'Confirmación de un pronóstico que ya acertó: «Te lo dije», sello ACERTADO, el marcador final y el pronóstico con su cuota. Úsala solo con pronósticos ganados, después del resultado (elige el pronóstico acertado en el elemento). No garantiza resultados futuros.',
+    'Confirmación de un pronóstico que ya acertó: «Te lo dije», sello ACERTADO, el marcador final y el pronóstico acertado. Úsala solo con pronósticos ganados, después del resultado (elige el pronóstico acertado en el elemento). No garantiza resultados futuros.',
   build: (t) => {
     const dh = legalH(t)
     const dy = t.contentBottom - dh
     const badge = (p: Partial<Parameters<typeof E.badge>[0]>) => E.badge({ textColor: '$text', color: '$accent', ...p })
     // The pick that won (prediction 2 of the sample: «Más de 2.5 goles» with a 2-1 final).
     const pick = (x: number, y: number, w: number, h: number): PredictionElement =>
-      E.prediction({ name: 'Pronóstico acertado', predictionIndex: 1, mode: 'revealed', revealStamp: '', x, y, width: w, height: h, chrome: 'none', showMatch: false, showNote: false, showConfidence: false, showOdds: true })
+      E.prediction({ name: 'Pronóstico acertado', predictionIndex: 1, mode: 'revealed', revealStamp: '', x, y, width: w, height: h, chrome: 'none', showMatch: false, showNote: false, showConfidence: false })
     const tall = t.H >= t.W * 1.3
     const z = headZone(t, 1, (tall ? 180 : 170) * vk(t))
     if (!tall) {

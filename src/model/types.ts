@@ -329,8 +329,7 @@ export interface PredictionElement extends BaseElement {
   accentColor: ColorValue
   cardColor: ColorValue
   textColor: ColorValue
-  hiddenPosition: 'pick' | 'pickAndOdds' | 'all'
-  showOdds: boolean
+  hiddenPosition: 'pick' | 'all'
   showConfidence: boolean
   showMatch: boolean
   showNote: boolean
@@ -354,7 +353,6 @@ export interface ResultsListElement extends BaseElement {
   lossColor: ColorValue
   pendingColor: ColorValue
   showSummary: boolean
-  showOdds: boolean
   rowGap: number
   font: string
   cardColor: ColorValue
@@ -681,7 +679,6 @@ export interface Prediction {
   id: ID
   market: string
   pick: string
-  odds: string
   confidence: number
   note: string
 }
@@ -738,7 +735,6 @@ export interface ResultEntry {
   id: ID
   match: string
   pick: string
-  odds: string
   date: string
   outcome: ResultOutcome
 }

@@ -183,14 +183,11 @@ export function PredictionsEditor({ items, onChange }: { items: Prediction[]; on
           </div>
           <TextField label="Mercado" value={p.market} onChange={(v) => set(i, { market: v })} />
           <TextField label="Pronóstico" value={p.pick} onChange={(v) => set(i, { pick: v })} />
-          <div className="grid grid-cols-2 gap-2">
-            <TextField label="Cuota" value={p.odds} onChange={(v) => set(i, { odds: v })} />
-            <NumberField label="Confianza" suffix="%" min={0} max={100} value={p.confidence} onChange={(v) => set(i, { confidence: v ?? 0 })} />
-          </div>
+          <NumberField label="Confianza" suffix="%" min={0} max={100} value={p.confidence} onChange={(v) => set(i, { confidence: v ?? 0 })} />
           <TextField label="Argumento" multiline rows={2} value={p.note} onChange={(v) => set(i, { note: v })} />
         </div>
       ))}
-      <button type="button" className="btn w-full" onClick={() => onChange([...items, { id: uid('pr'), market: 'Mercado', pick: 'Pronóstico', odds: '', confidence: 60, note: '' }])}>
+      <button type="button" className="btn w-full" onClick={() => onChange([...items, { id: uid('pr'), market: 'Mercado', pick: 'Pronóstico', confidence: 60, note: '' }])}>
         <Plus size={14} /> Añadir pronóstico
       </button>
       <p className="text-[11px] leading-snug text-dim">Ningún pronóstico se presenta como garantizado. Añade siempre el aviso legal de tu marca.</p>
@@ -205,10 +202,7 @@ export function ResultsEditor({ items, onChange }: { items: ResultEntry[]; onCha
       {items.map((r, i) => (
         <div key={r.id} className="space-y-1.5 rounded-lg border border-line bg-ink-2 p-2">
           <input className="field" aria-label="Partido" value={r.match} onChange={(e) => set(i, { match: e.target.value })} />
-          <div className="grid grid-cols-[1fr_64px] gap-1.5">
-            <input className="field py-1 text-[11px]" aria-label="Pronóstico" placeholder="Pronóstico" value={r.pick} onChange={(e) => set(i, { pick: e.target.value })} />
-            <input className="field py-1 text-[11px]" aria-label="Cuota" placeholder="Cuota" value={r.odds} onChange={(e) => set(i, { odds: e.target.value })} />
-          </div>
+          <input className="field py-1 text-[11px]" aria-label="Pronóstico" placeholder="Pronóstico" value={r.pick} onChange={(e) => set(i, { pick: e.target.value })} />
           <div className="flex items-center gap-1.5">
             <input type="date" className="field w-auto py-1 text-[11px]" aria-label="Fecha" value={r.date} onChange={(e) => set(i, { date: e.target.value })} />
             <select className="field flex-1 py-1 text-[11px]" aria-label="Resultado" value={r.outcome} onChange={(e) => set(i, { outcome: e.target.value as ResultEntry['outcome'] })}>
@@ -221,7 +215,7 @@ export function ResultsEditor({ items, onChange }: { items: ResultEntry[]; onCha
           </div>
         </div>
       ))}
-      <button type="button" className="btn w-full" onClick={() => onChange([{ id: uid('r'), match: 'Local vs Visitante', pick: '', odds: '', date: new Date().toISOString().slice(0, 10), outcome: 'pending' }, ...items])}>
+      <button type="button" className="btn w-full" onClick={() => onChange([{ id: uid('r'), match: 'Local vs Visitante', pick: '', date: new Date().toISOString().slice(0, 10), outcome: 'pending' }, ...items])}>
         <Plus size={14} /> Añadir resultado
       </button>
       <p className="text-[11px] leading-snug text-dim">Los resultados se introducen manualmente. La aplicación nunca marca un pronóstico como acertado por sí sola.</p>

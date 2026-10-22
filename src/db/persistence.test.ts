@@ -12,6 +12,7 @@ import { newProject } from '../model/defaults'
 import { buildMatchCarousel } from '../templates'
 import { DEFAULT_BRAND } from '../model/brand'
 import { image } from '../model/elements'
+import * as E from '../model/elements'
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory()
@@ -113,5 +114,24 @@ describe('svg sanitizer', () => {
     expect(out).toContain('url(#g)')
     expect(out).not.toContain('evil')
     expect(out).not.toContain('@import')
+  })
+})
+
+describe('older projects', () => {
+  it('lose every trace of betting odds when they open', () => {
+    const p = newProject({ preset: 'vertical' })
+    p.slides = buildMatchCarousel(p)
+    const old = JSON.parse(JSON.stringify(p))
+    old.match.predictions[0].odds = '2.45'
+    old.results = [{ id: 'r1', match: 'A vs B', pick: 'Gana A', odds: '1.80', date: '2026-10-01', outcome: 'won' }]
+    const els = old.slides[0].elements
+    els.push({ ...els.find((e: { type: string }) => e.type === 'text'), id: 'tx-legacy', text: 'Mi pick · Cuota: {odds}' })
+    els.push({ ...E.prediction({ hiddenPosition: 'pick' }), id: 'pr-legacy', hiddenPosition: 'pickAndOdds', showOdds: true })
+    const out = migrateProject(old)
+    const json = JSON.stringify(out)
+    expect(json).not.toMatch(/odds/i)
+    expect(json).not.toMatch(/cuota/i)
+    expect(out.slides[0].elements.find((e) => e.id === 'tx-legacy')).toMatchObject({ text: 'Mi pick ·' })
+    expect(out.slides[0].elements.find((e) => e.id === 'pr-legacy')).toMatchObject({ hiddenPosition: 'pick' })
   })
 })

@@ -122,6 +122,26 @@ function migrateElementV2(el: SlideElement): SlideElement {
 }
 
 /** Fill in fields added in later versions so old files keep working. */
+// Betting odds are no longer part of the app: older projects lose the values,
+// the switches that showed them and any {odds} token (with a «Cuota» label
+// right before it) in their texts.
+const ODDS_TOKEN = /(?:\s*\bcuotas?\b\s*[:@]?)?\s*\{odds\}/gi
+
+function withoutOdds(el: SlideElement): SlideElement {
+  const x = { ...el } as SlideElement & { showOdds?: boolean }
+  delete x.showOdds
+  if (x.type === 'prediction' && (x.hiddenPosition as string) === 'pickAndOdds') x.hiddenPosition = 'pick'
+  if ((x.type === 'text' || x.type === 'badge') && /\{odds\}/i.test(x.text)) x.text = x.text.replace(ODDS_TOKEN, '')
+  return x
+}
+
+function dropKey<T extends object>(o: T, key: string): T {
+  if (!(key in o)) return o
+  const c = { ...o } as Record<string, unknown>
+  delete c[key]
+  return c as T
+}
+
 export function migrateProject(p: Project): Project {
   const from = p.schemaVersion ?? 1
   const out: Project = {
@@ -129,7 +149,7 @@ export function migrateProject(p: Project): Project {
     kind: p.kind ?? 'carousel',
     schemaVersion: SCHEMA_VERSION,
     agenda: Array.isArray(p.agenda) ? p.agenda : sampleAgenda(),
-    results: Array.isArray(p.results) ? p.results : [],
+    results: Array.isArray(p.results) ? p.results.map((r) => dropKey(r, 'odds')) : [],
     pageNumbers: p.pageNumbers ?? true,
     slides: (p.slides ?? []).map((s) => ({
       ...s,
@@ -138,13 +158,13 @@ export function migrateProject(p: Project): Project {
       templateId: s.templateId ?? null,
       background: { ...defaultBackground(), ...(s.background ?? {}) },
       overrides: s.overrides ?? {},
-      elements: (s.elements ?? []).filter((e) => e && typeof e === 'object' && 'type' in e).map((e) => (from < 2 ? migrateElementV2(e) : e)),
+      elements: (s.elements ?? []).filter((e) => e && typeof e === 'object' && 'type' in e).map((e) => withoutOdds(from < 2 ? migrateElementV2(e) : e)),
     })),
   }
   out.match = {
     ...p.match,
     stats: p.match?.stats ?? [],
-    predictions: p.match?.predictions ?? [],
+    predictions: (p.match?.predictions ?? []).map((x) => dropKey(x, 'odds')),
     score: p.match?.score ?? { home: '', away: '', note: '' },
     isSample: p.match?.isSample ?? false,
   }

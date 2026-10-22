@@ -362,7 +362,7 @@ export function PredictionProps({ el }: { el: PredictionElement }) {
         <Section title="Bloqueo (teaser)">
           <Slider label="Intensidad del desenfoque" min={2} max={60} step={1} value={el.blurIntensity} onChange={(v) => set({ blurIntensity: v })} />
           <Slider label="Opacidad del velo" value={el.overlayOpacity} onChange={(v) => set({ overlayOpacity: v })} />
-          <Select label="Contenido oculto" value={el.hiddenPosition} onChange={(v) => set({ hiddenPosition: v })} options={[{ value: 'pick', label: 'Solo el pronóstico' }, { value: 'pickAndOdds', label: 'Pronóstico y cuota' }, { value: 'all', label: 'Todo el contenido' }]} />
+          <Select label="Contenido oculto" value={el.hiddenPosition} onChange={(v) => set({ hiddenPosition: v })} options={[{ value: 'pick', label: 'Solo el pronóstico' }, { value: 'all', label: 'Todo el contenido' }]} />
           <Select label="Estilo del candado" value={el.lockStyle} onChange={(v) => set({ lockStyle: v })} options={[{ value: 'padlock', label: 'Candado' }, { value: 'shield', label: 'Escudo' }, { value: 'keyhole', label: 'Llave' }, { value: 'none', label: 'Sin icono' }]} />
           <TextField label="Texto teaser" value={el.teaser} onChange={(v) => set({ teaser: v })} />
           <p className="text-[11px] leading-snug text-dim">El texto oculto se sustituye por caracteres aleatorios antes de difuminarse: la imagen exportada nunca revela el pronóstico real.</p>
@@ -375,7 +375,6 @@ export function PredictionProps({ el }: { el: PredictionElement }) {
       )}
       <Section title="Contenido y estilo">
         <Toggle label="Mostrar partido" checked={el.showMatch} onChange={(v) => set({ showMatch: v })} />
-        <Toggle label="Mostrar cuota" checked={el.showOdds} onChange={(v) => set({ showOdds: v })} />
         <Toggle label="Mostrar confianza" checked={el.showConfidence} onChange={(v) => set({ showConfidence: v })} />
         <Toggle label="Mostrar argumento" checked={el.showNote} onChange={(v) => set({ showNote: v })} />
         <ColorField label="Acento" value={el.accentColor} onChange={(v) => set({ accentColor: v })} />
@@ -398,7 +397,6 @@ export function ResultsListProps({ el }: { el: ResultsListElement }) {
       <GoToData tab="stats" label="Editar historial de resultados →" />
       <NumberField label="Entradas máximas" value={el.maxItems} min={1} max={12} onChange={(v) => set({ maxItems: Math.round(v ?? 5) })} />
       <Toggle label="Resumen (aciertos, fallos, %)" checked={el.showSummary} onChange={(v) => set({ showSummary: v })} />
-      <Toggle label="Mostrar cuota" checked={el.showOdds} onChange={(v) => set({ showOdds: v })} />
       <Slider label="Separación" min={0} max={60} step={1} value={el.rowGap} onChange={(v) => set({ rowGap: v })} />
       <div className="grid grid-cols-3 gap-1.5">
         <ColorField label="Acierto" value={el.winColor} onChange={(v) => set({ winColor: v })} />

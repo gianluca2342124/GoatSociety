@@ -127,9 +127,9 @@ export function sampleMatch(): MatchData {
       stat('Córners por partido', 5.1, 6.2, '', 1),
     ],
     predictions: [
-      { id: uid('pr'), market: 'Resultado final', pick: 'Gana Barcelona', odds: '2.45', confidence: 72, note: 'Superioridad en transición y en duelos exteriores.' },
-      { id: uid('pr'), market: 'Goles', pick: 'Más de 2.5 goles', odds: '1.70', confidence: 64, note: 'Ambos equipos promedian más de dos goles.' },
-      { id: uid('pr'), market: 'Ambos marcan', pick: 'Sí', odds: '1.62', confidence: 60, note: '' },
+      { id: uid('pr'), market: 'Resultado final', pick: 'Gana Barcelona', confidence: 72, note: 'Superioridad en transición y en duelos exteriores.' },
+      { id: uid('pr'), market: 'Goles', pick: 'Más de 2.5 goles', confidence: 64, note: 'Ambos equipos promedian más de dos goles.' },
+      { id: uid('pr'), market: 'Ambos marcan', pick: 'Sí', confidence: 60, note: '' },
     ],
     score: { home: '2', away: '1', note: 'Final' },
     notes: '',
@@ -160,13 +160,13 @@ export function sampleAgenda(): AgendaMatch[] {
 }
 
 export function sampleResults(): ResultEntry[] {
-  const r = (match: string, pick: string, odds: string, date: string, outcome: ResultEntry['outcome']): ResultEntry => ({ id: uid('r'), match, pick, odds, date, outcome })
+  const r = (match: string, pick: string, date: string, outcome: ResultEntry['outcome']): ResultEntry => ({ id: uid('r'), match, pick, date, outcome })
   return [
-    r('Equipo A vs Equipo B', 'Más de 2.5 goles', '1.80', '2026-10-12', 'won'),
-    r('Equipo C vs Equipo D', 'Gana local', '2.10', '2026-10-11', 'won'),
-    r('Equipo E vs Equipo F', 'Ambos marcan', '1.65', '2026-10-08', 'lost'),
-    r('Equipo G vs Equipo H', 'Empate al descanso', '2.40', '2026-10-05', 'won'),
-    r('Equipo I vs Equipo J', 'Menos de 3.5', '1.45', '2026-10-04', 'pending'),
+    r('Equipo A vs Equipo B', 'Más de 2.5 goles', '2026-10-12', 'won'),
+    r('Equipo C vs Equipo D', 'Gana local', '2026-10-11', 'won'),
+    r('Equipo E vs Equipo F', 'Ambos marcan', '2026-10-08', 'lost'),
+    r('Equipo G vs Equipo H', 'Empate al descanso', '2026-10-05', 'won'),
+    r('Equipo I vs Equipo J', 'Menos de 3.5', '2026-10-04', 'pending'),
   ]
 }
 

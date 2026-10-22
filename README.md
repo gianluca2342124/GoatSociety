@@ -165,7 +165,7 @@ En un teléfono (o una tableta pequeña en vertical) el editor cambia solo a un 
 ### Pronósticos bloqueados
 
 - Elemento **Pronóstico** con modos Normal, **Bloqueado** y **Revelado** (misma composición).
-- En modo bloqueado: desenfoque fuerte ajustable, **velo esmerilado**, **resplandor** detrás del candado, estilo de candado, texto teaser, qué ocultar (pronóstico, pronóstico + cuota o todo) y colores.
+- En modo bloqueado: desenfoque fuerte ajustable, **velo esmerilado**, **resplandor** detrás del candado, estilo de candado, texto teaser, qué ocultar (solo el pronóstico o todo) y colores.
 - Lo oculto se dibuja siempre con un texto señuelo de forma fija: la imagen exportada es idéntica diga lo que diga el pronóstico, así que ni la longitud ni la forma del desenfoque lo delatan.
 - El texto oculto se sustituye por un señuelo de **forma fija** (no conserva ni las letras ni la longitud del pronóstico real) **antes** de difuminarse, así que la imagen exportada nunca permite leerlo ni adivinarlo.
 - **TE LO DIJE** (plantilla 35): para presumir de un pronóstico que **ya ha salido**. Se rellena a mano después del partido (resultado en Partido → Resultado y el pronóstico acertado en el selector «Pronóstico vinculado»). No promete nada sobre pronósticos futuros.
@@ -267,7 +267,7 @@ Formatos de lienzo: **Vertical 3:4 1080×1440 (por defecto)**, Story/TikTok 1080
 | 10 | Tactical Board | Táctica | Pizarra a todo ancho con una acción destacada |
 | 11 | Formation Battle | Táctica | Duelo de sistemas sobre campo cenital |
 | 12 | Key Tactical Movement | Táctica | Un movimiento, una flecha gruesa, tres pasos |
-| 13 | Premium Prediction | Pronósticos | Pronóstico sin tarjeta: pick enorme y cuota en acento |
+| 13 | Premium Prediction | Pronósticos | Pronóstico sin tarjeta: pick enorme, confianza y argumento |
 | 14 | Locked Prediction | Pronósticos | Pronóstico desenfocado con candado y llamada al perfil |
 | 15 | Prediction Reveal | Pronósticos | La misma composición con el pronóstico revelado |
 | 16 | Verified Results | Pronósticos | % de acierto calculado y filas abiertas de resultados |

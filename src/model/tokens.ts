@@ -295,7 +295,6 @@ export const TEXT_TOKENS: { token: string; label: string }[] = [
   { token: '{subheadline}', label: 'Subtítulo' },
   { token: '{pick}', label: 'Pronóstico principal' },
   { token: '{market}', label: 'Mercado' },
-  { token: '{odds}', label: 'Cuota' },
   { token: '{handle}', label: 'Usuario' },
   { token: '{brand}', label: 'Marca' },
   { token: '{community}', label: 'Destino de la comunidad (opcional)' },
@@ -368,8 +367,6 @@ export function tokenValue(key: string, ctx: TokenContext): string | undefined {
       return prediction(match)?.pick ?? ''
     case 'market':
       return prediction(match)?.market ?? ''
-    case 'odds':
-      return prediction(match)?.odds ?? ''
     case 'handle':
       return brand.handle
     case 'brand':
@@ -424,7 +421,7 @@ export function resolveText(text: string, ctx: TokenContext, depth = 0): string 
 
 /** True when the text references shared match data. */
 export function isLinked(text: string): boolean {
-  return /\{(home|away|competition|stage|date|weekday|time|venue|headline|subheadline|pick|market|odds)[a-zA-Z0-9.]*\}/.test(text)
+  return /\{(home|away|competition|stage|date|weekday|time|venue|headline|subheadline|pick|market)[a-zA-Z0-9.]*\}/.test(text)
 }
 
 // ── Editorial presets (accent + intensity) ──────────────────────────────────

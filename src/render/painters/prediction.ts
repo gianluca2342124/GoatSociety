@@ -21,19 +21,13 @@ export function scramble(_text: string, seed = 17): string {
   return `${word(4)} ${word(9)}`
 }
 
-/** Decoy odds: always the same number shape. */
-export function scrambleOdds(seed = 17): string {
-  const rnd = seeded(seed)
-  return `${1 + Math.floor(rnd() * 8)}.${Math.floor(rnd() * 10)}${Math.floor(rnd() * 10)}`
-}
-
-type HidePart = 'market' | 'pick' | 'odds' | 'conf' | 'note'
-const HIDE_ALL: HidePart[] = ['market', 'pick', 'odds', 'conf', 'note']
+type HidePart = 'market' | 'pick' | 'conf' | 'note'
+const HIDE_ALL: HidePart[] = ['market', 'pick', 'conf', 'note']
 
 /** The parts a locked prediction hides. */
 function hiddenParts(el: PredictionElement): HidePart[] {
   if (el.mode !== 'locked') return []
-  return el.hiddenPosition === 'all' ? HIDE_ALL : el.hiddenPosition === 'pickAndOdds' ? ['pick', 'odds'] : ['pick']
+  return el.hiddenPosition === 'all' ? HIDE_ALL : ['pick']
 }
 
 function drawLock(ctx: Ctx, style: PredictionElement['lockStyle'], cx: number, cy: number, size: number, accent: string) {
@@ -124,11 +118,10 @@ export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) 
   if (!pred) return
 
   // ── Body layout (vertically centered block) ─────────────────────────────
-  type Part = 'market' | 'pick' | 'odds' | 'conf' | 'note'
+  type Part = HidePart
   const marketH = Math.min(56, bodyH * 0.12)
   const pickH = bodyH * (locked ? 0.4 : 0.34)
   const gap = bodyH * 0.05
-  const oddsH = el.showOdds && pred.odds ? Math.min(76, bodyH * 0.15) : 0
   const confLabel = Math.min(22, bodyH * 0.05)
   const confH = el.showConfidence ? 10 + confLabel * 1.8 : 0
   const noteStyle = { family: rc.font('$body'), size: Math.min(28, bodyH * 0.06), weight: 500, italic: false, letterSpacing: 0, lineHeight: 1.35, uppercase: false }
@@ -137,15 +130,13 @@ export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) 
   // note is measured from its decoy, so the layout never depends on it).
   const noteSrc = hidden.includes('note') ? scramble(pred.note, 29) : pred.note
   const noteH = el.showNote && pred.note ? Math.min(bodyH * 0.2, fitText(noteSrc, noteStyle, w - pad * 2, bodyH * 0.2, 14).height + 4) : 0
-  const total = marketH + pickH + gap + (oddsH ? oddsH + gap : 0) + (confH ? confH + 24 : 0) + noteH
+  const total = marketH + pickH + gap + (confH ? confH + 24 : 0) + noteH
   const parts: Record<Part, { y: number; h: number }> = {} as Record<Part, { y: number; h: number }>
   let cursor = bodyTop + Math.max(0, (bodyH - total) / 2)
   parts.market = { y: cursor, h: marketH }
   cursor += marketH
   parts.pick = { y: cursor, h: pickH }
   cursor += pickH + gap
-  parts.odds = { y: cursor, h: oddsH }
-  if (oddsH) cursor += oddsH + gap
   parts.conf = { y: cursor, h: confH }
   if (confH) cursor += confH + 24
   parts.note = { y: cursor, h: noteH }
@@ -165,16 +156,6 @@ export function paintPrediction(ctx: Ctx, el: PredictionElement, rc: RenderCtx) 
         c.translate(pad, box.y)
         drawLayout(c, lay, { ...style, size: lay.fontSize, letterSpacing: lay.letterSpacing }, { width: w - pad * 2, height: box.h, align: 'center', verticalAlign: 'middle', fill: textC, accent })
         c.restore()
-        break
-      }
-      case 'odds': {
-        const oh = box.h
-        const label = `CUOTA  ${decoy ? scrambleOdds() : pred.odds}`
-        const ow = Math.max(oh * 3.6, labelWidth(label, { family: rc.font('$numbers'), size: oh * 0.46, weight: 800, letterSpacing: 1.5 }) + oh * 1.4)
-        roundRect(c, w / 2 - ow / 2, box.y, ow, oh, oh / 2)
-        c.fillStyle = accent
-        c.fill()
-        drawLabel(c, label, w / 2, box.y + oh / 2, { family: rc.font('$numbers'), size: oh * 0.46, weight: 800, color: '#08090B', align: 'center', letterSpacing: 1.5 })
         break
       }
       case 'conf': {
@@ -310,8 +291,8 @@ export function drawSolidLock(ctx: Ctx, cx: number, cy: number, size: number, co
 
 /**
  * GOAT EDITORIAL prediction: no card, no header, no pills, no gauges.
- * A muted market label, the pick as the hero, the odds as one big accent
- * number. Locked mode blurs decoy text in place and puts one solid lock on it.
+ * A muted market label and the pick as the hero. Locked mode blurs decoy
+ * text in place and puts one solid lock on it.
  */
 function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx) {
   const { width: w, height: h } = el
@@ -322,15 +303,12 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
   const muted = rc.color('$muted')
   const locked = el.mode === 'locked'
   const labelFont = rc.font('$label')
-  const numFont = rc.font('$numbers')
   const headFont = rc.font(el.headlineFont)
-  type Part = 'stamp' | 'market' | 'pick' | 'odds' | 'conf' | 'note'
+  type Part = 'stamp' | 'market' | 'pick' | 'conf' | 'note'
   // Natural sizes at full scale (1080 wide story), shrunk below if needed.
   const stampS = el.mode === 'revealed' && el.revealStamp ? 46 : 0
   const marketS = 44
   const pickS = Math.min(170, w * 0.182)
-  const oddsS = el.showOdds && pred.odds ? Math.min(230, w * 0.235) : 0
-  const oddsGap = Math.max(16, oddsS * 0.1)
   const confS = el.showConfidence ? 50 : 0
   const noteStyle = { family: rc.font('$body'), size: 44, weight: 500, italic: false, letterSpacing: 0, lineHeight: 1.25, uppercase: false }
   const hidden = hiddenParts(el)
@@ -346,12 +324,11 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
     stamp: stampS ? capOf(labelFont, stampS, 700) : 0,
     market: capOf(labelFont, marketS, 600),
     pick: pickLay.height,
-    odds: oddsS ? capOf(numFont, oddsS) + oddsGap + capOf(labelFont, 38, 600) : 0,
     conf: confS ? capOf(rc.font('$body'), confS, 600) : 0,
     note: noteLay ? noteLay.height : 0,
   }
-  const gaps: Record<Part, number> = { stamp: 30, market: 34, pick: 60, odds: 46, conf: 40, note: 0 }
-  const order: Part[] = ['stamp', 'market', 'pick', 'odds', 'conf', 'note']
+  const gaps: Record<Part, number> = { stamp: 30, market: 34, pick: 60, conf: 40, note: 0 }
+  const order: Part[] = ['stamp', 'market', 'pick', 'conf', 'note']
   const used = order.filter((p) => heights[p] > 0)
   let total = used.reduce((a, p, i) => a + heights[p] + (i < used.length - 1 ? gaps[p] : 0), 0)
   const k = total > h ? h / total : 1
@@ -380,12 +357,6 @@ function paintPredictionEditorial(ctx: Ctx, el: PredictionElement, rc: RenderCtx
         c.scale(k, k)
         drawLayout(c, lay, { ...pickStyle, size: lay.fontSize, letterSpacing: lay.letterSpacing }, { width: w, height: heights.pick, align: 'center', verticalAlign: 'middle', fill: textC, accent })
         c.restore()
-        break
-      }
-      case 'odds': {
-        const os = oddsS * k
-        drawLabel(c, decoy ? scrambleOdds() : pred.odds, cx, b.y, { family: numFont, size: os, color: accent, align: 'center', baseline: 'top', maxWidth: w })
-        drawLabel(c, 'cuota', cx, b.y + capOf(numFont, os) + oddsGap * k, { family: labelFont, size: Math.max(32, 38 * k), weight: 600, color: muted, align: 'center', baseline: 'top', uppercase: true })
         break
       }
       case 'conf': {

@@ -83,7 +83,7 @@ export function NewProjectDialog() {
     base.subheadline = 'Análisis y claves del partido'
     if (!sample) {
       base.stats = ['Goles por partido', 'Posesión', 'Tiros a puerta', 'xG por partido', 'Goles encajados'].map((l, i) => stat(l, null, null, i === 1 ? '%' : '', i === 1 ? 0 : 1, i === 4))
-      base.predictions = [{ id: uid('pr'), market: 'Mercado', pick: 'Tu pronóstico', odds: '', confidence: 60, note: '' }]
+      base.predictions = [{ id: uid('pr'), market: 'Mercado', pick: 'Tu pronóstico', confidence: 60, note: '' }]
       base.isSample = false
     }
     return base
