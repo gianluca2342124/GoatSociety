@@ -125,6 +125,8 @@ export function ExportPanel({ onDone, compact = false }: { onDone: () => void; c
       const files = await renderFiles()
       setSaving(true)
       const r = await saveToPhotos(files)
+      // The viewer may answer differently now than when the sheet opened: keep the hint honest.
+      if (r.method !== method && (r.method === 'viewer' || method === 'viewer')) setMethod(r.method)
       const msg = photoMessage(r, files.length)
       const rest = r.method !== 'gallery' ? keepRemaining(r.saved) : ''
       if (msg) toast(msg.text + rest, msg.kind)

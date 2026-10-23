@@ -81,7 +81,13 @@ async function installMemoryIndexedDB() {
 }
 
 /** How long to wait for the browser's storage before giving up on it. */
-const OPEN_TIMEOUT = 5000
+const OPEN_TIMEOUT = 8000
+
+let storageBack: (() => void) | null = null
+/** Called if the browser's storage answers after the studio had to go on in memory. */
+export function onStorageBack(fn: () => void) {
+  storageBack = fn
+}
 
 /**
  * Checks the browser's storage with the raw API, before idb ever sees it: it
@@ -112,7 +118,12 @@ function checkStorage(): Promise<void> {
     req.onerror = () => finish(req.error ?? new Error('IndexedDB'))
     req.onsuccess = () => {
       const d = req.result
-      if (done) return d.close()
+      if (done) {
+        // Too late: this session already works in memory. A reload can use it.
+        d.close()
+        if (memoryOnly) storageBack?.()
+        return
+      }
       try {
         const tx = d.transaction('kv', 'readwrite')
         tx.objectStore('kv').put(Date.now(), 'write')
@@ -128,9 +139,21 @@ function checkStorage(): Promise<void> {
 
 async function openPersistent(): Promise<IDBPDatabase<GoatDB>> {
   await checkStorage()
-  const d = await open(() => {
+  let gaveUp = false
+  const opening = open(() => {
     dbPromise = null
   })
+  // A connection that arrives after giving up is closed straight away (by
+  // then the in-memory classes are installed, so idb never adopts it).
+  opening.then((d) => gaveUp && d.close(), () => undefined)
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      gaveUp = true
+      reject(new Error('IndexedDB no responde'))
+    }, OPEN_TIMEOUT)
+  })
+  const d = await Promise.race([opening, late]).finally(() => clearTimeout(timer))
   // Only an open that succeeded has shown idb the browser's classes.
   persistentUsed = true
   return d

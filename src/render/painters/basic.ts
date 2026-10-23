@@ -437,14 +437,21 @@ function applyShade(target: Ctx, slideToTarget: DOMMatrix, boxes: Box[], strengt
 }
 
 /**
- * Darken a photo exactly where content sits on top of it, with a soft black
- * shade, so scores, numbers, crests and texts always read. `slideToDevice`
- * maps slide coordinates to the canvas; the caller clips to the photo.
+ * Darken a photo layer (a canvas holding only the photo) exactly where content
+ * sits on top of it, so scores, numbers, crests and texts always read. Only
+ * the photo's own pixels darken. `slideToLayer` maps slide coordinates to the
+ * layer's pixels. False when nothing sits on it.
  */
-export function paintContentShade(ctx: Ctx, rc: RenderCtx, slideToDevice: DOMMatrix, above: SlideElement[], area: Box, strength: number) {
-  if (strength <= 0) return
+export function shadePhotoLayer(layer: Ctx, rc: RenderCtx, slideToLayer: DOMMatrix, above: SlideElement[], area: Box, strength: number): boolean {
+  if (strength <= 0) return false
   const boxes = shadeBoxes(rc, above, area)
-  if (boxes.length) applyShade(ctx, slideToDevice, boxes, strength, false)
+  if (boxes.length) applyShade(layer, slideToLayer, boxes, strength, true)
+  return boxes.length > 0
+}
+
+/** True when content sits over `area` and a photo there needs the shade. */
+export function needsContentShade(rc: RenderCtx, above: SlideElement[], area: Box, strength: number): boolean {
+  return strength > 0 && shadeBoxes(rc, above, area).length > 0
 }
 
 /** The shade for a photo element, from the elements stacked above it. */

@@ -142,11 +142,12 @@ export async function saveNow() {
 
 /** In-memory session: say so, and offer the only way to keep the work. */
 export function memoryWarning() {
-  const p = useEditor.getState().project
+  const has = !!useEditor.getState().project
   useUI.getState().toast(
     'Este navegador no guarda datos: el proyecto solo existe hasta que cierres. Exporta una copia .goat.json para conservarlo.',
     'error',
-    p ? { label: 'Exportar copia', run: () => void exportProjectFile(p) } : undefined,
+    // Exports the project as it is when tapped, edits after the notice included.
+    has ? { label: 'Exportar copia', run: () => void exportProjectFile() } : undefined,
     10000,
   )
 }

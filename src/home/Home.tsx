@@ -72,7 +72,7 @@ export function Home() {
   const modal = useUI((s) => s.modal)
   const file = useRef<HTMLInputElement>(null)
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto" style={{ paddingLeft: 'var(--in-left)', paddingRight: 'var(--in-right)' }}>
       <section className="goat-grain relative overflow-hidden border-b border-line">
         <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(ellipse 70% 90% at 78% 40%, rgba(100,28,42,0.55), transparent 60%), radial-gradient(ellipse 60% 80% at 20% 100%, rgba(16,62,52,0.5), transparent 60%), #08090B' }} />
         <div className="relative mx-auto flex max-w-[1240px] items-center gap-10 px-8 py-12 lg:py-16">

@@ -24,8 +24,12 @@ export function useSafeAreas() {
         root.style.setProperty(`--in-${side}`, `${Math.max(0, inset - pad)}px`)
         root.style.setProperty(`--edge-${side}`, `${Math.max(inset, pad)}px`)
       }
+      window.dispatchEvent(new Event('goat:insets'))
     }
     apply()
+    // The insets can change after the resize event (rotation): watch the probe's own size.
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(apply)
+    ro?.observe(probe, { box: 'border-box' })
     const vv = window.visualViewport
     window.addEventListener('resize', apply)
     window.addEventListener('orientationchange', apply)
@@ -34,6 +38,7 @@ export function useSafeAreas() {
       window.removeEventListener('resize', apply)
       window.removeEventListener('orientationchange', apply)
       vv?.removeEventListener('resize', apply)
+      ro?.disconnect()
       probe.remove()
     }
   }, [])

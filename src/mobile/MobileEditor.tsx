@@ -37,9 +37,11 @@ function useViewportHeight() {
     apply()
     vv?.addEventListener('resize', apply)
     window.addEventListener('resize', apply)
+    window.addEventListener('goat:insets', apply)
     return () => {
       vv?.removeEventListener('resize', apply)
       window.removeEventListener('resize', apply)
+      window.removeEventListener('goat:insets', apply)
       document.documentElement.style.removeProperty('--app-h')
     }
   }, [])
@@ -63,14 +65,13 @@ function TopBar() {
       <button type="button" className={`${iconBtn} max-[379px]:hidden`} aria-label="Rehacer" disabled={!canRedo} onClick={() => useEditor.getState().redo()}>
         <Redo2 size={19} />
       </button>
-      {memoryOnly ? (
-        <button type="button" className="flex min-w-0 flex-1 items-center justify-center gap-1 truncate px-1 text-[11px] font-semibold text-gold" onClick={memoryWarning} data-testid="m-memory-only">
-          <CloudOff size={13} className="shrink-0" /> <span className="truncate">Sin guardar</span>
+      <div className="min-w-0 flex-1 truncate px-1 text-center text-[12px] text-muted tabular-nums" aria-hidden>
+        {project.slides.length > 1 ? `${pageIndex + 1} / ${project.slides.length}` : ''}
+      </div>
+      {memoryOnly && (
+        <button type="button" className="flex h-10 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold text-gold active:bg-white/10" aria-label="Sin guardar: exporta una copia para conservar el proyecto" onClick={memoryWarning} data-testid="m-memory-only">
+          <CloudOff size={16} className="shrink-0" /> <span className="max-[419px]:hidden">Sin guardar</span>
         </button>
-      ) : (
-        <div className="min-w-0 flex-1 truncate px-1 text-center text-[12px] text-muted tabular-nums" aria-hidden>
-          {project.slides.length > 1 ? `${pageIndex + 1} / ${project.slides.length}` : ''}
-        </div>
       )}
       <button type="button" className={iconBtn} aria-label="Vista previa" onClick={() => useUI.getState().set({ modal: 'preview' })} data-testid="m-preview">
         <Play size={18} />

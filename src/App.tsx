@@ -4,13 +4,13 @@ import { useUI } from './store/ui'
 import { useIsMobile } from './ui/useMedia'
 import { ConfirmHost } from './ui/confirm'
 import { PhotoGallery } from './ui/PhotoGallery'
-import { fallBackToMemory, isMemoryOnly } from './db/db'
+import { fallBackToMemory, isMemoryOnly, onStorageBack } from './db/db'
 import { useLibrary } from './store/library'
 import { useEditor } from './store/editor'
 import { preloadAllFonts } from './fonts/fonts'
 import { clearLayoutCache } from './render/text/layout'
 import { clearBitmapCache } from './render/paint/bitmapCache'
-import { hasPendingSave, startAutosave } from './store/projectService'
+import { exportProjectFile, hasPendingSave, startAutosave } from './store/projectService'
 import { Home } from './home/Home'
 import { Editor } from './editor/Editor'
 import { GoatCanvas } from './ui/GoatGlyph'
@@ -63,6 +63,14 @@ export function App() {
 
   useEffect(() => {
     const stop = startAutosave()
+    onStorageBack(() =>
+      useUI.getState().toast(
+        'El almacenamiento de este navegador ya responde. Exporta lo que hayas hecho y recarga para guardar con normalidad.',
+        'info',
+        useEditor.getState().project ? { label: 'Exportar copia', run: () => void exportProjectFile() } : undefined,
+        12000,
+      ),
+    )
     const init = useLibrary.getState().init
     init()
       // Storage that opened but fails while starting up (full, revoked…): carry on in memory.
